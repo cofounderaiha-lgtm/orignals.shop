@@ -132,6 +132,28 @@ function mitraThink(raw) {
     return;
   }
 
+  /* — cancel order — */
+  if (has('cancel') && has('order', 'booking', 'khana', 'delivery')) {
+    const cand = activeOrders().filter(o => canCancel(o));
+    if (cand.length) {
+      const o = cand[0];
+      cancelOrder(o.id);
+      mitraReply(`Done — cancelled <b>${esc(o.title)}</b>.<br/>${money(o.total)} refunded to your wallet instantly. \u{1F44D}`, ['Show my orders \u{1F9FE}', 'Order something else'], 'Cancelled and refunded ' + o.total + ' rupees');
+    } else {
+      mitraReply(`Nothing I can cancel right now — orders can only be cancelled <b>before pickup</b>. Rides and picked-up orders are locked.`, ['Show my orders \u{1F9FE}']);
+    }
+    return;
+  }
+
+  /* — my tickets — */
+  if (has('my ticket', 'mere ticket', 'my booking', 'meri booking', 'show ticket', 'ticket dikha')) {
+    const n = (S.tickets || []).length + (S.bookings || []).length + (S.stays || []).length;
+    const a = regAction(() => go('tickets/mine'));
+    mitraReply(n ? `You have <b>${n}</b> booking${n > 1 ? 's' : ''} \u2B50<br/><button class="mbtn" onclick="runMitraAction(${a})">Open my bookings</button>`
+      : `No bookings yet — movies, events, tables and stays all land here.`, n ? ['Show my orders \u{1F9FE}'] : ['Book movie tickets \u2B50']);
+    return;
+  }
+
   /* — track orders — */
   if (has('order aa', 'where is my order', 'track', 'kahan', 'kaha hai', 'status', 'my order', 'mera order')) {
     const act = activeOrders();

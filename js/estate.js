@@ -33,6 +33,7 @@ view('estate', args => {
           <div class="btn-pair">
             <button class="btn-main sm" onclick="propContact('${p.id}')">Contact ${p.by === 'Owner' ? 'owner' : 'dealer'}</button>
             <button class="btn-main sm ghost" onclick="propVisit('${p.id}')">Book site visit</button>
+            ${tab !== 'rent' ? `<button class="btn-main sm ghost" onclick="emiSheet(${p.price})">EMI</button>` : ''}
           </div>
         </div>
       </div>`).join('')}</div>`
@@ -189,4 +190,32 @@ function stayBook(hid) {
       go('estate/mine');
     }
   });
+}
+
+
+/* ---------- EMI calculator ---------- */
+function emiSheet(price) {
+  window._emi = { down: 20, yrs: 15 };
+  renderEmi(price);
+}
+function renderEmi(price) {
+  const e = window._emi, rate = 8.5;
+  const P = price * (1 - e.down / 100), r = rate / 1200, n = e.yrs * 12;
+  const emi = Math.round(P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
+  const totalPay = emi * n, interest = totalPay - P;
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">EMI calculator</h3>
+    <div class="ck-line"><span>Property price</span><span><b>${lakh(price)}</b></span></div>
+    <div class="fld"><span>Down payment</span><div class="chip-wrap">
+      ${[10, 20, 30, 40].map(d => `<button class="chip ${e.down === d ? 'on' : ''}" onclick="window._emi.down=${d};renderEmi(${price})">${d}%</button>`).join('')}
+    </div></div>
+    <div class="fld"><span>Tenure</span><div class="chip-wrap">
+      ${[5, 10, 15, 20, 25].map(y => `<button class="chip ${e.yrs === y ? 'on' : ''}" onclick="window._emi.yrs=${y};renderEmi(${price})">${y} yrs</button>`).join('')}
+    </div></div>
+    <div class="card-block bill">
+      <div class="ck-line"><span>Loan amount</span><span>${lakh(P)}</span></div>
+      <div class="ck-line"><span>Interest rate</span><span>${rate}% p.a. (typical)</span></div>
+      <div class="ck-line grand"><span>Monthly EMI</span><span>${money(emi)}</span></div>
+      <div class="ck-line"><span>Total interest over ${e.yrs} yrs</span><span>${lakh(interest)}</span></div>
+    </div>
+    <div class="foot-note sm">Indicative only — final rates depend on your bank &amp; credit score.</div>`);
 }

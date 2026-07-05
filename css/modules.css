@@ -601,3 +601,11 @@
   .wiz-dots,.wiz-q,.fld,.fld-pair,.search-row,.seat-bar,.ticket-card{max-width:720px;margin-left:auto;margin-right:auto}
   .earn-hero p{max-width:460px}
 }
+
+/* ---------- depth pass: levels · stock tags · cancel ---------- */
+.lvl-bar{height:8px;background:var(--surface-2);border-radius:6px;overflow:hidden;margin:6px 0 8px}
+.lvl-bar i{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .4s}
+.out-tag{font-size:.6rem;font-weight:800;color:var(--chilli-700);background:var(--chilli-50);border-radius:5px;padding:2px 6px;margin-left:6px;font-style:normal}
+[data-theme="dark"] .out-tag{background:#33150D;color:#E06A4F}
+.btn-main.ghost.red{color:var(--red);border-color:var(--red)}
+.lnk.red{color:var(--red)}

@@ -192,9 +192,23 @@ function renderShopDash() {
     <div class="etile"><b>${M.items.length}</b><small>Items listed</small></div>
   </div>
 
+  ${done.length ? (() => { const days = [...Array(7)].map((_, i) => {
+      const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (6 - i));
+      const nx = d.getTime() + 86400000;
+      return { lbl: d.toLocaleDateString('en-IN', { weekday: 'narrow' }), amt: done.filter(o => o.ts >= d.getTime() && o.ts < nx).reduce((a, o) => a + o.total, 0) }; });
+    const mx = Math.max(...days.map(d => d.amt), 50);
+    return `<div class="card-block"><h3>${ic('chart', 14)} Sales — last 7 days</h3>
+      <div class="bars">${days.map(d => `<div class="bar"><i style="height:${Math.max(d.amt / mx * 100, 3)}%"></i><small>${d.lbl}</small></div>`).join('')}</div></div>`; })() : ''}
+
+  ${M.offer ? `<div class="offer-strip">${ic('gift', 13)} Live offer: <b>${esc(M.offer.label)}</b> — shown to nearby customers <button class="lnk red" onclick="S.myShop.offer=null;save();renderShopDash()">End</button></div>` : ''}
+
   <div class="btn-pair">
     <button class="btn-main sm alt" onclick="shopItemSheet()">+ Add item</button>
     <button class="btn-main sm ghost" onclick="go('storefront')">Preview my shop</button>
+  </div>
+  <div class="btn-pair">
+    <button class="btn-main sm ghost" onclick="offerSheet()">Create offer</button>
+    <button class="btn-main sm ghost" onclick="shareShop()">Share shop link</button>
   </div>
 
   ${!M.items.length ? `<div class="tip-strip">Add your first items — orders start coming once your shelf isn't empty!</div>` : ''}
@@ -205,12 +219,13 @@ function renderShopDash() {
   ${M.items.length ? `<div class="sec-head"><h2>Your shelf (${M.items.length})</h2></div>
   ${M.items.map((it, i) => `<div class="item-row slim">
       <div class="item-emoji">${icOr(it.emoji, 20)}</div>
-      <div class="item-info"><b>${esc(it.name)}</b><small>${esc(it.qty)}</small><div class="item-price">${money(it.price)}</div></div>
-      <div class="item-act"><button class="lnk" onclick="shopItemSheet(${i})">Edit</button>
+      <div class="item-info"><b>${esc(it.name)}</b>${it.out ? ' <em class="out-tag">Out of stock</em>' : ''}<small>${esc(it.qty)}</small><div class="item-price">${money(it.price)}</div></div>
+      <div class="item-act"><button class="lnk" onclick="S.myShop.items[${i}].out=!S.myShop.items[${i}].out;save();renderShopDash()">${it.out ? 'Restock' : 'Mark out'}</button>
+        <button class="lnk" onclick="shopItemSheet(${i})">Edit</button>
         <button class="lnk red" onclick="if(confirm('Remove ${esc(it.name)}?')){S.myShop.items.splice(${i},1);save();renderShopDash()}">Delete</button></div></div>`).join('')}` : ''}
 
   ${done.length ? `<div class="sec-head"><h2>Completed</h2></div>
-    ${done.slice(0, 6).map(o => `<div class="order-row static"><span class="or-emoji">✅</span>
+    ${done.slice(0, 6).map(o => `<div class="order-row static"><span class="or-emoji">${ic('check', 16)}</span>
       <div class="or-info"><b>${o.id} · ${esc(o.customer)}</b><small>${o.items.map(i => i.name).join(', ')}</small></div>
       <b class="ok">+${money(o.total)}</b></div>`).join('')}` : ''}`;
 
@@ -302,3 +317,31 @@ view('storefront', () => {
       : `<div class="empty"><span>🧺</span><b>Empty shelf</b><p>Add items from your dashboard.</p></div>`}
   </div>`;
 });
+
+
+/* ---------- offers & sharing ---------- */
+function offerSheet() {
+  window._offP = 0;
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Create an offer</h3>
+    <div class="fld"><span>Discount</span><div class="chip-wrap">
+      ${[10, 15, 20, 30, 50].map(p => `<button class="chip" onclick="window._offP=${p};$$('.sheet-body .chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${p}% off</button>`).join('')}
+    </div></div>
+    <label class="fld"><span>Minimum order (optional)</span><input class="txt" id="offMin" type="number" placeholder="e.g. 199"/></label>
+    <button class="btn-main wide" onclick="saveOffer()">Go live with offer</button>
+    <div class="foot-note sm">Offers show on your shop card — nearby customers see them instantly.</div>`);
+}
+function saveOffer() {
+  const p = window._offP;
+  if (!p) { toast('Pick a discount percentage'); return; }
+  const min = parseInt($('#offMin').value, 10) || 0;
+  S.myShop.offer = { pct: p, min, label: p + '% off' + (min ? ' above ' + money(min) : ' on everything') };
+  save(); closeSheet(); confettiBurst();
+  toast('Offer live: ' + S.myShop.offer.label);
+  renderShopDash();
+}
+function shareShop() {
+  const link = 'https://orignals.shop/#/storefront/' + encodeURIComponent(S.myShop.name.toLowerCase().replace(/\s+/g, '-'));
+  const done = () => toast('Link copied — share it on WhatsApp, status, anywhere');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, () => prompt('Copy your shop link:', link));
+  else prompt('Copy your shop link:', link);
+}

@@ -270,6 +270,14 @@ view('earnings', () => {
     <div class="etile"><b>${money(total)}</b><small>All time</small></div>
     <div class="etile"><b>${money(S.wallet.bal)}</b><small>Wallet</small></div>
   </div>
+  ${(() => { const j = S.partner.jobs;
+    const lv = j >= 25 ? ['Gold', 25, 50] : j >= 10 ? ['Silver', 10, 25] : ['Bronze', 0, 10];
+    const pct = Math.min((j - lv[1]) / (lv[2] - lv[1]) * 100, 100);
+    return `<div class="card-block">
+    <h3>${ic('star', 14)} Partner level — <b>${lv[0]}</b></h3>
+    <div class="lvl-bar"><i style="width:${pct}%"></i></div>
+    <small class="dim">${j >= 25 ? 'Top tier — priority jobs & festival bonuses unlocked' : `${lv[2] - j} more trips to ${lv[2] === 10 ? 'Silver (priority jobs)' : 'Gold (festival bonuses)'}`}</small>
+  </div>`; })()}
   <div class="card-block">
     <h3>Last 7 days</h3>
     <div class="bars">${days.map(d => `<div class="bar"><i style="height:${Math.max(d.amt / max * 100, 3)}%"></i><small>${d.lbl}</small></div>`).join('')}</div>
@@ -280,5 +288,28 @@ view('earnings', () => {
       <div class="or-info"><b>${esc(e.what)}</b><small>${new Date(e.ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>
       <b class="${e.pay ? 'ok' : 'dim'}">${e.pay ? '+' + money(e.pay) : 'SEVA'}</b></div>`).join('')
     : `<div class="empty"><span>${ic('cash', 40)}</span><b>No trips yet</b><p>Accept a job from the feed to start.</p></div>`}
-  <button class="btn-main wide ghost" onclick="toast('Cash-out to ${esc(S.partner.upi)} requested (demo)')">Cash out to UPI</button>`;
+  <button class="btn-main wide" onclick="withdrawSheet()">Withdraw to bank / UPI</button>`;
 });
+
+/* ---------- withdraw earnings (wallet -> bank) ---------- */
+function withdrawSheet() {
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Withdraw to bank</h3>
+    <div class="ck-line"><span>Wallet balance</span><span><b>${money(S.wallet.bal)}</b></span></div>
+    <label class="fld"><span>Amount (min ₹100)</span><input class="txt" id="wdAmt" type="number" inputmode="numeric" placeholder="500"/></label>
+    <label class="fld"><span>UPI ID</span><input class="txt" id="wdUpi" value="${esc(S.partner.upi || '')}" placeholder="name@bank"/></label>
+    <button class="btn-main wide" onclick="doWithdraw()">Withdraw instantly</button>
+    <div class="foot-note sm">0 fees · arrives in seconds (demo: deducted from wallet)</div>`);
+}
+function doWithdraw() {
+  const amt = parseInt($('#wdAmt').value, 10) || 0;
+  const upi = $('#wdUpi').value.trim();
+  if (amt < 100) { toast('Minimum withdrawal is ₹100'); return; }
+  if (amt > S.wallet.bal) { toast('That is more than your wallet balance'); return; }
+  if (!/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) { toast('Enter a valid UPI ID like name@bank'); return; }
+  S.partner.upi = upi;
+  walletPay(amt, 'Withdrawn to ' + upi);
+  closeSheet(); confettiBurst();
+  notify('Withdrawal successful', money(amt) + ' sent to ' + upi, 'cash');
+  toast(money(amt) + ' sent to ' + upi);
+  VIEWS.earnings([]);
+}

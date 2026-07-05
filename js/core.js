@@ -211,8 +211,19 @@ function orderStage(o) {
   for (let i = 0; i < times.length; i++) if (el >= times[i]) idx = i;
   return idx;
 }
-function orderDone(o) { return orderStage(o) >= FLOWS[o.flow].length - 1; }
-function orderStatus(o) { return FLOWS[o.flow][orderStage(o)]; }
+function orderDone(o) { return !!o.cancelled || orderStage(o) >= FLOWS[o.flow].length - 1; }
+function orderStatus(o) { return o.cancelled ? { t: 'Cancelled — refunded', e: 'x' } : FLOWS[o.flow][orderStage(o)]; }
+function canCancel(o) { return !o.cancelled && o.kind !== 'ride' && orderStage(o) < 2; }
+function cancelOrder(oid) {
+  const o = S.orders.find(x => x.id === oid);
+  if (!o || !canCancel(o)) { toast('Too late to cancel — already picked up'); return; }
+  o.cancelled = Date.now();
+  walletAdd(o.total, 'Refund · ' + o.id + ' · ' + o.title);
+  notify('Order cancelled', money(o.total) + ' refunded to your wallet instantly', 'x');
+  toast('Cancelled — ' + money(o.total) + ' refunded to wallet');
+  if (typeof renderTrack === 'function' && $('#trackWrap')) renderTrack(oid);
+  refreshChrome();
+}
 function activeOrders() { return S.orders.filter(o => !orderDone(o)); }
 
 /* poll: fire notifications when a stage advances; refresh live views */

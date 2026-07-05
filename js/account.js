@@ -70,6 +70,15 @@ view('account', () => {
       : `<button class="btn-main sm" onclick="buyMembership()">Activate — ₹99 (≈1 CHF)</button>`}
   </div>
 
+  ${(() => { if (!S.refCode) { S.refCode = 'ORIG-' + uid().slice(0, 5).toUpperCase(); save(); }
+    return `<div class="card-block">
+    <h3>${ic('gift', 15)} Refer &amp; earn — ₹50 each</h3>
+    <p class="movie-about">Share your code. When a friend joins and places their first order, you both get ₹50 in wallet.</p>
+    <div class="ck-coupon"><input value="${S.refCode}" readonly id="refCodeBox"/><button onclick="copyRef()">Copy</button></div>
+    ${S.refRedeemed ? `<div class="trust-row">${ic('check', 13)} Friend's code applied — ₹50 credited</div>`
+      : `<div class="ck-coupon" style="margin-top:8px"><input id="refIn" placeholder="Have a friend's code? ORIG-XXXXX"/><button onclick="redeemRef()">Apply</button></div>`}
+  </div>`; })()}
+
   <div class="sec-head"><h2>Your roles — one identity, every side</h2></div>
   <button class="role-row" onclick="setMode('buy')">
     <span>${ic('cart', 20)}</span><div><b>Buyer</b><small>Purity-verified food &amp; every shop nearby</small></div><em>Active</em></button>
@@ -123,4 +132,21 @@ function resetDemo() {
   if (!confirm('Reset everything? Wallet, orders, your shop, listings and partner profile will be cleared.')) return;
   localStorage.removeItem(OMNY_KEY);
   location.hash = ''; location.reload();
+}
+
+
+/* ---------- referral ---------- */
+function copyRef() {
+  const v = $('#refCodeBox').value;
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(v).then(() => toast('Code copied — share away!'));
+  else { $('#refCodeBox').select(); document.execCommand && document.execCommand('copy'); toast('Code copied'); }
+}
+function redeemRef() {
+  const v = ($('#refIn').value || '').trim().toUpperCase();
+  if (!/^ORIG-[A-Z0-9]{4,6}$/.test(v)) { toast('Codes look like ORIG-XXXXX'); return; }
+  if (v === S.refCode) { toast("That's your own code!"); return; }
+  S.refRedeemed = v;
+  walletAdd(50, 'Referral bonus · ' + v);
+  confettiBurst(); toast('₹50 added — your friend gets ₹50 too!');
+  VIEWS.account([]);
 }

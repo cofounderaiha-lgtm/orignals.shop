@@ -296,13 +296,15 @@ function renderTrack(oid) {
     <div class="ck-line grand"><span>Paid</span><span>${money(o.total)}</span></div>
   </div>
 
-  ${done && !o.rated ? `
+  ${o.cancelled ? `<div class="warn-strip">${ic('x', 13)} Cancelled — <b>${money(o.total)} refunded</b> to your wallet. No questions asked.</div>` : ''}
+  ${!done && canCancel(o) ? `<button class="btn-main wide ghost red" onclick="if(confirm('Cancel this order? Full ${money(o.total)} refunds to wallet instantly.'))cancelOrder('${o.id}')">Cancel order — full refund</button>` : ''}
+  ${done && !o.rated && !o.cancelled ? `
   <div class="card-block rate-block">
     <h3>Rate this ${o.kind === 'ride' ? 'ride' : 'delivery'}</h3>
     <div class="rate-stars">${[1,2,3,4,5].map(n => `<button onclick="rateOrder('${o.id}',${n})">☆</button>`).join('')}</div>
   </div>` : ''}
   ${done && o.rated ? `<div class="card-block"><h3>Thanks for rating ${'★'.repeat(o.rated)}</h3></div>` : ''}
-  ${done && o.kind === 'shop' ? `<button class="btn-main wide ghost" onclick="reorder('${o.id}')">Reorder the same</button>` : ''}
+  ${done && o.kind === 'shop' && !o.cancelled ? `<button class="btn-main wide ghost" onclick="reorder('${o.id}')">Reorder the same</button>` : ''}
   <button class="btn-main wide ghost" onclick="toast('Tell Mitra your issue — opening chat');setTimeout(()=>go('mitra'),600)">Need help with this order?</button>`;
 }
 
