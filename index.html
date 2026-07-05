@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="theme-color" content="#6d5ef4"/>
+<title>Orignals — Real. Verified. Nearby.</title>
+<meta name="description" content="Purity-verified food, every nearby shop, neighbour-powered delivery, rides, tickets, stays & property — one people-first platform."/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%236d5ef4'/%3E%3Cpath d='M12 5l1.7 5.3L19 12l-5.3 1.7L12 19l-1.7-5.3L5 12l5.3-1.7z' fill='white'/%3E%3C/svg%3E"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/app.css"/>
+<link rel="stylesheet" href="css/modules.css"/>
+</head>
+<body>
+
+<div class="frame">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="hd-row">
+      <div class="logo" onclick="go(S.mode==='earn'?'earn':'home')">
+        <svg class="logo-mark" width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="url(#lg)"/><path d="M12 5.2l1.6 5.2 5.2 1.6-5.2 1.6L12 18.8l-1.6-5.2L5.2 12l5.2-1.6z" fill="#fff"/><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d5ef4"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs></svg>
+        <span>Orig<b>nals</b></span>
+      </div>
+      <button class="loc-pill" onclick="pickAddress(()=>route())">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21.5s-7.2-6.2-7.2-11.3a7.2 7.2 0 0114.4 0C19.2 15.3 12 21.5 12 21.5z"/><circle cx="12" cy="10" r="2.6"/></svg>
+        <span id="locName">Home</span>
+      </button>
+      <nav class="hd-nav" id="hdNav"></nav>
+      <div class="hd-spacer"></div>
+      <button class="wallet-chip" onclick="go('wallet')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2" fill="currentColor"/></svg>
+        <span id="walletChip">₹0</span>
+      </button>
+      <button class="hd-ic" onclick="go('notifs')" title="Updates">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0112 0c0 4.8 2 6 2 6H4s2-1.2 2-6z"/><path d="M10.3 19.5a2 2 0 003.4 0"/></svg>
+        <span id="bellDot"></span>
+      </button>
+      <button class="hd-ic" onclick="toggleTheme()" title="Light / dark" id="themeBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 13.5A8.5 8.5 0 1110.5 4a7 7 0 009.5 9.5z"/></svg>
+      </button>
+    </div>
+    <div class="mode-toggle buy" id="modeToggle">
+      <button onclick="setMode('buy')">Buy</button>
+      <button onclick="setMode('earn')">Earn</button>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main id="view" class="view-in"></main>
+
+  <!-- CART BUBBLE -->
+  <div class="cart-bubble" id="cartBubble" onclick="go('cart')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l1.5 13.5h-15z"/><path d="M9 10V6a3 3 0 016 0v4"/></svg>
+    <div><b><span id="cartBubbleCount">0</span> items in basket</b><small>Tap to review &amp; pay</small></div>
+    <em id="cartBubbleTotal">₹0</em>
+  </div>
+
+  <!-- BOTTOM NAV (mobile) -->
+  <nav class="bnav">
+    <button class="bnav-item" data-v="home" onclick="go(S.mode==='earn'?'earn':'home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/></svg>Home</button>
+    <button class="bnav-item" data-v="shops" onclick="go('shops')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7L6 3h12l1.5 4"/><path d="M4 7h16v2.6a2.6 2.6 0 01-5.2 0 2.7 2.7 0 01-5.4 0A2.6 2.6 0 014 9.6z"/><path d="M5.5 12.5V21h13v-8.5"/></svg>Nearby</button>
+    <button class="bnav-mitra" onclick="go('mitra')">
+      <i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5l2.3 6.9 7.2 2.6-7.2 2.6L12 21.5l-2.3-6.9-7.2-2.6 7.2-2.6z"/></svg></i>Mitra</button>
+    <button class="bnav-item" data-v="orders" onclick="go('orders')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5L10 21l-2-1.5L6 21z"/><path d="M9.5 8h5M9.5 12h5"/></svg>Orders</button>
+    <button class="bnav-item" data-v="account" onclick="go('account')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5a7 7 0 0114 0"/></svg>You</button>
+  </nav>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM SHEET -->
+<div class="sheet-wrap" id="sheetWrap">
+  <div class="sheet-backdrop" onclick="closeSheet()"></div>
+  <div class="sheet"><div class="sheet-body" id="sheetBody"></div></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/core.js"></script>
+<script src="js/home.js"></script>
+<script src="js/shops.js"></script>
+<script src="js/send.js"></script>
+<script src="js/rides.js"></script>
+<script src="js/tickets.js"></script>
+<script src="js/estate.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/earn.js"></script>
+<script src="js/myshop.js"></script>
+<script src="js/mitra.js"></script>
+<script src="js/account.js"></script>
+</body>
+</html>
