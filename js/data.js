@@ -20,7 +20,7 @@ const DB = {
 
   /* ---------- NEARBY SHOPS (every shop in India can be here) ---------- */
   shops: [
-    { id:'sh1', name:'Prakriti Organic Store', type:'organic', emoji:'🌿', grad:['#052e16','#16a34a'],
+    { id:'sh1', name:'Prakriti Organic Store', type:'organic', emoji:'🌿', grad:['#0F3B21','#1A5632'],
       rating:4.7, ratings:'2.1K', km:0.4, time:12, open:true, delivery:'partner', veg:true,
       offer:'FRESH20 — ₹20 off above ₹149', tag:'Certified organic · Farm direct',
       items:[
@@ -33,7 +33,7 @@ const DB = {
         { id:'o7', name:'Organic Moong Dal', qty:'500 g', price:92, mrp:110, emoji:'🫘', veg:true },
         { id:'o8', name:'Wood-Pressed Ghee', qty:'250 ml', price:390, mrp:450, emoji:'🧈', veg:true }
       ]},
-    { id:'sh2', name:'Sharma Kirana & General', type:'grocery', emoji:'🛒', grad:['#1e3a8a','#3b82f6'],
+    { id:'sh2', name:'Sharma Kirana & General', type:'grocery', emoji:'🛒', grad:['#0F3B21','#1A5632'],
       rating:4.4, ratings:'5.4K', km:0.2, time:9, open:true, delivery:'partner', veg:true,
       offer:'Free delivery above ₹199', tag:'Your neighbourhood kirana since 1998',
       items:[
@@ -48,7 +48,7 @@ const DB = {
         { id:'k9', name:'Iodised Salt', qty:'1 kg', price:24, mrp:28, emoji:'🧂', veg:true },
         { id:'k10', name:'Dish Wash Gel', qty:'500 ml', price:99, mrp:115, emoji:'🧴', veg:true }
       ]},
-    { id:'sh3', name:'Biryani Junction', type:'food', emoji:'🍛', grad:['#7c2d12','#ea580c'],
+    { id:'sh3', name:'Biryani Junction', type:'food', emoji:'🍛', grad:['#0F3B21','#1A5632'],
       rating:4.5, ratings:'12K', km:1.1, time:28, open:true, delivery:'partner', veg:false,
       offer:'FOOD50 — ₹50 off above ₹299', tag:'Dum biryani · Kebabs · Since 1996',
       items:[
@@ -58,7 +58,7 @@ const DB = {
         { id:'f4', name:'Chicken 65', qty:'8 pcs', price:189, emoji:'🍗', veg:false, desc:'Fiery fried chicken, curry leaves & chilli.' },
         { id:'f5', name:'Phirni', qty:'1 cup', price:99, emoji:'🍮', veg:true, desc:'Chilled rice pudding, cardamom, pistachio.' }
       ]},
-    { id:'sh4', name:'Dakshin Tiffins', type:'food', emoji:'🥞', grad:['#14532d','#16a34a'],
+    { id:'sh4', name:'Dakshin Tiffins', type:'food', emoji:'🥞', grad:['#0F3B21','#1A5632'],
       rating:4.6, ratings:'15K', km:0.7, time:20, open:true, delivery:'self', veg:true,
       offer:'20% off up to ₹120', tag:'Pure veg · Delivers itself',
       items:[
@@ -68,7 +68,7 @@ const DB = {
         { id:'f9', name:'Curd Rice', qty:'Serves 1', price:89, emoji:'🍚', veg:true, desc:'Tempered curd rice with pomegranate.' },
         { id:'f10', name:'Filter Coffee', qty:'180 ml', price:49, emoji:'☕', veg:true, desc:'Frothy decoction coffee, davara set.' }
       ]},
-    { id:'sh5', name:'Burger Republic', type:'food', emoji:'🍔', grad:['#713f12','#f59e0b'],
+    { id:'sh5', name:'Burger Republic', type:'food', emoji:'🍔', grad:['#0F3B21','#1A5632'],
       rating:4.4, ratings:'10K', km:1.8, time:24, open:true, delivery:'partner', veg:false,
       offer:'Free fries above ₹399', tag:'Smashed patties · Hand-spun shakes',
       items:[
@@ -77,7 +77,7 @@ const DB = {
         { id:'f13', name:'Peri Peri Fries', qty:'Regular', price:129, emoji:'🍟', veg:true, bestseller:true, desc:'Skin-on fries dusted with peri peri.' },
         { id:'f14', name:'Thick Oreo Shake', qty:'400 ml', price:169, emoji:'🥤', veg:true, desc:'Hand-spun shake with crushed cookies.' }
       ]},
-    { id:'sh6', name:'Sanjeevani Medicals', type:'pharmacy', emoji:'💊', grad:['#134e4a','#0d9488'],
+    { id:'sh6', name:'Sanjeevani Medicals', type:'pharmacy', emoji:'💊', grad:['#0F3B21','#1A5632'],
       rating:4.8, ratings:'3.2K', km:0.5, time:14, open:true, delivery:'both', veg:true,
       offer:'15% off on wellness', tag:'Licensed pharmacy · Open till 11 pm',
       items:[
@@ -88,7 +88,7 @@ const DB = {
         { id:'p5', name:'Band-Aid Strips', qty:'20 pcs', price:45, mrp:55, emoji:'🩹' },
         { id:'p6', name:'ORS Sachets', qty:'5 pcs', price:60, mrp:70, emoji:'🥤' }
       ]},
-    { id:'sh7', name:'Threads of Bharat', type:'fashion', emoji:'👗', grad:['#831843','#ec4899'],
+    { id:'sh7', name:'Threads of Bharat', type:'fashion', emoji:'👗', grad:['#0F3B21','#1A5632'],
       rating:4.5, ratings:'1.8K', km:2.3, time:35, open:true, delivery:'self', veg:true,
       offer:'Flat 30% off festive wear', tag:'Handloom · Local weavers',
       items:[
@@ -98,7 +98,7 @@ const DB = {
         { id:'t4', name:'Block-Print Dupatta', qty:'2.4 m', price:499, mrp:750, emoji:'🧣' },
         { id:'t5', name:'Nehru Jacket', qty:'M–XL', price:1299, mrp:1900, emoji:'🧥' }
       ]},
-    { id:'sh8', name:'Voltify Electronics', type:'electronics', emoji:'🔌', grad:['#1e1b4b','#4338ca'],
+    { id:'sh8', name:'Voltify Electronics', type:'electronics', emoji:'🔌', grad:['#0F3B21','#1A5632'],
       rating:4.3, ratings:'4.6K', km:1.4, time:26, open:true, delivery:'both', veg:true,
       offer:'SAVE100 — ₹100 off above ₹999', tag:'Genuine products · GST billing',
       items:[
@@ -109,7 +109,7 @@ const DB = {
         { id:'e5', name:'Bluetooth Speaker 16W', qty:'1 unit', price:1899, mrp:3299, emoji:'🔊' },
         { id:'e6', name:'Power Bank 20000 mAh', qty:'1 unit', price:1599, mrp:2799, emoji:'🔋' }
       ]},
-    { id:'sh9', name:'Glaze & Crumb Bakery', type:'food', emoji:'🍰', grad:['#581c87','#a855f7'],
+    { id:'sh9', name:'Glaze & Crumb Bakery', type:'food', emoji:'🍰', grad:['#0F3B21','#1A5632'],
       rating:4.7, ratings:'5K', km:0.9, time:18, open:true, delivery:'both', veg:true,
       offer:'Dessert combo at ₹199', tag:'Fresh bakes every 4 hours',
       items:[
@@ -118,7 +118,7 @@ const DB = {
         { id:'b3', name:'Choco Lava Cake', qty:'1 pc', price:119, emoji:'🍫', veg:true, desc:'Molten-centre cake, served warm.' },
         { id:'b4', name:'Fresh Fruit Cake 500g', qty:'500 g', price:449, emoji:'🎂', veg:true, bestseller:true, desc:'Seasonal fruits on vanilla sponge.' }
       ]},
-    { id:'sh10', name:'Pushpa Flower Mart', type:'flowers', emoji:'💐', grad:['#7f1d1d','#f43f5e'],
+    { id:'sh10', name:'Pushpa Flower Mart', type:'flowers', emoji:'💐', grad:['#0F3B21','#1A5632'],
       rating:4.6, ratings:'980', km:0.6, time:15, open:true, delivery:'partner', veg:true,
       offer:'Same-hour delivery', tag:'Temple fresh · Event decor',
       items:[
@@ -128,7 +128,7 @@ const DB = {
         { id:'fl4', name:'Lotus (5)', qty:'5 stems', price:120, emoji:'🪷' },
         { id:'fl5', name:'Mixed Basket Deluxe', qty:'1 pc', price:799, mrp:999, emoji:'💐' }
       ]},
-    { id:'sh11', name:'AgroHarvest Wholesale', type:'wholesale', emoji:'🏭', grad:['#431407','#c2410c'],
+    { id:'sh11', name:'AgroHarvest Wholesale', type:'wholesale', emoji:'🏭', grad:['#0F3B21','#1A5632'],
       rating:4.4, ratings:'2.1K', km:3.8, time:120, open:true, delivery:'self', veg:true, b2b:true,
       offer:'GST invoice · Credit for regulars', tag:'Bulk grains & spices · MOQ pricing',
       items:[
@@ -138,7 +138,7 @@ const DB = {
         { id:'w4', name:'Basmati 1121 Steam', qty:'per kg', price:98, moq:100, emoji:'🌾', bestseller:true },
         { id:'w5', name:'Kashmiri Chilli Whole', qty:'per kg', price:310, moq:25, emoji:'🌶️' }
       ]},
-    { id:'sh12', name:'PackWell Traders', type:'wholesale', emoji:'📦', grad:['#0c4a6e','#0284c7'],
+    { id:'sh12', name:'PackWell Traders', type:'wholesale', emoji:'📦', grad:['#0F3B21','#1A5632'],
       rating:4.6, ratings:'1.4K', km:4.5, time:180, open:true, delivery:'both', veg:true, b2b:true,
       offer:'Custom printing available', tag:'Packaging for shops & sellers · MOQ pricing',
       items:[
@@ -147,7 +147,7 @@ const DB = {
         { id:'w8', name:'Food Containers 500 ml', qty:'per pc', price:4.8, moq:500, emoji:'🥡', bestseller:true },
         { id:'w9', name:'BOPP Tape Rolls', qty:'per pc', price:38, moq:72, emoji:'🎗️' }
       ]},
-    { id:'sh13', name:'Green Bowl Co.', type:'food', emoji:'🥗', grad:['#052e16','#22c55e'],
+    { id:'sh13', name:'Green Bowl Co.', type:'food', emoji:'🥗', grad:['#0F3B21','#1A5632'],
       rating:4.5, ratings:'4K', km:1.6, time:21, open:true, delivery:'partner', veg:true,
       offer:'Free smoothie above ₹499', tag:'Salads · Bowls · No refined sugar',
       items:[
@@ -155,7 +155,7 @@ const DB = {
         { id:'f16', name:'Grilled Chicken Bowl', qty:'Serves 1', price:349, emoji:'🍗', veg:false, desc:'Herb chicken, brown rice, charred broccoli.' },
         { id:'f17', name:'Berry Blast Smoothie', qty:'400 ml', price:189, emoji:'🫐', veg:true, desc:'Mixed berries, yogurt, chia — no added sugar.' }
       ]},
-    { id:'sh14', name:'Kitab Corner', type:'fashion', emoji:'📚', grad:['#312e81','#6366f1'],
+    { id:'sh14', name:'Kitab Corner', type:'fashion', emoji:'📚', grad:['#0F3B21','#1A5632'],
       rating:4.8, ratings:'760', km:1.2, time:22, open:false, delivery:'self', veg:true,
       offer:'Old books exchange', tag:'Books & stationery · Opens 10 am',
       items:[
@@ -228,7 +228,7 @@ const DB = {
 
   /* ---------- STORE THEMES (Your Shop) ---------- */
   storeThemes: [
-    { id:'mint', name:'Mint Fresh', bg:'#f0fdf4', ink:'#14532d', accent:'#16a34a', desc:'Clean & organic' },
+    { id:'mint', name:'Mint Fresh', bg:'#f0fdf4', ink:'#14532d', accent:'#1A5632', desc:'Clean & organic' },
     { id:'noir', name:'Noir Luxe',  bg:'#101014', ink:'#f4f2ee', accent:'#d4af37', desc:'Premium boutique' },
     { id:'sun',  name:'Sunset Pop', bg:'#fff7ed', ink:'#431407', accent:'#f97316', desc:'Warm & playful' }
   ],
@@ -264,38 +264,38 @@ const DB = {
   /* ---------- MOVIES (invented titles — no real brands) ---------- */
   movies: [
     { id:'mv1', title:'Monsoon Express', genre:'Action · Thriller', lang:'Hindi', cert:'UA', mins:148, rating:8.4, votes:'42K',
-      grad:['#0f172a','#1d4ed8'], tag:'IMAX · 2D', times:['10:15 AM','1:30 PM','6:30 PM','9:45 PM'],
+      grad:['#0F3B21','#1A5632'], tag:'IMAX · 2D', times:['10:15 AM','1:30 PM','6:30 PM','9:45 PM'],
       about:'A railway cop races a cyclone and a conspiracy across 1,400 km of flooded tracks.' },
     { id:'mv2', title:'Dil Ki Gali', genre:'Romance · Drama', lang:'Hindi', cert:'U', mins:136, rating:7.9, votes:'28K',
-      grad:['#4a044e','#db2777'], tag:'2D', times:['11:00 AM','2:15 PM','7:00 PM','10:15 PM'],
+      grad:['#0F3B21','#1A5632'], tag:'2D', times:['11:00 AM','2:15 PM','7:00 PM','10:15 PM'],
       about:'Two street food rivals in Old Delhi discover their grandmothers were once best friends.' },
     { id:'mv3', title:'Project Garuda', genre:'Sci-Fi · Adventure', lang:'Hindi · Eng', cert:'UA', mins:162, rating:8.9, votes:'71K',
-      grad:['#022c22','#0d9488'], tag:'3D · IMAX', times:['9:30 AM','12:45 PM','4:30 PM','8:30 PM'],
+      grad:['#0F3B21','#1A5632'], tag:'3D · IMAX', times:['9:30 AM','12:45 PM','4:30 PM','8:30 PM'],
       about:'India\'s first deep-space rescue — a lone pilot, a failing station, ninety minutes of orbit left.' },
     { id:'mv4', title:'Chhota Champion', genre:'Family · Sports', lang:'Hindi', cert:'U', mins:124, rating:8.1, votes:'19K',
-      grad:['#431407','#ea580c'], tag:'2D', times:['10:00 AM','1:00 PM','5:15 PM','8:00 PM'],
+      grad:['#0F3B21','#1A5632'], tag:'2D', times:['10:00 AM','1:00 PM','5:15 PM','8:00 PM'],
       about:'A 12-year-old kabaddi prodigy takes her village team to the national finals.' },
     { id:'mv5', title:'The Silent Ledger', genre:'Crime · Mystery', lang:'English', cert:'A', mins:141, rating:8.6, votes:'33K',
-      grad:['#1c1917','#78716c'], tag:'2D · Dolby', times:['12:00 PM','3:30 PM','7:45 PM','10:45 PM'],
+      grad:['#0F3B21','#1A5632'], tag:'2D · Dolby', times:['12:00 PM','3:30 PM','7:45 PM','10:45 PM'],
       about:'A forensic accountant finds one rupee that shouldn\'t exist — and unravels a billion.' },
     { id:'mv6', title:'Raag & Rhythm', genre:'Musical · Drama', lang:'Tamil · Hindi', cert:'U', mins:152, rating:8.2, votes:'24K',
-      grad:['#312e81','#8b5cf6'], tag:'2D', times:['11:30 AM','3:00 PM','6:45 PM','9:30 PM'],
+      grad:['#0F3B21','#1A5632'], tag:'2D', times:['11:30 AM','3:00 PM','6:45 PM','9:30 PM'],
       about:'A classical vocalist and a street rapper are forced to compose one song together.' }
   ],
 
   /* ---------- EVENTS ---------- */
   events: [
     { id:'ev1', title:'Laugh Riot — Standup Night', cat:'Comedy', venue:'The Attic, MG Road', when:'Sat, 8:00 PM', price:499,
-      img:'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=800&q=60&auto=format&fit=crop', grad:['#431407','#f59e0b'],
+      img:'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=800&q=60&auto=format&fit=crop', grad:['#0F3B21','#1A5632'],
       about:'90 minutes, 4 comics, zero mercy. Age 16+.' },
     { id:'ev2', title:'Indie Sundowner Concert', cat:'Music', venue:'Lakeside Amphitheatre', when:'Sun, 5:30 PM', price:799,
-      img:'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=60&auto=format&fit=crop', grad:['#312e81','#6d5ef4'],
+      img:'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=60&auto=format&fit=crop', grad:['#0F3B21','#1A5632'],
       about:'5 indie bands, open lawns, food trucks by the lake.' },
     { id:'ev3', title:'Big Match — Giant Screening', cat:'Sports', venue:'Grand Stadium, Gate 4', when:'Sat, 7:00 PM', price:299,
-      img:'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&q=60&auto=format&fit=crop', grad:['#052e16','#16a34a'],
+      img:'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&q=60&auto=format&fit=crop', grad:['#0F3B21','#1A5632'],
       about:'The final, on a 60-ft screen, with 5,000 fans.' },
     { id:'ev4', title:'Street Food Carnival', cat:'Food Fest', venue:'Central Mall Grounds', when:'Sat–Sun, 12 PM on', price:199,
-      img:'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=60&auto=format&fit=crop', grad:['#7f1d1d','#f43f5e'],
+      img:'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=60&auto=format&fit=crop', grad:['#0F3B21','#1A5632'],
       about:'60 stalls, 12 states, one entry band. Kids free.' }
   ],
 

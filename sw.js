@@ -1,5 +1,5 @@
 /* Orignals service worker — offline shell so the installed app always opens */
-const CACHE = 'orignals-v1';
+const CACHE = 'orignals-v2';
 const SHELL = [
   './index.html', './css/app.css', './css/modules.css',
   './js/data.js', './js/icons.js', './js/core.js', './js/home.js', './js/shops.js',

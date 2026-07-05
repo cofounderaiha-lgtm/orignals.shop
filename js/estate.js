@@ -20,7 +20,7 @@ view('estate', args => {
     <div class="tip-strip">${ic('shield', 13)} Every listing is GPS-pinned &amp; document-checked — precise location, zero fake listings.</div>
     ${list.length ? `<div class="prop-list">${list.map(p => `
       <div class="prop-card">
-        <div class="prop-img" style="background:linear-gradient(135deg,#1e293b,#475569)">
+        <div class="prop-img">
           ${p.img ? `<img src="${p.img}" alt="" loading="lazy" onerror="this.remove()"/>` : `<span class="tile-ic">${ic('home', 34)}</span>`}
           ${p.verified ? `<em class="prop-verified">${ic('shield', 11)} Verified</em>` : ''}
         </div>
@@ -46,7 +46,7 @@ view('estate', args => {
     <div class="prop-list">
       ${DB.hotels.map(h => `
       <div class="prop-card">
-        <div class="prop-img" style="background:linear-gradient(135deg,#0c1a2b,#0e7490)">
+        <div class="prop-img">
           ${h.img ? `<img src="${h.img}" alt="" loading="lazy" onerror="this.remove()"/>` : `<span class="tile-ic">${ic('home', 34)}</span>`}
           <em class="prop-verified">${'★'.repeat(h.star)} ${h.rating} (${h.ratings})</em>
         </div>

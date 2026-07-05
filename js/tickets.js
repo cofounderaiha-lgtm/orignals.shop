@@ -33,7 +33,7 @@ view('tickets', args => {
     <div class="movie-grid">
       ${list.map(m => `
       <div class="movie-card" onclick="go('movie/${m.id}')">
-        <div class="poster" style="background:linear-gradient(150deg,${m.grad[0]},${m.grad[1]})">
+        <div class="poster">
           <b>${esc(m.title)}</b><small>${esc(m.tag)}</small>
           <span class="poster-rate">★ ${m.rating}</span>
         </div>
@@ -50,7 +50,7 @@ view('tickets', args => {
     body = `<div class="event-list">
       ${DB.events.map(e => `
       <div class="event-card" onclick="eventSheet('${e.id}')">
-        <div class="event-img" style="background:linear-gradient(135deg,${e.grad[0]},${e.grad[1]})">
+        <div class="event-img">
           ${e.img ? `<img src="${e.img}" alt="" loading="lazy" onerror="this.remove()"/>` : ''}
           <em>${esc(e.cat)}</em></div>
         <div class="event-body">
@@ -108,7 +108,7 @@ view('movie', args => {
   if (!m) { go('tickets'); return; }
   window._tkDate = window._tkDate || tkDates()[0].key;
   $('#view').innerHTML = `
-  <div class="shop-hero" style="background:linear-gradient(135deg,${m.grad[0]},${m.grad[1]})">
+  <div class="shop-hero">
     <button class="back glass" onclick="go('tickets')">${ic('chevl', 16)}</button>
     <div class="movie-hero"><b>${esc(m.title)}</b><small>${esc(m.tag)} · ★ ${m.rating} (${m.votes})</small></div>
   </div>
@@ -227,7 +227,7 @@ view('ticket', args => {
   <div class="page-head"><button class="back" onclick="go('tickets/mine')">${ic('chevl', 16)}</button>
     <div><h1>Your ticket</h1><small>Show this at entry — that's it</small></div></div>
   <div class="ticket-card">
-    <div class="ticket-top" style="background:linear-gradient(135deg,${t.grad ? t.grad[0] : '#312e81'},${t.grad ? t.grad[1] : '#6d5ef4'})">
+    <div class="ticket-top">
       <b>${esc(t.title)}</b><small>${esc(t.sub)}</small></div>
     <div class="ticket-mid">
       ${qrSVG(t.id)}

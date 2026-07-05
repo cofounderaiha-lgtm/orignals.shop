@@ -10,7 +10,7 @@ function deliveryBadge(shop) {
 
 function shopTile(s, big) {
   const img = DB.shopImgs[s.id];
-  return `<div class="shop-tile ${big ? 'big' : ''}" style="background:linear-gradient(135deg,${s.grad[0]},${s.grad[1]})">
+  return `<div class="shop-tile ${big ? 'big' : ''}">
     <span class="tile-ic">${typeIcon(s.type, big ? 40 : 28)}</span>
     ${img ? `<img src="${img}" alt="" loading="lazy" onerror="this.remove()"/>` : ''}
     ${!big ? `<span class="rate on-img">★ ${s.rating}</span>` : ''}
@@ -90,7 +90,7 @@ view('shop', args => {
     </div>`;
 
   $('#view').innerHTML = `
-  <div class="shop-hero" style="background:linear-gradient(135deg,${s.grad[0]},${s.grad[1]})">
+  <div class="shop-hero">
     ${DB.shopImgs[s.id] ? `<img src="${DB.shopImgs[s.id]}" alt="" onerror="this.remove()"/>` : ''}
     <button class="back glass" onclick="go('shops')">${ic('chevl', 16)}</button>
     <span class="shop-hero-ic">${typeIcon(s.type, 42)}</span>
@@ -265,13 +265,13 @@ function renderTrack(oid) {
 
   <div class="track-map">
     <svg viewBox="0 0 400 190">
-      <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6d5ef4"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs>
+      <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1A5632"/><stop offset="1" stop-color="#0F3B21"/></linearGradient></defs>
       ${[0,1,2,3,4,5].map(i => `<line x1="${i*80}" y1="0" x2="${i*80}" y2="190" class="grid"/>`).join('')}
       ${[0,1,2,3].map(i => `<line x1="0" y1="${i*63}" x2="400" y2="${i*63}" class="grid"/>`).join('')}
       <path d="M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60" class="route-bg"/>
       <path d="M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60" class="route" style="stroke-dasharray:420;stroke-dashoffset:${420 - 420 * prog}"/>
-      <circle cx="40" cy="150" r="7" fill="#16a34a"/><text x="40" y="175" class="map-lbl">${o.kind === 'ride' ? 'Pickup' : 'Shop'}</text>
-      <circle cx="360" cy="60" r="7" fill="#ef4444"/><text x="360" y="40" class="map-lbl">${o.kind === 'ride' ? 'Drop' : 'You'}</text>
+      <circle cx="40" cy="150" r="7" fill="#1A5632"/><text x="40" y="175" class="map-lbl">${o.kind === 'ride' ? 'Pickup' : 'Shop'}</text>
+      <circle cx="360" cy="60" r="7" fill="#C84B31"/><text x="360" y="40" class="map-lbl">${o.kind === 'ride' ? 'Drop' : 'You'}</text>
       <g style="offset-path:path('M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60');offset-distance:${prog * 100}%" class="mover">
         <circle r="12" fill="url(#rg)"/>${icNested('bike', 13)}</g>
     </svg>

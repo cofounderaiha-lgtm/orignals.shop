@@ -107,7 +107,7 @@ function closeSheet() {
 /* ---------- confetti ---------- */
 function confettiBurst() {
   const c = document.createElement('div'); c.className = 'confetti';
-  const colors = ['#6d5ef4', '#f59e0b', '#16a34a', '#ec4899', '#0ea5e9'];
+  const colors = ['#1A5632', '#E8A020', '#67C48D', '#C84B31', '#F1EADC'];
   for (let i = 0; i < 34; i++) {
     const p = document.createElement('i');
     p.style.cssText = `left:${rnd(5, 95)}%;background:${pick(colors)};animation-delay:${Math.random() * .5}s;animation-duration:${1.4 + Math.random()}s;transform:rotate(${rnd(0, 360)}deg)`;

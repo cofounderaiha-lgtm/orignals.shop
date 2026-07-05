@@ -285,7 +285,7 @@ view('storefront', () => {
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="go('myshop')">←</button>
     <div><h1>Customer view 👁</h1><small>This is how ${esc(M.name)} appears to buyers nearby</small></div></div>
-  <div class="shop-hero" style="background:linear-gradient(135deg,#312e81,#6d5ef4)">
+  <div class="shop-hero">
     <span class="shop-hero-emoji">${cat ? cat.emoji : '🏪'}</span>
   </div>
   <div class="shop-sheet">

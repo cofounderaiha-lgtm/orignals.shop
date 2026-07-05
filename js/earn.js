@@ -212,10 +212,10 @@ function renderActiveJob() {
       ${[0,1,2,3,4,5].map(i => `<line x1="${i*80}" y1="0" x2="${i*80}" y2="190" class="grid"/>`).join('')}
       <path d="M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60" class="route-bg"/>
       <path d="M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60" class="route" style="stroke-dasharray:420;stroke-dashoffset:${420 - 420 * prog}"/>
-      <circle cx="40" cy="150" r="7" fill="#16a34a"/><text x="40" y="175" class="map-lbl">Pickup</text>
-      <circle cx="360" cy="60" r="7" fill="#ef4444"/><text x="360" y="40" class="map-lbl">Drop</text>
+      <circle cx="40" cy="150" r="7" fill="#1A5632"/><text x="40" y="175" class="map-lbl">Pickup</text>
+      <circle cx="360" cy="60" r="7" fill="#C84B31"/><text x="360" y="40" class="map-lbl">Drop</text>
       <g style="offset-path:path('M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60');offset-distance:${prog * 100}%" class="mover">
-        <circle r="12" fill="#16a34a"/>${icNested(VEH_ICON[S.partner.veh] || 'bike', 13)}</g>
+        <circle r="12" fill="#1A5632"/>${icNested(VEH_ICON[S.partner.veh] || 'bike', 13)}</g>
     </svg>
   </div>
 

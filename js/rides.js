@@ -21,9 +21,9 @@ function renderRide() {
       ${[0,1,2,3,4,5].map(i => `<line x1="${i*80}" y1="0" x2="${i*80}" y2="170" class="grid"/>`).join('')}
       ${[0,1,2].map(i => `<line x1="0" y1="${i*85}" x2="400" y2="${i*85}" class="grid"/>`).join('')}
       ${RIDE.to ? `<path d="M60 130 C 150 130, 160 40, 250 40 S 340 90, 350 55" class="route"/>` : ''}
-      <circle cx="60" cy="130" r="7" fill="#16a34a"/>
-      ${RIDE.to ? `<circle cx="350" cy="55" r="7" fill="#ef4444"/>` : ''}
-      ${[[110, 60], [210, 120], [300, 100], [160, 30]].map(m => `<g class="cab-float" transform="translate(${m[0]},${m[1]})"><circle r="10" fill="#6d5ef4" opacity=".9"/>${icNested('bike', 11)}</g>`).join('')}
+      <circle cx="60" cy="130" r="7" fill="#1A5632"/>
+      ${RIDE.to ? `<circle cx="350" cy="55" r="7" fill="#C84B31"/>` : ''}
+      ${[[110, 60], [210, 120], [300, 100], [160, 30]].map(m => `<g class="cab-float" transform="translate(${m[0]},${m[1]})"><circle r="10" fill="#1A5632" opacity=".9"/>${icNested('bike', 11)}</g>`).join('')}
     </svg>
     ${RIDE.to ? `<div class="eta-pill">${km.toFixed(1)} km · ~${Math.round(km * 3 + 4)} min</div>` : ''}
   </div>

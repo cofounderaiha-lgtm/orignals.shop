@@ -35,16 +35,16 @@ view('home', () => {
 
   <div id="activeStrip" class="active-strip">${activeStripHTML()}</div>
 
+  <!-- 3-tint category system (spec §6): commerce=leaf · movement=haldi · lifestyle=cream -->
   <div class="svc-grid">
-    <button class="svc" onclick="go('shops')"><span class="svc-ic" style="--c:#6d5ef4">${ic('store', 21)}</span><b>Shops Nearby</b><small>Buy from any shop</small></button>
-    <button class="svc" onclick="go('send')"><span class="svc-ic" style="--c:#0ea5e9">${ic('package', 21)}</span><b>Send Anything</b><small>Tiffin to truck-load</small></button>
-    <button class="svc" onclick="go('ride')"><span class="svc-ic" style="--c:#f59e0b">${ic('bike', 21)}</span><b>Rides</b><small>Bike · Auto · Car</small></button>
-    <button class="svc" onclick="go('tickets')"><span class="svc-ic" style="--c:#e11d48">${ic('star', 21)}</span><b>Movies & Events</b><small>Book seats live</small></button>
-    <button class="svc" onclick="go('tickets/dining')"><span class="svc-ic" style="--c:#ea580c">${ic('bowl', 21)}</span><b>Dining</b><small>Reserve a table</small></button>
-    <button class="svc" onclick="go('estate')"><span class="svc-ic" style="--c:#0891b2">${ic('home', 21)}</span><b>Property & Stays</b><small>Buy · rent · hotels</small></button>
-    <button class="svc" onclick="setMode('earn')"><span class="svc-ic" style="--c:#16a34a">${ic('users', 21)}</span><b>Earn</b><small>Deliver as you go</small></button>
-    <button class="svc" onclick="go('myshop')"><span class="svc-ic" style="--c:#ec4899">${ic('chart', 21)}</span><b>Your Shop</b><small>Sell on Orignals</small></button>
-    <button class="svc" onclick="go('wallet')"><span class="svc-ic" style="--c:#8b5cf6">${ic('wallet', 21)}</span><b>Wallet</b><small>${money(S.wallet.bal)}</small></button>
+    <button class="svc t-com" onclick="go('shops')"><span class="svc-ic">${ic('store', 21)}</span><b>Shops Nearby</b><small>Buy from any shop</small></button>
+    <button class="svc t-move" onclick="go('send')"><span class="svc-ic">${ic('package', 21)}</span><b>Send Anything</b><small>Tiffin to truck-load</small></button>
+    <button class="svc t-move" onclick="go('ride')"><span class="svc-ic">${ic('bike', 21)}</span><b>Rides</b><small>Bike · Auto · Car</small></button>
+    <button class="svc t-life" onclick="go('tickets')"><span class="svc-ic">${ic('star', 21)}</span><b>Movies & Events</b><small>Book seats live</small></button>
+    <button class="svc t-com" onclick="go('tickets/dining')"><span class="svc-ic">${ic('bowl', 21)}</span><b>Dining</b><small>Reserve a table</small></button>
+    <button class="svc t-life" onclick="go('estate')"><span class="svc-ic">${ic('home', 21)}</span><b>Property & Stays</b><small>Buy · rent · hotels</small></button>
+    <button class="svc t-move" onclick="setMode('earn')"><span class="svc-ic">${ic('users', 21)}</span><b>Earn</b><small>Deliver as you go</small></button>
+    <button class="svc t-com" onclick="go('myshop')"><span class="svc-ic">${ic('chart', 21)}</span><b>Your Shop</b><small>Sell on Orignals</small></button>
   </div>
 
   <div class="chip-row">
