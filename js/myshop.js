@@ -46,8 +46,15 @@ function renderShopReg() {
     <div class="wiz-q">Your shop</div>
     <label class="fld"><span>Shop name</span><input class="txt" placeholder="e.g. Lakshmi Kirana Store" value="${esc(SREG.name)}" oninput="SREG.name=this.value"/></label>
     <div class="fld"><span>Category</span>
-      <div class="chip-wrap">${DB.shopTypes.filter(t => t.id !== 'all').map(t =>
-        `<button class="chip ${SREG.cat === t.id ? 'on' : ''}" onclick="SREG.cat='${t.id}';renderShopReg()"><span>${t.emoji}</span>${t.name}</button>`).join('')}</div></div>
+      <div class="chip-wrap">
+        ${DB.shopTypes.filter(t => t.id !== 'all').map(t =>
+          `<button class="chip ${SREG.cat === t.id ? 'on' : ''}" onclick="SREG.cat='${t.id}';renderShopReg()">${typeIcon(t.id, 14)}${t.name}</button>`).join('')}
+        ${(S.customCats || []).map(c =>
+          `<button class="chip ${SREG.cat === c.id ? 'on' : ''}" onclick="SREG.cat='${c.id}';renderShopReg()">${ic('store', 14)}${esc(c.name)}</button>`).join('')}
+        <button class="chip ${SREG.cat === 'other' ? 'on' : ''}" onclick="SREG.cat='other';renderShopReg()">${ic('plus', 14)}Other</button>
+      </div>
+      ${SREG.cat === 'other' ? `<input class="txt" placeholder="Type your category — e.g. Tailor, Salon, Tutor, Repair…" maxlength="30" value="${esc(SREG.customCat || '')}" oninput="SREG.customCat=this.value"/>
+      <div class="foot-note sm" style="text-align:left">Your category gets saved and appears as an option for every seller after you.</div>` : ''}</div>
     <label class="fld"><span>Owner mobile</span><input class="txt" placeholder="10-digit mobile" maxlength="10" inputmode="numeric" value="${esc(SREG.phone)}" oninput="SREG.phone=this.value.replace(/\\D/g,'')"/></label>
     <button class="btn-main wide" onclick="shopRegNext1()">Next →</button>`;
 
@@ -86,10 +93,25 @@ function renderShopReg() {
   <div class="wiz-dots">${[1, 2, 3, 4].map(i => `<i class="${i <= st ? 'on' : ''}"></i>`).join('')}</div>
   ${body}`;
 }
+function catInfo(id) {
+  return DB.shopTypes.find(t => t.id === id) || (S.customCats || []).find(c => c.id === id) || { id, name: 'Shop' };
+}
 function shopRegNext1() {
-  if (SREG.name.trim().length < 3) { toast('Give your shop a name', ''); return; }
-  if (!SREG.cat) { toast('Pick a category', '🏷️'); return; }
-  if (SREG.phone.length !== 10) { toast('Enter a valid 10-digit mobile', ''); return; }
+  if (SREG.name.trim().length < 3) { toast('Give your shop a name'); return; }
+  if (!SREG.cat) { toast('Pick a category'); return; }
+  if (SREG.cat === 'other') {
+    const name = (SREG.customCat || '').trim();
+    if (name.length < 3) { toast('Type your category name first'); return; }
+    if (!S.customCats) S.customCats = [];
+    let c = S.customCats.find(x => x.name.toLowerCase() === name.toLowerCase());
+    if (!c) {
+      c = { id: 'c' + uid(), name: name.replace(/\b\w/g, m => m.toUpperCase()) };
+      S.customCats.push(c); save();
+      toast('"' + c.name + '" saved — future sellers will see it too');
+    }
+    SREG.cat = c.id;
+  }
+  if (SREG.phone.length !== 10) { toast('Enter a valid 10-digit mobile'); return; }
   SREG.step = 2; renderShopReg();
 }
 function shopPickAddr() {

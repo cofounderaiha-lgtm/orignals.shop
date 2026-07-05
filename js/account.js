@@ -64,7 +64,7 @@ view('account', () => {
 
   <div class="card-block">
     <h3>${ic('shield', 15)} Membership — 1 CHF/year</h3>
-    <p class="movie-about">First month complimentary, then 1 CHF/yr for buyers. Sellers: 5 tiers, no signup fee — Individual 1 CHF/yr, Retail 10, Large retail 25, Wholesaler 50, Manufacturer 100. Delivery partners never pay.</p>
+    <p class="movie-about">First month complimentary for everyone, no signup fees. Buyers 1 CHF/yr. Sellers, 5 tiers: Individual 1 · Retail 10 · Large retail 25 · Wholesaler 50 · Manufacturer 100 CHF/yr. Delivery partners by vehicle: on foot 1 up to truck 10 CHF/yr.</p>
     ${memberTill
       ? `<div class="trust-row">${ic('check', 13)} Active till ${new Date(S.memberTill).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>`
       : `<button class="btn-main sm" onclick="buyMembership()">Activate — ₹99 (≈1 CHF)</button>`}

@@ -6,6 +6,9 @@
 
 let REG = null;
 
+/* partner yearly fee by vehicle level (first month complimentary) */
+const PARTNER_FEE = { walk: 1, cycle: 1, bike: 3, auto: 5, car: 7, van: 7, truck: 10 };
+
 const RIDE_JOBS = [
   { id: 'rj1', what: 'Ride · 1 person to Cyber Park', type: 'ride', from: 'Lakeview Residency', to: 'Tower B, Cyber Park', km: 8.4, pay: 96, by: 'Priya M. · face-verified', note: 'Share OK — one more co-rider may join on route' },
   { id: 'rj2', what: 'Ride · 2 people to Railway Station', type: 'ride', from: 'Central Mall', to: 'Railway Station', km: 4.1, pay: 62, by: 'Rahul S. · face-verified', note: 'Luggage: 2 bags' },
@@ -36,7 +39,7 @@ function renderEarnPitch() {
     <div class="earn-stats">
       <div><b>₹120–450</b><small>avg per day, part-time</small></div>
       <div><b>Walk to truck</b><small>every vehicle counts</small></div>
-      <div><b>0 fees</b><small>partners never pay</small></div>
+      <div><b>1–10 CHF/yr</b><small>by vehicle · first month free</small></div>
     </div>
     <button class="btn-main wide lg" onclick="startPartnerReg()">Register &amp; verify — 2 minutes</button>
     <div class="foot-note">${ic('shield', 12)} Face + vehicle verified by computer vision. Safety first, always.</div>
@@ -76,7 +79,7 @@ function renderReg() {
     <div class="wiz-q">How will you carry?</div>
     <div class="ptype-grid">
       ${DB.vehicles.map(v => `<button class="ptype ${REG.veh === v.id ? 'on' : ''}" onclick="REG.veh='${v.id}';renderReg()">
-        <span>${vehIcon(v.id, 26)}</span><b>${v.name}</b><small>${v.carry}${v.ride ? ' · can carry people' : ''}</small></button>`).join('')}
+        <span>${vehIcon(v.id, 26)}</span><b>${v.name} <small class="ok">· ${PARTNER_FEE[v.id]} CHF/yr</small></b><small>${v.carry}${v.ride ? ' · can carry people' : ''}</small></button>`).join('')}
     </div>
     ${REG.veh ? `<button class="btn-main wide" onclick="REG.step=3;renderReg()">Next ${ic('arrowr', 13)}</button>` : ''}
     <div class="tip-strip">No vehicle? No problem. Walkers deliver tiffins &amp; documents within 2 km.</div>`;

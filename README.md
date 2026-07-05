@@ -52,6 +52,6 @@ First month complimentary for everyone. No signup fees. Then:
 | Seller 3 · Large retail | restaurants, multi-staff shops, hosts | **25 CHF** |
 | Seller 4 · Wholesaler / dealer / hotel | | **50 CHF** |
 | Seller 5 · Manufacturer / enterprise | | **100 CHF** |
-| Delivery partner | Earn mode | **0 — they earn, never pay** |
+| Delivery partner | by vehicle level: on foot/cycle 1 · bike 3 · auto 5 · car/van 7 · truck | **1–10 CHF** |
 
 Admin panel has 5 control levels (L1 Support → L5 Super Admin) with permission-gated tabs, plus a live Database view with JSON export.

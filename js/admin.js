@@ -122,8 +122,12 @@ view('admin', args => {
       <div class="ck-line"><span><b>3 · Large retail</b> — restaurants, multi-staff shops, hosts</span><span><b>25 CHF</b></span></div>
       <div class="ck-line"><span><b>4 · Wholesaler / dealer / hotel</b></span><span><b>50 CHF</b></span></div>
       <div class="ck-line"><span><b>5 · Manufacturer / enterprise</b></span><span><b>100 CHF</b></span></div></div>
-    <div class="card-block"><h3>Delivery partners (Earn mode)</h3>
-      <div class="ck-line"><span>Joining & platform fee</span><span><b>0 — they earn, never pay</b></span></div></div>`;
+    <div class="card-block"><h3>Delivery partners — by vehicle level (first month complimentary · then per year)</h3>
+      <div class="ck-line"><span>On foot / Cycle</span><span><b>1 CHF</b></span></div>
+      <div class="ck-line"><span>Bike</span><span><b>3 CHF</b></span></div>
+      <div class="ck-line"><span>Auto</span><span><b>5 CHF</b></span></div>
+      <div class="ck-line"><span>Car / Van</span><span><b>7 CHF</b></span></div>
+      <div class="ck-line"><span>Truck</span><span><b>10 CHF</b></span></div></div>`;
 
   if (tab === 'roles') body = `
     <div class="tip-strip">${ic('shield', 13)} Five control levels — each admin sees only what their level permits. You are acting as <b>${role.name}</b>.</div>
