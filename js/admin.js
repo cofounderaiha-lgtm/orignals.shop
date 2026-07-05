@@ -156,6 +156,7 @@ view('admin', args => {
     ${dbTable('property_listings', (S.myListings || []).map(p => [esc(p.title), (p.leads || 0) + ' leads · ' + (p.views || 0) + ' views']))}
     ${dbTable('rfqs_b2b', (S.rfqs || []).map(r => [esc(r.item) + ' × ' + r.qty, r.status === 'quoted' ? money(r.quote) + '/' + esc(r.unit) : 'awaiting quote']))}
     ${dbTable('earnings', S.earnings.map(e => [esc(e.what), e.pay ? '+' + money(e.pay) : 'seva']))}
+    <div class="card-block"><h3>${ic('grid', 14)} Cloud database</h3>${typeof cloudStatusHTML === 'function' ? cloudStatusHTML() : ''}</div>
     <button class="btn-main wide ghost" onclick="exportState()">${ic('upload', 14)} Export full database (JSON)</button>`;
   }
 

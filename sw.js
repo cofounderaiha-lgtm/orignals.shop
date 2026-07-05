@@ -1,11 +1,11 @@
 /* Orignals service worker — offline shell so the installed app always opens */
-const CACHE = 'orignals-v2';
+const CACHE = 'orignals-v3';
 const SHELL = [
   './index.html', './css/app.css', './css/modules.css',
   './js/data.js', './js/icons.js', './js/core.js', './js/home.js', './js/shops.js',
   './js/send.js', './js/rides.js', './js/tickets.js', './js/estate.js',
   './js/earn.js', './js/myshop.js', './js/mitra.js', './js/account.js', './js/admin.js',
-  './manifest.json'
+  './manifest.json', './config.js', './js/cloud.js'
 ];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

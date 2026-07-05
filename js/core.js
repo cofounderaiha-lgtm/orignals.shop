@@ -35,7 +35,11 @@ function defaultState() {
 let S;
 try { S = Object.assign(defaultState(), JSON.parse(localStorage.getItem(OMNY_KEY)) || {}); }
 catch (e) { S = defaultState(); }
-function save() { localStorage.setItem(OMNY_KEY, JSON.stringify(S)); }
+function save() {
+  S.lastSaved = Date.now();
+  localStorage.setItem(OMNY_KEY, JSON.stringify(S));
+  if (typeof cloudQueue === 'function') cloudQueue();
+}
 
 /* ---------- theme ---------- */
 function applyTheme() { document.documentElement.dataset.theme = S.theme; }
@@ -346,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
   buildChrome();
   window.addEventListener('hashchange', route);
   route();
+  if (typeof cloudInit === 'function') cloudInit();
   if (!S.notifs.length) notify('Welcome to Orignals', 'Purity-verified food, every shop nearby, earn as you go. ₹500 free in your wallet.');
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
