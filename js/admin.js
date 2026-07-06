@@ -30,8 +30,8 @@ function adminSeed() {
 
 /* ---------- admin control levels ---------- */
 const ADMIN_ROLES = [
-  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments.', perms: ['overview', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'data'] },
-  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: KYC, fraud, all orders, database read.', perms: ['overview', 'kyc', 'fraud', 'orders', 'roles', 'data'] },
+  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments.', perms: ['overview', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'data', 'mitra'] },
+  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: KYC, fraud, all orders, database read.', perms: ['overview', 'kyc', 'fraud', 'orders', 'roles', 'data', 'mitra'] },
   { id: 'l3', name: 'L3 · Purity Inspector', desc: 'Field & lab team. Seals or delists batches. Nothing else.', perms: ['overview', 'purity', 'roles'] },
   { id: 'l2', name: 'L2 · City Manager', desc: 'Onboards shops & partners in their city, watches local orders.', perms: ['overview', 'kyc', 'orders', 'roles'] },
   { id: 'l1', name: 'L1 · Support Agent', desc: 'Sees order status to help customers. Read-only.', perms: ['overview', 'orders', 'roles'] }
@@ -44,7 +44,7 @@ view('admin', args => {
   let tab = args[0] || 'overview';
   if (!role.perms.includes(tab)) tab = 'overview';
   const A = S.admin;
-  const tabs = [['overview', 'Overview'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Control levels'], ['data', 'Database']];
+  const tabs = [['overview', 'Overview'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Control levels'], ['data', 'Database'], ['mitra', 'Mitra AI']];
   const gmv = S.orders.reduce((a, o) => a + o.total, 0) + (S.myShop ? S.myShop.revenue : 0);
   let body = '';
 
@@ -158,6 +158,51 @@ view('admin', args => {
     ${dbTable('earnings', S.earnings.map(e => [esc(e.what), e.pay ? '+' + money(e.pay) : 'seva']))}
     <div class="card-block"><h3>${ic('grid', 14)} Cloud database</h3>${typeof cloudStatusHTML === 'function' ? cloudStatusHTML() : ''}</div>
     <button class="btn-main wide ghost" onclick="exportState()">${ic('upload', 14)} Export full database (JSON)</button>`;
+  }
+
+  if (tab === 'mitra') {
+    if (!BRAIN.W) brainLoad();
+    const st = brainStats();
+    const log = brainLog();
+    const needsLabel = log.map((u, i) => ({ u, i })).filter(x => !x.u.label || x.u.conf < 0.6).slice(-8).reverse();
+    const llmCfg = (window.ORIGNALS_CONFIG || {}).llm || {};
+    const llmOn = llmCfg.apiKey && !String(llmCfg.apiKey).includes('YOUR-');
+    body = `
+    <div class="tip-strip">${ic('spark', 13)} <b>Mitra Brain</b> — Orignals' own model. It trains itself on every conversation: rules label the easy ones, you label the hard ones here, and (optionally) Claude's answers distill in. Zero API cost by default.</div>
+    <div class="earn-tiles wide3">
+      <div class="etile"><b>${st.utterances}</b><small>Utterances collected</small></div>
+      <div class="etile"><b>${st.labeled}</b><small>Training labels</small></div>
+      <div class="etile"><b>${st.accuracy === null ? '—' : st.accuracy + '%'}</b><small>Model accuracy</small></div>
+    </div>
+    <div class="earn-tiles wide3">
+      <div class="etile"><b>${(st.params / 1000).toFixed(1)}K</b><small>Model parameters</small></div>
+      <div class="etile"><b>${st.trained}</b><small>Training steps</small></div>
+      <div class="etile"><b>${llmOn ? esc(llmCfg.model || '') : 'OFF'}</b><small>Claude escalation</small></div>
+    </div>
+
+    ${needsLabel.length ? `<div class="sec-head"><h2>Teach the model</h2><small class="dim">pick the right intent</small></div>
+    ${needsLabel.map(x => `
+      <div class="order-row static">
+        <span class="or-emoji">${ic('spark', 16)}</span>
+        <div class="or-info"><b>"${esc(x.u.text)}"</b>
+          <small>model guessed: ${esc(x.u.pred)} · ${Math.round(x.u.conf * 100)}% ${x.u.label ? '· labeled: ' + esc(x.u.label) : '· <b>unlabeled</b>'}</small></div>
+        <select class="txt sm" onchange="brainRelabel(${x.i}, this.value); toast('Learned — model updated'); VIEWS.admin(['mitra'])">
+          <option value="">label…</option>
+          ${BRAIN.intents.map(i2 => `<option value="${i2}" ${x.u.label === i2 ? 'selected' : ''}>${i2.replace('_', ' ')}</option>`).join('')}
+        </select>
+      </div>`).join('')}` : `<div class="tip-strip">${ic('check', 13)} Nothing needs labelling — talk to Mitra and hard cases will appear here.</div>`}
+
+    <div class="card-block"><h3>Dataset by intent</h3>
+      ${BRAIN.intents.map(i2 => {
+        const n = (st.perIntent[i2] || 0) + (BRAIN_SEED[i2] || []).length;
+        return `<div class="ck-line"><span>${i2.replace('_', ' ')}</span><span>${n} examples</span></div>`;
+      }).join('')}</div>
+
+    <div class="btn-pair">
+      <button class="btn-main sm ghost" onclick="brainExportJSONL()">${ic('upload', 13)} Export dataset (JSONL)</button>
+      <button class="btn-main sm ghost" onclick="brainRetrain();toast('Retrained from scratch on all labels');VIEWS.admin(['mitra'])">Retrain model</button>
+    </div>
+    <div class="foot-note sm">The JSONL export is exactly what you'll use to fine-tune a full open-weights model later — see docs/MITRA-AI.md for the roadmap.</div>`;
   }
 
   $('#view').innerHTML = `

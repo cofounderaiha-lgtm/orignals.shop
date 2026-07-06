@@ -137,7 +137,30 @@ async function cloudPush() {
       }
     }
 
-    /* 4 — custom categories benefit every seller */
+    /* 4 — Mitra Brain: training data + model meta mirror to cloud */
+    try {
+      const ulog = (typeof brainLog === 'function') ? brainLog().slice(-200) : [];
+      if (ulog.length) {
+        await cloudFetch('mitra_utterances?on_conflict=device_key,ts', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(ulog.map(u => ({
+            device_key: S.deviceKey, ts: new Date(u.ts).toISOString(),
+            text: u.text, pred: u.pred, conf: u.conf, label: u.label, src: u.src
+          })))
+        });
+      }
+      if (typeof brainStats === 'function' && BRAIN.W) {
+        const bs = brainStats();
+        await cloudFetch('mitra_model?on_conflict=device_key', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify([{ device_key: S.deviceKey, version: BRAIN.version, trained: bs.trained, labeled: bs.labeled, accuracy: bs.accuracy }])
+        });
+      }
+    } catch (e) { console.warn('[cloud] mitra sync skipped:', e.message); }
+
+    /* 5 — custom categories benefit every seller */
     if ((S.customCats || []).length) {
       await cloudFetch('custom_categories?on_conflict=id', {
         method: 'POST',

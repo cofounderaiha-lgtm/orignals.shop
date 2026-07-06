@@ -118,6 +118,11 @@ function mitraThink(raw) {
   const t = norm(raw);
   const has = (...ws) => ws.some(w => t.includes(w));
 
+  /* — Mitra Brain: every utterance observed; rule matches become
+     training labels (the flywheel). Skipped on internal re-dispatch. — */
+  const _pred = brainPredict(raw);
+  if (!window._brainHop) brainObserve(raw, _pred, ruleIntent(t), 'rules');
+
   /* — wallet — */
   if (has('wallet', 'balance', 'paisa', 'paise', 'money')) {
     const addM = t.match(/(?:add|dal|put|load)[^\d]*(\d+)/);
@@ -340,9 +345,33 @@ function mitraThink(raw) {
     return;
   }
 
+  /* — Mitra Brain fallback: the model routes what the rules missed — */
+  if (!window._brainHop && _pred.conf >= 0.55 && BRAIN_CANON[_pred.intent]) {
+    brainObserve(raw, _pred, _pred.intent, 'brain');
+    window._brainHop = true;
+    try { mitraThink(BRAIN_CANON[_pred.intent]); } finally { window._brainHop = false; }
+    return;
+  }
+
+  /* — Claude escalation (config-gated; answers distill into the brain) — */
+  const _llm = (window.ORIGNALS_CONFIG || {}).llm || {};
+  if (!window._brainHop && _llm.apiKey && !String(_llm.apiKey).includes('YOUR-')) {
+    mitraReply(`Thinking…`, []);
+    brainAskClaude(raw).then(out => {
+      if (out) {
+        const canon = BRAIN_CANON[out.intent];
+        mitraReply(esc(out.reply) + (canon ? `<br/><button class="mbtn" onclick="window._brainHop=true;try{mitraThink('${canon}')}finally{window._brainHop=false}">Do it for me</button>` : ''),
+          ['Help'], out.reply);
+      } else {
+        mitraReply(`Hmm, I didn't find that nearby. Try simpler words like <i>"milk"</i>, <i>"biryani"</i>, <i>"medicine"</i> — or say <i>"help"</i>.`, ['Help', 'Order bread']);
+      }
+    });
+    return;
+  }
+
   /* — fallback — */
-  mitraReply(`Hmm, I didn't find that nearby. 🤔 Try simpler words like <i>"milk"</i>, <i>"biryani"</i>, <i>"medicine"</i>, <i>"flowers"</i> — or say <i>"help"</i> to see everything I can do.`,
-    ['Help 🧿', 'Order bread 🍞', 'Send a parcel 📦']);
+  mitraReply(`Hmm, I didn't find that nearby. Try simpler words like <i>"milk"</i>, <i>"biryani"</i>, <i>"medicine"</i>, <i>"flowers"</i> — or say <i>"help"</i> to see everything I can do. <small class="malt">(Every question teaches Mitra Brain — it gets smarter daily.)</small>`,
+    ['Help', 'Order bread', 'Send a parcel']);
 }
 
 /* assistant places the order end-to-end */
