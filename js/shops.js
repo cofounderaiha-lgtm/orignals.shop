@@ -57,15 +57,36 @@ view('shops', args => {
   }
   const filt = args[0] || 'all';
   const q = (window._shopQ || '').toLowerCase();
-  let list = [...DB.shops].sort((a, b) => a.km - b.km);
+  const sort = window._shopSort || 'relevance';
+  window._shopFilters = window._shopFilters || {};
+  const F = window._shopFilters;
+  let list = [...DB.shops];
   if (filt !== 'all') list = list.filter(s => s.type === filt);
   if (q) list = list.filter(s => s.name.toLowerCase().includes(q) || s.tag.toLowerCase().includes(q) ||
     s.items.some(i => i.name.toLowerCase().includes(q)));
+  /* market-level filters */
+  if (F.veg) list = list.filter(s => s.veg);
+  if (F.offer) list = list.filter(s => s.offer);
+  if (F.open) list = list.filter(s => s.open);
+  if (F.free) list = list.filter(s => s.delivery !== 'partner' || (s.offer && /free/i.test(s.offer)));
+  /* market-level sort */
+  const minPrice = s => Math.min(...s.items.map(i => i.price), 1e9);
+  const sorters = {
+    relevance: (a, b) => (b.open - a.open) || (a.km - b.km),
+    rating: (a, b) => (b.rating || 0) - (a.rating || 0),
+    near: (a, b) => a.km - b.km,
+    fast: (a, b) => (a.time || 99) - (b.time || 99),
+    price: (a, b) => minPrice(a) - minPrice(b)
+  };
+  list.sort(sorters[sort] || sorters.relevance);
+  const activeFilters = Object.values(F).filter(Boolean).length;
+
+  const sortOpts = [['relevance', 'Relevance'], ['rating', 'Top rated'], ['near', 'Nearest'], ['fast', 'Fastest'], ['price', 'Price: low']];
 
   $('#view').innerHTML = `
   <div class="page-head">
     <button class="back" onclick="go('home')">${ic('chevl', 16)}</button>
-    <div><h1>Shops near you</h1><small>${DB.shops.length} shops within 5 km of ${esc(S.user.addr.name)}</small></div>
+    <div><h1>Shops near you</h1><small>${list.length} of ${DB.shops.length} shops near ${esc(S.user.addr.name)}</small></div>
     <button class="lnk" onclick="go('categories')">All categories</button>
   </div>
   <div class="search-row">
@@ -76,8 +97,14 @@ view('shops', args => {
   <div class="chip-row sticky-chips">
     ${DB.shopTypes.map(t => `<button class="chip ${t.id === filt ? 'on' : ''}" onclick="go('shops/${t.id}')">${typeIcon(t.id, 14)}${t.name}</button>`).join('')}
   </div>
-  ${list.length ? `<div class="shop-list">${list.map((s, i) => shopCardHTML(s, i === 0 && !q && filt === 'all')).join('')}</div>`
-    : `<div class="empty"><span>${ic('search', 40)}</span><b>No shops found for "${esc(window._shopQ || '')}"</b><p>Every category sells on Orignals — a shop for this will onboard soon. Try another word.</p><button class="btn-main" onclick="window._shopQ='';go('shops')">Browse all shops</button></div>`}
+  <div class="sortbar">
+    <button class="sortbtn ${activeFilters ? 'on' : ''}" onclick="shopFilterSheet()">${ic('grid', 13)} Filters${activeFilters ? ' · ' + activeFilters : ''}</button>
+    <div class="sortscroll">
+      ${sortOpts.map(o => `<button class="sortchip ${sort === o[0] ? 'on' : ''}" onclick="window._shopSort='${o[0]}';VIEWS.shops(['${filt}'])">${o[1]}</button>`).join('')}
+    </div>
+  </div>
+  ${list.length ? `<div class="shop-list">${list.map((s, i) => shopCardHTML(s, i === 0 && !q && filt === 'all' && sort === 'relevance')).join('')}</div>`
+    : `<div class="empty"><span>${ic('search', 40)}</span><b>No shops match</b><p>${activeFilters ? 'Try removing a filter, or ' : ''}search another word — every category onboards to Orignals.</p><button class="btn-main" onclick="window._shopQ='';window._shopFilters={};go('shops')">Reset</button></div>`}
   <div class="join-strip" onclick="go('myshop')">Own a shop? <b>List it on Orignals — free, 2 minutes</b> ${ic('arrowr', 12)}</div>`;
 
   const inp = $('#shopQ');
@@ -85,6 +112,20 @@ view('shops', args => {
 });
 let _shopDeb;
 function debounceShops(filt) { clearTimeout(_shopDeb); _shopDeb = setTimeout(() => VIEWS.shops([filt]), 250); }
+
+function shopFilterSheet() {
+  const F = window._shopFilters || (window._shopFilters = {});
+  const opts = [['veg', 'Pure veg', 'leaf'], ['offer', 'Has offers', 'gift'], ['open', 'Open now', 'clock'], ['free', 'Free delivery', 'truck']];
+  const render = () => { $('#sheetBody').innerHTML = `
+    <div class="sheet-grab"></div><h3 class="sheet-title">Filters</h3>
+    ${opts.map(o => `<label class="agree-row ${F[o[0]] ? 'on' : ''}" onclick="window._shopFilters['${o[0]}']=!window._shopFilters['${o[0]}'];window._sfR()">
+      <i>${F[o[0]] ? '✓' : ''}</i><span>${ic(o[2], 14)} <b>${o[1]}</b></span></label>`).join('')}
+    <div class="btn-pair" style="margin-top:12px">
+      <button class="btn-main ghost" onclick="window._shopFilters={};window._sfR()">Clear all</button>
+      <button class="btn-main" onclick="closeSheet();VIEWS.shops(['${(location.hash.split('/')[1] || 'all')}'])">Show results</button>
+    </div>`; };
+  window._sfR = render; sheet(''); render();
+}
 
 /* ---------- SHOP PAGE ---------- */
 view('shop', args => {
@@ -344,6 +385,15 @@ function renderTrack(oid) {
   trackLiveMap('trkMap', o);
 }
 
+function cancelScheduled(i) {
+  const r = (S.scheduled || [])[i]; if (!r) return;
+  if (!confirm('Cancel your scheduled ride at ' + r.when + '? Full refund to wallet.')) return;
+  S.scheduled.splice(i, 1);
+  walletAdd(r.total, 'Refund · scheduled ride · ' + r.title);
+  save(); toast('Scheduled ride cancelled — ' + money(r.total) + ' refunded');
+  VIEWS.orders([]);
+}
+
 function rateOrder(oid, n) {
   const o = S.orders.find(x => x.id === oid); if (!o) return;
   o.rated = n; save(); confettiBurst(); toast('Thanks! ' + '★'.repeat(n) + ' given');
@@ -384,6 +434,10 @@ view('orders', () => {
     <button class="btn-main sm" style="margin:0" onclick="trackById()">Track</button>
   </div>
   ${act.length ? `<div class="sec-head"><h2>Live now <span class="live-dot"></span></h2></div>${act.map(row).join('')}` : ''}
+  ${(S.scheduled || []).length ? `<div class="sec-head"><h2>Scheduled ${ic('clock', 13)}</h2></div>
+    ${S.scheduled.map((r, i) => `<div class="order-row static"><span class="or-emoji">${ic('bike', 18)}</span>
+      <div class="or-info"><b>${esc(r.title)}</b><small>at ${esc(r.when)} · ${r.from} → ${r.to} · ${r.km} km</small></div>
+      <div class="or-right"><b>${money(r.total)}</b><button class="lnk red" onclick="cancelScheduled(${i})">Cancel</button></div></div>`).join('')}` : ''}
   ${tks.length || bks.length ? `<div class="sec-head"><h2>Tickets &amp; bookings</h2></div>
     ${tks.map(t => `<div class="order-row" onclick="go('ticket/${t.id}')">
       <span class="or-emoji">${ic('star', 18)}</span>

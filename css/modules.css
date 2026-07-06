@@ -778,6 +778,25 @@
 .sec-head.slim{margin:10px 0 8px}
 .sec-head.slim h2{font-size:.95rem}
 
+/* ---------- ride now / schedule segment ---------- */
+.when-seg{display:flex;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:5px;margin:2px 0 10px}
+.when-seg button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:transparent;border:none;
+  border-radius:10px;padding:9px 4px;cursor:pointer;color:var(--mut);font-family:inherit;font-size:.8rem;font-weight:700}
+.when-seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.when-seg button.on svg{color:var(--primary)}
+
+/* ---------- sort & filter bar (market-level) ---------- */
+.sortbar{display:flex;align-items:center;gap:8px;margin:4px 0 10px;position:sticky;top:0;z-index:40}
+.sortbtn{flex:none;display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--line);
+  border-radius:50px;padding:7px 13px;font-family:inherit;font-size:.76rem;font-weight:700;color:var(--ink);cursor:pointer}
+.sortbtn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.sortbtn.on svg{color:#fff}
+.sortscroll{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;flex:1}
+.sortscroll::-webkit-scrollbar{display:none}
+.sortchip{flex:none;background:var(--surface-2);border:1px solid var(--line);border-radius:50px;padding:7px 13px;
+  font-family:inherit;font-size:.76rem;font-weight:600;color:var(--mut);cursor:pointer;white-space:nowrap}
+.sortchip.on{background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 40%,transparent)}
+
 /* ---------- legal & policy pages ---------- */
 .legal{max-width:640px;margin:0 auto;padding:2px 2px 20px;line-height:1.6}
 .legal h3{font-family:'Bricolage Grotesque',Inter,sans-serif;font-size:1rem;color:var(--ink);margin:20px 0 6px}
