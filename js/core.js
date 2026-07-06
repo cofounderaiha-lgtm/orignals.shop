@@ -106,6 +106,8 @@ function sheet(html, cls) {
 function closeSheet() {
   $('#sheetWrap').classList.remove('open');
   document.body.style.overflow = '';
+  /* release any un-paid seat hold the user is walking away from */
+  if (typeof releaseSeatHold === 'function') releaseSeatHold();
 }
 
 /* ---------- confetti ---------- */

@@ -291,6 +291,34 @@ async function cloudShopsRefresh(onDone) {
 }
 
 /* ============================================================
+   SEAT INVENTORY — real, no double-booking across devices
+   ============================================================ */
+async function cloudSeatsTaken(showKey) {
+  if (!CLOUD.on) return [];
+  try {
+    const rows = await cloudFetch('seat_bookings?show_key=eq.' + encodeURIComponent(showKey) + '&select=seat');
+    return (rows || []).map(r => r.seat);
+  } catch (e) { return []; }
+}
+function cloudSeatsBook(showKey, seats) {
+  if (!CLOUD.on) return Promise.resolve([]);   // offline: allow (single device)
+  return cloudFetch('rpc/seats_book', { method: 'POST', body: JSON.stringify({ p_show: showKey, p_seats: seats, p_device: S.deviceKey || 'anon' }) })
+    .then(r => Array.isArray(r) ? r : []).catch(() => []);
+}
+function cloudSeatsConfirm(showKey, seats, ticketId) {
+  if (!CLOUD.on) return Promise.resolve();
+  return cloudFetch('rpc/seats_confirm', { method: 'POST', body: JSON.stringify({ p_show: showKey, p_seats: seats, p_device: S.deviceKey || 'anon', p_ticket: ticketId }) }).catch(() => {});
+}
+function cloudSeatsFree(showKey, seats) {
+  if (!CLOUD.on) return Promise.resolve();
+  return cloudFetch('rpc/seats_free', { method: 'POST', body: JSON.stringify({ p_show: showKey, p_seats: seats, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+}
+function cloudSeatsFreeTicket(ticketId) {
+  if (!CLOUD.on) return Promise.resolve();
+  return cloudFetch('rpc/seats_free_ticket', { method: 'POST', body: JSON.stringify({ p_ticket: ticketId, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+}
+
+/* ============================================================
    CROSS-DEVICE COMMERCE — buyer's order ⇄ shopkeeper's dashboard
    ============================================================ */
 

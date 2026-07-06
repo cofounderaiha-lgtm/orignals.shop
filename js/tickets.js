@@ -132,16 +132,27 @@ view('movie', args => {
   </div>`;
 });
 
-/* ---------- SEAT SELECTION ---------- */
+/* ---------- SEAT SELECTION (real cross-device inventory) ---------- */
 let SEATSEL = [];
+function showKeyOf(m, tIdx) { return m.id + '|' + window._tkDate + '|' + tIdx; }
+
 view('seats', args => {
   const m = DB.movies.find(x => x.id === args[0]);
   const tIdx = parseInt(args[1], 10) || 0;
   if (!m) { go('tickets'); return; }
   window._tkDate = window._tkDate || tkDates()[0].key;
   SEATSEL = [];
-  window._seatCtx = { m, tIdx };
+  window._seatCtx = { m, tIdx, taken: new Set(), loaded: false };
   renderSeats();
+  /* pull the REAL booked seats for this exact show from the cloud */
+  if (typeof cloudSeatsTaken === 'function') {
+    cloudSeatsTaken(showKeyOf(m, tIdx)).then(list => {
+      if (!window._seatCtx || window._seatCtx.m.id !== m.id || window._seatCtx.tIdx !== tIdx) return;
+      window._seatCtx.taken = new Set(list);
+      window._seatCtx.loaded = true;
+      if (location.hash.includes('seats/')) renderSeats();
+    });
+  }
 });
 
 function seatPrice(row) {
@@ -156,7 +167,7 @@ function renderSeats() {
 
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="go('movie/${m.id}')">${ic('chevl', 16)}</button>
-    <div><h1>${esc(m.title)}</h1><small>${tkDates().find(d => d.key === window._tkDate).day} · ${time} · Screen 2</small></div></div>
+    <div><h1>${esc(m.title)}</h1><small>${tkDates().find(d => d.key === window._tkDate).day} · ${time} · Screen 2${window._seatCtx.loaded ? ' · <b class="ok">live seats</b>' : (typeof CLOUD !== 'undefined' && CLOUD.on ? ' · syncing…' : '')}</small></div></div>
 
   <div class="screen-arc"><svg viewBox="0 0 300 30"><path d="M10 28 Q150 -8 290 28" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" opacity=".7"/></svg><small>SCREEN THIS WAY</small></div>
 
@@ -168,7 +179,9 @@ function renderSeats() {
         <small>${r}</small>
         ${[...Array(12)].map((_, c) => {
           const sid = r + (c + 1);
-          const sold = hash(m.id + tIdx + sid + window._tkDate) % 10 < 3;
+          /* sold = real cloud booking OR the house's baseline occupancy */
+          const sold = (window._seatCtx.taken && window._seatCtx.taken.has(sid)) ||
+                       hash(m.id + tIdx + sid + window._tkDate) % 10 < 3;
           const sel = SEATSEL.includes(sid);
           return `${c === 3 || c === 9 ? '<span class="aisle"></span>' : ''}
             <button class="seat ${sold ? 'sold' : sel ? 'sel' : ''}" ${sold ? '' : `onclick="toggleSeat('${sid}')"`}>${c + 1}</button>`;
@@ -188,19 +201,49 @@ function toggleSeat(sid) {
   else { if (SEATSEL.length >= 6) { toast('Max 6 seats per booking'); return; } SEATSEL.push(sid); }
   renderSeats();
 }
-function seatCheckout() {
+/* seat hold lifecycle: reserve on the server BEFORE payment (real
+   cinemas lock your seats while you pay), confirm on pay, release if
+   the user backs out of checkout. */
+let _seatHold = null;
+function releaseSeatHold() {
+  if (_seatHold && !_seatHold.confirmed) {
+    if (typeof cloudSeatsFree === 'function') cloudSeatsFree(_seatHold.show, _seatHold.seats);
+    _seatHold = null;
+  }
+}
+
+async function seatCheckout() {
   const { m, tIdx } = window._seatCtx;
   const time = m.times[tIdx];
   const day = tkDates().find(d => d.key === window._tkDate).day;
   const total = SEATSEL.reduce((a, s) => a + seatPrice(s[0]), 0);
+  const show = showKeyOf(m, tIdx);
+  const seats = [...SEATSEL];
+
+  /* atomically hold the seats first — this is what prevents two phones
+     from ever buying the same seat */
+  toast('Holding your seats…');
+  const conflicts = (typeof cloudSeatsBook === 'function') ? await cloudSeatsBook(show, seats) : [];
+  if (conflicts && conflicts.length) {
+    conflicts.forEach(s => window._seatCtx.taken.add(s));
+    SEATSEL = SEATSEL.filter(s => !conflicts.includes(s));
+    renderSeats();
+    toast('Just taken by someone else: ' + conflicts.join(', ') + ' — pick again');
+    return;
+  }
+  _seatHold = { show, seats, confirmed: false };
+
   checkoutSheet({
-    title: m.title + ' · ' + SEATSEL.length + ' seats', icon: 'star',
-    meta: `${day} · ${time} · Seats ${SEATSEL.join(', ')} · Zero convenience fee`,
-    lines: SEATSEL.map(s => ['Seat ' + s + ' (' + DB.seatTiers.find(t => t.rows.includes(s[0])).name + ')', seatPrice(s[0])]),
+    title: m.title + ' · ' + seats.length + ' seats', icon: 'star',
+    meta: `${day} · ${time} · Seats ${seats.join(', ')} · held for you · zero convenience fee`,
+    lines: seats.map(s => ['Seat ' + s + ' (' + DB.seatTiers.find(t => t.rows.includes(s[0])).name + ')', seatPrice(s[0])]),
     total,
     onPay: (final) => {
       if (!S.tickets) S.tickets = [];
-      const t = { id: 'TK' + rnd(10000, 99999), title: m.title, sub: `${day} · ${time} · Screen 2 · ${SEATSEL.join(', ')}`, seats: [...SEATSEL], total: final, ts: Date.now(), grad: m.grad };
+      const t = { id: 'TK' + rnd(10000, 99999), title: m.title, sub: `${day} · ${time} · Screen 2 · ${seats.join(', ')}`, seats, show, total: final, ts: Date.now(), grad: m.grad };
+      if (_seatHold) _seatHold.confirmed = true;      // stop the release-on-close
+      if (typeof cloudSeatsConfirm === 'function') cloudSeatsConfirm(show, seats, t.id);
+      _seatHold = null;
       S.tickets.unshift(t); save();
       notify('Tickets confirmed', `${m.title} — ${t.sub}`);
       go('ticket/' + t.id);
@@ -241,6 +284,8 @@ view('ticket', args => {
 function cancelTicket(tid) {
   const t = S.tickets.find(x => x.id === tid); if (!t) return;
   if (!confirm('Cancel this ticket? 90% refunds to your wallet instantly.')) return;
+  /* free the seats so others can book them */
+  if (t.show && t.seats && typeof cloudSeatsFreeTicket === 'function') cloudSeatsFreeTicket(tid);
   S.tickets = S.tickets.filter(x => x.id !== tid);
   walletAdd(Math.round(t.total * 0.9), 'Refund · ' + t.title);
   save(); toast('Cancelled — ' + money(Math.round(t.total * 0.9)) + ' refunded');
