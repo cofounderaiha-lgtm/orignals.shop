@@ -234,9 +234,12 @@ function cartCheckout() {
       const o = createOrder({
         kind: 'shop', flow: S.cart.deliv === 'self' ? 'shop_self' : 'shop_partner',
         km: +shop.km || undefined,
+        cloudShop: !!shop.community,
         title: shop.name + ' · ' + items.length + ' item' + (items.length > 1 ? 's' : ''),
         shopId: shop.id, items, total: final, addr: S.user.addr
       });
+      /* community shop: the order lands LIVE on the shopkeeper's device */
+      if (o.cloudShop && typeof cloudPostShopOrder === 'function') cloudPostShopOrder(o, shop);
       S.cart = { shopId: null, items: {} }; save();
       go('track/' + o.id);
     }
@@ -274,6 +277,10 @@ view('track', args => {
 });
 
 function trackEtaText(o) {
+  if (o.cloudShop) {
+    const t = { new: 'Waiting for the shop to accept', prep: 'Shop is packing your order', finding: 'Shop is calling a partner', handed: 'On the way to you', selfout: 'Shop is on the way' };
+    return (t[o.cloudStatus || 'new'] || 'Live') + ' · Live';
+  }
   const times = orderTimes(o);
   return `~${Math.max(1, Math.round((times[times.length - 1] - (Date.now() - o.placedAt) / 1000) / 60 * 10) / 10)} min left · Live`;
 }
@@ -309,7 +316,7 @@ function renderTrack(oid) {
     <span class="pc-ava">${ic('user', 22)}</span>
     <div class="pc-info"><b>${esc(o.partner.name)} <small class="dim">★ ${o.partner.rating}</small></b>
       <small>${o.partner.car ? esc(o.partner.car) + ' · ' : ''}${esc(o.partner.veh)} · ${o.partner.trips.toLocaleString('en-IN')} trips</small>
-      ${!done && !o.cancelled ? `<small class="ok">${orderStage(o) < FLOWS[o.flow].length - 2 ? 'Arriving in ~' + Math.max(1, Math.round((orderTimes(o)[orderTimes(o).length - 1] - (Date.now() - o.placedAt) / 1000) / 60)) + ' min' : 'Almost there'}</small>` : ''}</div>
+      ${!done && !o.cancelled ? `<small class="ok">${o.cloudShop ? 'Live — the shop updates this order' : orderStage(o) < FLOWS[o.flow].length - 2 ? 'Arriving in ~' + Math.max(1, Math.round((orderTimes(o)[orderTimes(o).length - 1] - (Date.now() - o.placedAt) / 1000) / 60)) + ' min' : 'Almost there'}</small>` : ''}</div>
     ${done ? '' : `<div class="pc-otp">OTP<b>${o.partner.otp}</b></div>`}
     <button class="pc-call" onclick="toast('Connecting to ${esc(o.partner.name)} via masked number — your number stays private')">${ic('phone', 16)}</button>
   </div>

@@ -192,8 +192,10 @@ function cloudStatusHTML() {
     error:      ['Cloud error', CLOUD.lastError, 'x']
   };
   const [t, sub, icon] = map[CLOUD.status];
+  if (CLOUD.on) setTimeout(cloudMarketStats, 60);
   return `<div class="trust-row">${ic(icon, 13)} <b>${t}</b> — ${esc(sub)}</div>
-    ${CLOUD.on ? `<div class="btn-pair">
+    ${CLOUD.on ? `<div id="mktStats" class="trust-row">${ic('clock', 12)} Loading live marketplace stats…</div>
+    <div class="btn-pair">
       <button class="btn-main sm ghost" onclick="cloudPush().then(()=>{toast('Pushed to cloud');VIEWS.admin(['data'])})">Sync now</button>
       <button class="btn-main sm ghost" onclick="cloudBoot()">Pull from cloud</button></div>` : ''}`;
 }
@@ -286,6 +288,81 @@ async function cloudShopsRefresh(onDone) {
     });
     if (added && onDone) onDone(added);
   } catch (e) { console.warn('[shops] community refresh skipped:', e.message); }
+}
+
+/* ============================================================
+   CROSS-DEVICE COMMERCE — buyer's order ⇄ shopkeeper's dashboard
+   ============================================================ */
+
+/* buyer → cloud: order on a community shop lands on the owner's phone */
+function cloudPostShopOrder(o, shop) {
+  if (!CLOUD.on || !shop || !shop.community) return;
+  const a = S.user.addr || DB.places[0];
+  cloudFetch('shop_orders?on_conflict=id', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=ignore-duplicates' },
+    body: JSON.stringify([{
+      id: o.id, shop_id: shop.id,
+      buyer_device: S.deviceKey || 'anon',
+      buyer_name: (S.user.name || 'Customer').slice(0, 40),
+      buyer_addr: (a.name + (a.sub ? ', ' + a.sub : '')).slice(0, 120),
+      buyer_lat: a.lat != null ? +a.lat : null, buyer_lng: a.lng != null ? +a.lng : null,
+      items: o.items || [], total: o.total
+    }])
+  }).catch(e => console.warn('[shop order] post skipped:', e.message));
+}
+
+/* owner action → cloud status (drives the buyer's live tracking) */
+function cloudShopOrderStatus(id, status) {
+  if (!CLOUD.on) return Promise.resolve(false);
+  return cloudFetch('rpc/shop_order_status', {
+    method: 'POST',
+    body: JSON.stringify({ p_id: id, p_device: S.deviceKey || 'anon', p_status: status })
+  }).catch(() => false);
+}
+
+/* buyer poll: live status of own cloud-shop orders → stage + refunds */
+let _ordPollAt = 0;
+async function pollCloudOrders() {
+  if (!CLOUD.on) return;
+  if (Date.now() - _ordPollAt < 7000) return;
+  const live = S.orders.filter(o => o.cloudShop && !o.cancelled && o.cloudStatus !== 'done');
+  if (!live.length) return;
+  _ordPollAt = Date.now();
+  try {
+    const ids = live.map(o => '"' + o.id + '"').join(',');
+    const rows = await cloudFetch('shop_orders?id=in.(' + ids + ')&select=id,status');
+    let changed = false;
+    (rows || []).forEach(r => {
+      const o = S.orders.find(x => x.id === r.id);
+      if (!o || o.cloudStatus === r.status) return;
+      o.cloudStatus = r.status; changed = true;
+      if (r.status === 'rejected' && !o.cancelled) {
+        o.cancelled = Date.now();
+        walletAdd(o.total, 'Refund · ' + o.id + ' · shop could not take the order');
+        notify('Order refunded', o.title + ' — the shop couldn\'t take it. ' + money(o.total) + ' is back in your wallet.', 'x');
+      } else {
+        const f = FLOWS[o.flow][orderStage(o)];
+        if (f) notify(f.t, o.title + ' · live update from the shop', f.e);
+      }
+    });
+    if (changed) { save(); refreshChrome(); }
+  } catch (e) { /* next poll */ }
+}
+
+/* live marketplace stats for Admin → Database */
+async function cloudMarketStats() {
+  const el = document.getElementById('mktStats');
+  if (!el || !CLOUD.on) return;
+  try {
+    const [jobs, sords, pays, shops] = await Promise.all([
+      cloudFetch('live_jobs?status=eq.open&select=id&limit=200'),
+      cloudFetch('shop_orders?status=not.in.(done,rejected)&select=id&limit=200'),
+      cloudFetch('payments?status=eq.verified&select=id&limit=200'),
+      cloudFetch('shops?id=like.my_*&deleted_at=is.null&select=id&limit=200')
+    ]);
+    el.innerHTML = `${ic('spark', 12)} <b>Marketplace live:</b> ${(jobs || []).length} open jobs · ${(sords || []).length} active shop orders · ${(pays || []).length} verified payments · ${(shops || []).length} community shops`;
+  } catch (e) { el.textContent = 'Marketplace stats unavailable — ' + e.message; }
 }
 
 /* ============================================================

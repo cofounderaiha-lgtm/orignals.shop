@@ -137,8 +137,62 @@ function submitShopReg() {
 }
 
 /* ---------- dashboard ---------- */
+
+/* REAL incoming orders: buyers on other devices ordering from this shop */
+async function shopCloudSync() {
+  const M = S.myShop;
+  if (!M || typeof CLOUD === 'undefined' || !CLOUD.on) return false;
+  let changed = false;
+  try {
+    const sid = 'my_' + (S.deviceKey || '').slice(0, 12);
+    const rows = await cloudFetch('shop_orders?shop_id=eq.' + sid + '&order=created_at.desc&limit=25');
+    (rows || []).forEach(r => {
+      let o = M.orders.find(x => x.id === r.id);
+      if (!o) {
+        o = {
+          id: r.id, ts: new Date(r.created_at).getTime(), real: true,
+          customer: (r.buyer_name || 'Customer'),
+          items: (r.items || []).map(i => ({ name: i.name, price: i.price, q: i.q, emoji: '' })),
+          total: +r.total, status: r.status,
+          buyer: { addr: r.buyer_addr, lat: r.buyer_lat, lng: r.buyer_lng }
+        };
+        if (r.buyer_lat != null && M.addr && M.addr.lat != null && typeof geoKm === 'function') {
+          o.km = +geoKm({ lat: +M.addr.lat, lng: +M.addr.lng }, { lat: +r.buyer_lat, lng: +r.buyer_lng }).toFixed(1);
+        }
+        M.orders.unshift(o); changed = true;
+        notify('LIVE order at your shop!', o.items.map(i => i.name).join(', ') + ' · ' + money(o.total) + ' · ' + o.customer, '🏪');
+        toast('New LIVE order at ' + M.name + '!');
+      } else if (o.real && r.status === 'rejected' && o.status !== 'rejected') {
+        o.status = 'rejected'; changed = true;
+        notify('Order cancelled by buyer', r.id + ' — no action needed.');
+      }
+    });
+
+    /* delivery leg posted to the partner feed: reflect real claim/finish */
+    for (const o of M.orders.filter(x => x.real && x.jobId && !['done', 'rejected'].includes(x.status))) {
+      const js = await cloudFetch('live_jobs?id=eq.' + o.jobId + '&select=status');
+      if (!js || !js[0]) continue;
+      if (js[0].status === 'taken' && o.status === 'finding') {
+        o.status = 'handed'; o.partner = 'Orignals partner (live claim)'; o.otp = o.otp || rnd(1000, 9999);
+        cloudShopOrderStatus(o.id, 'handed'); changed = true;
+        toast('A real partner claimed the delivery!');
+      }
+      if (js[0].status === 'done' && o.status !== 'done') {
+        o.status = 'done'; M.revenue += o.total;
+        walletAdd(o.total, 'Sale · ' + o.id);
+        cloudShopOrderStatus(o.id, 'done'); changed = true;
+        confettiBurst(); toast('+' + money(o.total) + ' — delivered by partner, sale complete!');
+      }
+    }
+  } catch (e) { /* next tick */ }
+  if (changed) save();
+  return changed;
+}
+
+/* simulated walk-in orders — ONLY when running without a cloud connection */
 function genIncomingOrder() {
   const M = S.myShop;
+  if (typeof CLOUD !== 'undefined' && CLOUD.on) return false;
   if (!M || !M.online || !M.items.length) return false;
   const pendingNew = M.orders.filter(o => o.status === 'new').length;
   if (pendingNew >= 2 || Date.now() - (M.lastGen || 0) < 22000) return false;
@@ -162,7 +216,7 @@ function renderShopDash() {
   const orderCard = o => `
     <div class="job-card ${o.status === 'new' ? 'pulse-border' : ''}">
       <div class="job-top"><span class="job-emoji">${ic('bell', 20)}</span>
-        <div><b>${o.id} · ${esc(o.customer)}</b><small>${o.km} km away · ${new Date(o.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</small></div>
+        <div><b>${o.id} · ${esc(o.customer)}</b><small>${o.real ? '<b class="ok">LIVE · real buyer</b> · ' : ''}${o.km != null ? o.km + ' km away · ' : ''}${new Date(o.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</small></div>
         <em class="job-pay">${money(o.total)}</em></div>
       <div class="job-note">${o.items.map(i => `${i.emoji} ${esc(i.name)} × ${i.q}`).join(' · ')}</div>
       ${o.status === 'new' ? `<div class="btn-pair">
@@ -236,23 +290,44 @@ function renderShopDash() {
   clearInterval(window._shopTimer);
   window._shopTimer = setInterval(() => {
     if (!location.hash.includes('myshop')) { clearInterval(window._shopTimer); return; }
-    if (genIncomingOrder()) renderShopDash();
+    if (typeof CLOUD !== 'undefined' && CLOUD.on) {
+      shopCloudSync().then(ch => { if (ch && location.hash.includes('myshop')) renderShopDash(); });
+    } else if (genIncomingOrder()) renderShopDash();
   }, 8000);
+  if (typeof CLOUD !== 'undefined' && CLOUD.on) shopCloudSync().then(ch => { if (ch && location.hash.includes('myshop')) renderShopDash(); });
 }
 
 function shopOrderAct(oid, act) {
   const M = S.myShop;
   const o = M.orders.find(x => x.id === oid); if (!o) return;
-  if (act === 'accept') { o.status = 'prep'; toast('Order accepted — pack it up!', '📦'); }
-  if (act === 'reject') { o.status = 'rejected'; toast('Order rejected & refunded', ''); }
-  if (act === 'selfout') { o.status = 'selfout'; o.deliv = 'self'; toast('Marked out for delivery', '🛵'); }
+  const pushCloud = (st) => { if (o.real && typeof cloudShopOrderStatus === 'function') cloudShopOrderStatus(oid, st); };
+  if (act === 'accept') { o.status = 'prep'; pushCloud('prep'); toast('Order accepted — pack it up!', '📦'); }
+  if (act === 'reject') { o.status = 'rejected'; pushCloud('rejected'); toast('Order rejected & refunded', ''); }
+  if (act === 'selfout') { o.status = 'selfout'; o.deliv = 'self'; pushCloud('selfout'); toast('Marked out for delivery', '🛵'); }
   if (act === 'find') {
-    o.status = 'finding'; save(); renderShopDash();
+    o.status = 'finding'; o.deliv = 'partner'; pushCloud('finding');
+    if (o.real && typeof cloudPostJob === 'function' && M.addr && M.addr.lat != null) {
+      /* the delivery leg becomes a REAL claimable job for nearby partners */
+      o.jobId = 'lj_' + oid;
+      cloudPostJob({
+        id: o.jobId, what: 'Deliver order from ' + M.name, jtype: 'box',
+        from_name: M.name + ' (shop)', to_name: (o.buyer && o.buyer.addr) ? o.buyer.addr.split(',')[0] : 'Customer',
+        from_lat: M.addr.lat, from_lng: M.addr.lng,
+        to_lat: o.buyer ? o.buyer.lat : null, to_lng: o.buyer ? o.buyer.lng : null,
+        km: o.km, pay: Math.max(15, Math.round((o.km || 2) * 9)), order_ref: oid
+      });
+      save(); renderShopDash();
+      toast('Posted to the live partner feed — first partner passing by claims it');
+      return;
+    }
+    /* no cloud/no GPS: platform assigns from the roster */
+    save(); renderShopDash();
     setTimeout(() => {
       const oo = S.myShop.orders.find(x => x.id === oid);
       if (oo && oo.status === 'finding') {
         const p = pick(DB.partners);
         oo.status = 'handed'; oo.partner = p.name + ' (' + p.veh + ')'; oo.otp = rnd(1000, 9999); oo.deliv = 'partner';
+        pushCloud('handed');
         save(); toast(p.name + ' accepted — arriving in ' + rnd(2, 6) + ' min', '🤝');
         if (location.hash.includes('myshop')) renderShopDash();
       }
@@ -260,7 +335,7 @@ function shopOrderAct(oid, act) {
     return;
   }
   if (act === 'done') {
-    o.status = 'done';
+    o.status = 'done'; pushCloud('done');
     M.revenue += o.total;
     walletAdd(o.total, 'Sale · ' + o.id + '');
     confettiBurst(); toast('+' + money(o.total) + ' — sale complete!', '💰');

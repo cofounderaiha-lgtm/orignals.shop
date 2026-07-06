@@ -218,6 +218,14 @@ function createOrder(o) {
 }
 function orderTimes(o) { return o.flowT || FLOW_T[o.flow]; }
 function orderStage(o) {
+  /* community-shop orders are driven by the REAL shopkeeper's actions
+     (accept → pack → hand over → delivered), not by a timer */
+  if (o.cloudShop) {
+    const last = FLOWS[o.flow].length - 1;
+    const map = { new: 0, prep: 1, finding: 1, handed: last - 1, selfout: last - 1, done: last };
+    const s = map[o.cloudStatus || 'new'];
+    return Math.min(s != null ? s : 0, last);
+  }
   const el = (Date.now() - o.placedAt) / 1000;
   const times = orderTimes(o);
   let idx = 0;
@@ -231,6 +239,10 @@ function cancelOrder(oid) {
   const o = S.orders.find(x => x.id === oid);
   if (!o || !canCancel(o)) { toast('Too late to cancel — already picked up'); return; }
   o.cancelled = Date.now();
+  /* tell the real shopkeeper on the other device */
+  if (o.cloudShop && typeof CLOUD !== 'undefined' && CLOUD.on) {
+    cloudFetch('rpc/shop_order_cancel', { method: 'POST', body: JSON.stringify({ p_id: o.id, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+  }
   walletAdd(o.total, 'Refund · ' + o.id + ' · ' + o.title);
   notify('Order cancelled', money(o.total) + ' refunded to your wallet instantly', 'x');
   toast('Cancelled — ' + money(o.total) + ' refunded to wallet');
@@ -253,6 +265,7 @@ setInterval(() => {
     }
   });
   if (changed) { save(); refreshChrome(); }
+  if (typeof pollCloudOrders === 'function') pollCloudOrders();
   const live = $('[data-live-order]');
   if (live && typeof renderTrack === 'function') renderTrack(live.dataset.liveOrder);
   const strip = $('#activeStrip');
