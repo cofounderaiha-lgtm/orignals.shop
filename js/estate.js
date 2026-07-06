@@ -49,14 +49,15 @@ view('estate', args => {
       <div class="prop-card">
         <div class="prop-img">
           ${h.img ? `<img src="${h.img}" alt="" loading="lazy" onerror="this.remove()"/>` : `<span class="tile-ic">${ic('home', 34)}</span>`}
-          <em class="prop-verified">${'★'.repeat(h.star)} ${h.rating} (${h.ratings})</em>
+          <em class="prop-verified">${ic('shield', 10)} VERIFIED HOST</em>
         </div>
         <div class="prop-body">
           <div class="prop-price">${money(h.price)}<small>/night</small></div>
           <b>${esc(h.name)}</b>
           <small>${ic('pin', 11)} ${esc(h.loc)}</small>
+          ${h.host ? `<small class="host-line">${ic('user', 11)} Hosted by <b>${esc(h.host.name)}</b> · Verified · joined ${h.host.since} · ★ ${h.rating} (${h.ratings})</small>` : ''}
           <div class="prop-tags">${h.amen.map(a => `<i>${esc(a)}</i>`).join('')}</div>
-          <button class="btn-main sm wide" onclick="staySheet('${h.id}')">Book stay</button>
+          <button class="btn-main sm wide" onclick="staySheet('${h.id}')">Book this stay</button>
         </div>
       </div>`).join('')}
     </div>
@@ -156,37 +157,54 @@ function propSubmit() {
   }, 25000);
 }
 
-/* ---------- hotel stay booking ---------- */
+/* ---------- hotel stay booking — real calendar dates ---------- */
+function stayFmt(d) { return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }); }
+function stayDays() {
+  return [...Array(14)].map((_, i) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return d; });
+}
 function staySheet(hid) {
   const h = DB.hotels.find(x => x.id === hid);
-  window._st = { day: 'Today', nights: 1, guests: 2 };
+  window._st = { inIdx: 0, nights: 2, guests: 2 };
+  const days = stayDays();
   const render = () => {
     const d = window._st;
+    const ci = days[d.inIdx];
+    const co = new Date(ci); co.setDate(co.getDate() + d.nights);
+    const total = h.price * d.nights;
     $('#sheetBody').innerHTML = `
     <div class="sheet-grab"></div><h3 class="sheet-title">${esc(h.name)}</h3>
-    <div class="ck-line"><span>${'★'.repeat(h.star)} · ${h.rating} (${h.ratings})</span><span>${money(h.price)}/night</span></div>
-    <div class="fld"><span>Check-in</span><div class="chip-wrap">
-      ${['Today', 'Tomorrow', 'Sat', 'Sun'].map(x => `<button class="chip ${d.day === x ? 'on' : ''}" onclick="window._st.day='${x}';window._stR()">${x}</button>`).join('')}</div></div>
+    ${h.host ? `<div class="trust-row">${ic('shield', 12)} Hosted by <b>&nbsp;${esc(h.host.name)}&nbsp;</b> · Verified · joined ${h.host.since} · ★ ${h.rating}</div>` : ''}
+    <div class="fld"><span>Check-in date</span><div class="chip-row" style="margin:4px 0 2px">
+      ${days.map((x, i) => `<button class="chip ${d.inIdx === i ? 'on' : ''}" onclick="window._st.inIdx=${i};window._stR()">${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : stayFmt(x)}</button>`).join('')}</div></div>
     <div class="qty-line"><b>Nights</b><span class="stp qty"><button onclick="window._st.nights=Math.max(1,window._st.nights-1);window._stR()">−</button><b>${d.nights}</b><button onclick="window._st.nights=Math.min(14,window._st.nights+1);window._stR()">+</button></span></div>
     <div class="qty-line"><b>Guests</b><span class="stp qty"><button onclick="window._st.guests=Math.max(1,window._st.guests-1);window._stR()">−</button><b>${d.guests}</b><button onclick="window._st.guests=Math.min(6,window._st.guests+1);window._stR()">+</button></span></div>
-    <button class="btn-main wide" onclick="stayBook('${hid}')">Book · ${money(h.price * d.nights)}</button>`;
+    <div class="card-block bill">
+      <div class="ck-line"><span>Check-in</span><span><b>${stayFmt(ci)}</b> · from 12 pm</span></div>
+      <div class="ck-line"><span>Check-out</span><span><b>${stayFmt(co)}</b> · by 11 am</span></div>
+      <div class="ck-line grand"><span>${money(h.price)} × ${d.nights} night${d.nights > 1 ? 's' : ''}</span><span>${money(total)}</span></div>
+    </div>
+    <div class="trust-row">${ic('check', 12)} The price shown is the price you pay — zero fees at checkout · free cancellation till 24 h before</div>
+    <button class="btn-main wide" onclick="stayBook('${hid}')">Book this stay · ${money(total)}</button>`;
   };
   window._stR = render;
   sheet(''); render();
 }
 function stayBook(hid) {
   const h = DB.hotels.find(x => x.id === hid);
-  const d = window._st, total = h.price * d.nights;
+  const d = window._st, days = stayDays();
+  const ci = days[d.inIdx];
+  const co = new Date(ci); co.setDate(co.getDate() + d.nights);
+  const total = h.price * d.nights;
   closeSheet();
   checkoutSheet({
     title: 'Stay · ' + h.name, icon: 'home',
-    meta: `${d.day} check-in · ${d.nights} night${d.nights > 1 ? 's' : ''} · ${d.guests} guests · free cancellation`,
+    meta: `${stayFmt(ci)} → ${stayFmt(co)} · ${d.nights} night${d.nights > 1 ? 's' : ''} · ${d.guests} guests · free cancellation`,
     lines: [[d.nights + ' night' + (d.nights > 1 ? 's' : '') + ' × ' + money(h.price), total]], total,
     onPay: (final) => {
       if (!S.stays) S.stays = [];
-      S.stays.unshift({ id: uid(), hotel: h.name, day: d.day, nights: d.nights, guests: d.guests, total: final, ts: Date.now() });
+      S.stays.unshift({ id: uid(), hotel: h.name, day: stayFmt(ci), checkIn: ci.toISOString(), checkOut: co.toISOString(), nights: d.nights, guests: d.guests, total: final, ts: Date.now() });
       save();
-      notify('Stay booked', `${h.name} — ${d.day}, ${d.nights} night(s). Show your ID at check-in.`);
+      notify('Stay booked', `${h.name} — check-in ${stayFmt(ci)}, ${d.nights} night${d.nights > 1 ? 's' : ''}. Show your ID at check-in.`);
       go('estate/mine');
     }
   });

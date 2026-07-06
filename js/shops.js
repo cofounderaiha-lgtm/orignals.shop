@@ -301,7 +301,9 @@ function renderTrack(oid) {
   ${o.partner && st >= 1 ? `
   <div class="partner-card">
     <span class="pc-ava">${ic('user', 22)}</span>
-    <div class="pc-info"><b>${esc(o.partner.name)}</b><small>★ ${o.partner.rating} · ${o.partner.trips.toLocaleString('en-IN')} trips · ${esc(o.partner.veh)}</small></div>
+    <div class="pc-info"><b>${esc(o.partner.name)} <small class="dim">★ ${o.partner.rating}</small></b>
+      <small>${o.partner.car ? esc(o.partner.car) + ' · ' : ''}${esc(o.partner.veh)} · ${o.partner.trips.toLocaleString('en-IN')} trips</small>
+      ${!done && !o.cancelled ? `<small class="ok">${orderStage(o) < FLOWS[o.flow].length - 2 ? 'Arriving in ~' + Math.max(1, Math.round((FLOW_T[o.flow][FLOW_T[o.flow].length - 1] - (Date.now() - o.placedAt) / 1000) / 60)) + ' min' : 'Almost there'}</small>` : ''}</div>
     ${done ? '' : `<div class="pc-otp">OTP<b>${o.partner.otp}</b></div>`}
     <button class="pc-call" onclick="toast('Connecting to ${esc(o.partner.name)} via masked number — your number stays private')">${ic('phone', 16)}</button>
   </div>

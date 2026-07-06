@@ -201,12 +201,12 @@ const DB = {
   ],
 
   partners: [
-    { name:'Ravi K.',   rating:4.9, trips:4820, veh:'KA 05 MX 4821' },
-    { name:'Sunita P.', rating:4.8, trips:3204, veh:'KA 03 HD 9034' },
-    { name:'Amit S.',   rating:4.9, trips:6110, veh:'KA 51 AB 2260' },
-    { name:'Farhan M.', rating:4.7, trips:2141, veh:'KA 01 QT 7745' },
-    { name:'Deepak R.', rating:4.9, trips:5480, veh:'KA 41 ZZ 1180' },
-    { name:'Manju N.',  rating:4.8, trips:3890, veh:'KA 09 CD 6412' }
+    { name:'Rohit Kumar', rating:4.9, trips:4820, car:'Maruti WagonR',  veh:'DL 1C AB 1234' },
+    { name:'Sunita P.',   rating:4.8, trips:3204, car:'Honda Activa',   veh:'DL 3S HD 9034' },
+    { name:'Amit S.',     rating:4.9, trips:6110, car:'Bajaj RE Auto',  veh:'DL 1R AB 2260' },
+    { name:'Farhan M.',   rating:4.7, trips:2141, car:'TVS Jupiter',    veh:'DL 5S QT 7745' },
+    { name:'Deepak R.',   rating:4.9, trips:5480, car:'Tata Ace',       veh:'DL 1L ZZ 1180' },
+    { name:'Manju N.',    rating:4.8, trips:3890, car:'Hero Splendor',  veh:'DL 9S CD 6412' }
   ],
 
   /* ---------- PARCEL TYPES (Send Anything) ---------- */
@@ -352,18 +352,27 @@ const DB = {
 
   /* ---------- HOTELS & STAYS ---------- */
   hotels: [
+    { id:'ht0', name:'Sunlit Studio near DU', loc:'Kingsway Camp · 10 min to campus', price:1800, rating:4.9, ratings:'214', star:4,
+      img:'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=60&auto=format&fit=crop', amen:['Entire studio','Kitchenette','Washing machine'],
+      host:{ name:'Meera Sharma', since:2019 } },
     { id:'ht1', name:'Lakeview Residency Inn', loc:'Sector 12, near lake', price:1499, rating:4.3, ratings:'2.1K', star:3,
-      img:'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=60&auto=format&fit=crop', amen:['Free WiFi','AC rooms','Breakfast','Parking'] },
+      img:'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=60&auto=format&fit=crop', amen:['Free WiFi','AC rooms','Breakfast','Parking'],
+      host:{ name:'Rajan Mehta', since:2017 } },
     { id:'ht2', name:'The Cyber Suites', loc:'Cyber Park, Phase 3', price:2899, rating:4.6, ratings:'3.4K', star:4,
-      img:'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&q=60&auto=format&fit=crop', amen:['Business desk','Gym','Restaurant','Airport cab'] },
+      img:'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&q=60&auto=format&fit=crop', amen:['Business desk','Gym','Restaurant','Airport cab'],
+      host:{ name:'Cyber Suites Hotels', since:2015 } },
     { id:'ht3', name:'Budget Stay Express', loc:'Railway Station Rd', price:799, rating:4.0, ratings:'5.2K', star:2,
-      img:'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=60&auto=format&fit=crop', amen:['24×7 check-in','Clean linen','UPI accepted'] },
+      img:'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=60&auto=format&fit=crop', amen:['24×7 check-in','Clean linen','UPI accepted'],
+      host:{ name:'Ramesh Yadav', since:2018 } },
     { id:'ht4', name:'Heritage Haveli Stay', loc:'Old Town, Temple Rd', price:3499, rating:4.8, ratings:'980', star:4,
-      img:'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=60&auto=format&fit=crop', amen:['Courtyard','Home food','Guided walks'] },
+      img:'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=60&auto=format&fit=crop', amen:['Courtyard','Home food','Guided walks'],
+      host:{ name:'Devika Rathore', since:2016 } },
     { id:'ht5', name:'Transit Pods — Airport', loc:'Terminal 2 walkway', price:999, rating:4.2, ratings:'1.7K', star:3,
-      img:'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=60&auto=format&fit=crop', amen:['Hourly stays','Shower','Luggage locker'] },
+      img:'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=60&auto=format&fit=crop', amen:['Hourly stays','Shower','Luggage locker'],
+      host:{ name:'Transit Pods Ltd', since:2022 } },
     { id:'ht6', name:'Green Farms Eco Resort', loc:'Village Belt, North', price:4299, rating:4.7, ratings:'760', star:4,
-      img:'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=60&auto=format&fit=crop', amen:['Organic kitchen','Pool','Bonfire','Farm tour'] }
+      img:'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=60&auto=format&fit=crop', amen:['Organic kitchen','Pool','Bonfire','Farm tour'],
+      host:{ name:'Baldev & Nirmala Singh', since:2014 } }
   ],
 
   dineSlots: ['12:30 PM','1:30 PM','7:00 PM','8:00 PM','9:00 PM'],

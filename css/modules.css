@@ -777,3 +777,8 @@
 .promise-strip svg{color:var(--primary);flex:none}
 .sec-head.slim{margin:10px 0 8px}
 .sec-head.slim h2{font-size:.95rem}
+
+/* ---------- verified host line (stays) ---------- */
+.host-line{display:flex;align-items:center;gap:5px;color:var(--mut);font-size:.72rem;margin:2px 0}
+.host-line b{color:var(--ink)}
+.host-line svg{color:var(--primary);flex:none}
