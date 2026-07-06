@@ -11,6 +11,14 @@ function tkDates() {
 function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
 function showAvail(mid, t) { const r = hash(mid + t) % 10; return r < 5 ? 'avail' : r < 8 ? 'fill' : 'full'; }
 
+/* cinemas near you (multi-venue, BookMyShow-style) */
+const CINEMAS = [
+  { id: 'cin1', name: 'PVR Grand Galleria', area: 'City Centre', km: 2.4 },
+  { id: 'cin2', name: 'INOX Riverside Mall', area: 'Sector 12', km: 4.1 },
+  { id: 'cin3', name: 'Cinepolis Metro Walk', area: 'Model Town', km: 3.3 },
+  { id: 'cin4', name: 'Miraj Cinemas', area: 'Old Town', km: 5.8 }
+];
+
 view('tickets', args => {
   const tab = args[0] || 'movies';
   window._tkDate = window._tkDate || tkDates()[0].key;
@@ -63,18 +71,29 @@ view('tickets', args => {
   }
 
   if (tab === 'dining') {
-    const rests = DB.shops.filter(s => s.type === 'food' && s.open);
+    const cuisines = ['All', 'Biryani', 'South Indian', 'Tiffin', 'Sweets', 'Veg'];
+    window._dineCuisine = window._dineCuisine || 'All';
+    const cz = window._dineCuisine;
+    let rests = DB.shops.filter(s => s.type === 'food' && s.open);
+    if (cz !== 'All') {
+      const kw = cz.toLowerCase();
+      rests = rests.filter(s => (s.name + ' ' + s.tag).toLowerCase().includes(kw) || (cz === 'Veg' && s.veg));
+    }
     body = `<div class="tip-strip">${ic('bowl', 13)} Reserve a table at restaurants near you — pay at the restaurant, 20% off the bill on Orignals reservations.</div>
+    <div class="chip-row">
+      ${cuisines.map(c => `<button class="chip ${cz === c ? 'on' : ''}" onclick="window._dineCuisine='${c}';VIEWS.tickets(['dining'])">${c}</button>`).join('')}
+    </div>
     <div class="shop-list">
-      ${rests.map(s => `
+      ${rests.length ? rests.map(s => `
       <div class="shop-card" onclick="dineSheet('${s.id}')">
         ${shopTile(s)}
         <div class="shop-body">
           <div class="shop-line1"><b>${esc(s.name)}</b><span class="rate">★ ${s.rating}</span></div>
           <div class="shop-line2">${esc(s.tag)}</div>
           <div class="shop-line3"><span>${ic('pin', 11)} ${s.km} km</span><span>·</span><span>Table for 2–8</span></div>
+          <div class="dine-menu-peek">${s.items.slice(0, 3).map(i => esc(i.name)).join(' · ')}</div>
           <span class="dbadge both">20% off bill · Reserve free</span>
-        </div></div>`).join('')}</div>`;
+        </div></div>`).join('') : `<div class="empty"><span>${ic('bowl', 40)}</span><b>No ${esc(cz)} places open now</b><p>Try another cuisine.</p></div>`}</div>`;
   }
 
   if (tab === 'mine') {
@@ -118,23 +137,27 @@ view('movie', args => {
     <p class="movie-about">${esc(m.about)}</p>
     <div class="trust-row">${ic('shield', 13)} Allows cancellation · Digital ticket · Recliners available · Wheelchair friendly</div>
 
-    <div class="sec-head"><h2>Pick a show</h2></div>
+    <div class="sec-head"><h2>Pick a cinema &amp; show</h2></div>
     <div class="date-strip">
       ${tkDates().map(d => `<button class="date-pill ${window._tkDate === d.key ? 'on' : ''}" onclick="window._tkDate='${d.key}';VIEWS.movie(['${m.id}'])"><small>${d.day}</small><b>${d.num}</b></button>`).join('')}
     </div>
-    <div class="show-row">
-      ${m.times.map((t, i) => {
-        const av = showAvail(m.id + window._tkDate, t);
-        return `<button class="show-pill ${av}" ${av === 'full' ? `onclick="toast('This show is almost full — pick another')"` : `onclick="go('seats/${m.id}/${i}')"`}>${t}<small>${av === 'avail' ? 'Available' : av === 'fill' ? 'Filling fast' : 'Almost full'}</small></button>`;
-      }).join('')}
-    </div>
+    ${CINEMAS.map(cin => `
+      <div class="cinema-block">
+        <div class="cinema-head"><b>${esc(cin.name)}</b><small>${ic('pin', 10)} ${esc(cin.area)} · ${cin.km} km</small></div>
+        <div class="show-row">
+          ${m.times.map((t, i) => {
+            const av = showAvail(m.id + cin.id + window._tkDate, t);
+            return `<button class="show-pill ${av}" ${av === 'full' ? `onclick="toast('This show is almost full — pick another')"` : `onclick="window._cinema='${esc(cin.name)}';go('seats/${m.id}/${i}')"`}>${t}<small>${av === 'avail' ? 'Available' : av === 'fill' ? 'Filling fast' : 'Almost full'}</small></button>`;
+          }).join('')}
+        </div>
+      </div>`).join('')}
     <div class="legend"><span><i class="lg avail"></i>Available</span><span><i class="lg fill"></i>Filling fast</span><span><i class="lg full"></i>Almost full</span></div>
   </div>`;
 });
 
 /* ---------- SEAT SELECTION (real cross-device inventory) ---------- */
 let SEATSEL = [];
-function showKeyOf(m, tIdx) { return m.id + '|' + window._tkDate + '|' + tIdx; }
+function showKeyOf(m, tIdx) { return m.id + '|' + window._tkDate + '|' + tIdx + '|' + (window._cinema || 'c'); }
 
 view('seats', args => {
   const m = DB.movies.find(x => x.id === args[0]);
@@ -167,7 +190,7 @@ function renderSeats() {
 
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="go('movie/${m.id}')">${ic('chevl', 16)}</button>
-    <div><h1>${esc(m.title)}</h1><small>${tkDates().find(d => d.key === window._tkDate).day} · ${time} · Screen 2${window._seatCtx.loaded ? ' · <b class="ok">live seats</b>' : (typeof CLOUD !== 'undefined' && CLOUD.on ? ' · syncing…' : '')}</small></div></div>
+    <div><h1>${esc(m.title)}</h1><small>${tkDates().find(d => d.key === window._tkDate).day} · ${time} · ${esc(window._cinema || 'Screen 2')}${window._seatCtx.loaded ? ' · <b class="ok">live seats</b>' : (typeof CLOUD !== 'undefined' && CLOUD.on ? ' · syncing…' : '')}</small></div></div>
 
   <div class="screen-arc"><svg viewBox="0 0 300 30"><path d="M10 28 Q150 -8 290 28" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" opacity=".7"/></svg><small>SCREEN THIS WAY</small></div>
 
@@ -201,6 +224,15 @@ function toggleSeat(sid) {
   else { if (SEATSEL.length >= 6) { toast('Max 6 seats per booking'); return; } SEATSEL.push(sid); }
   renderSeats();
 }
+/* food & beverage combos (BookMyShow-style add-on) */
+const FNB = [
+  { id: 'combo1', name: 'Large Popcorn + Pepsi', price: 470, ic: 'bowl' },
+  { id: 'combo2', name: 'Cheese Nachos + Coke', price: 380, ic: 'bowl' },
+  { id: 'pop', name: 'Salted Popcorn (Regular)', price: 250, ic: 'bowl' },
+  { id: 'samosa', name: 'Veg Samosa (2 pcs)', price: 120, ic: 'bowl' },
+  { id: 'water', name: 'Mineral Water', price: 60, ic: 'bowl' }
+];
+
 /* seat hold lifecycle: reserve on the server BEFORE payment (real
    cinemas lock your seats while you pay), confirm on pay, release if
    the user backs out of checkout. */
@@ -232,16 +264,48 @@ async function seatCheckout() {
     return;
   }
   _seatHold = { show, seats, confirmed: false };
+  window._fnb = {};
+  fnbSheet(() => seatPayment(m, tIdx, seats));   // offer snacks, then pay
+}
+
+/* F&B add-on step (skippable) */
+function fnbSheet(onProceed) {
+  window._fnbNext = onProceed;
+  const render = () => {
+    const F = window._fnb || {};
+    const sub = FNB.reduce((a, x) => a + (F[x.id] || 0) * x.price, 0);
+    $('#sheetBody').innerHTML = `
+    <div class="sheet-grab"></div><h3 class="sheet-title">Add snacks? ${ic('bowl', 16)}</h3>
+    <div class="foot-note sm" style="text-align:left;margin:0 0 6px">Skip the queue — pick up at the counter with your ticket.</div>
+    ${FNB.map(x => `<div class="qty-line"><div><b>${esc(x.name)}</b><small class="dim"> · ${money(x.price)}</small></div>
+      <span class="stp qty"><button onclick="window._fnb['${x.id}']=Math.max(0,(window._fnb['${x.id}']||0)-1);window._fnbR()">−</button><b>${(F[x.id] || 0)}</b><button onclick="window._fnb['${x.id}']=(window._fnb['${x.id}']||0)+1;window._fnbR()">+</button></span></div>`).join('')}
+    <div class="btn-pair" style="margin-top:12px">
+      <button class="btn-main ghost" onclick="window._fnbNext()">Skip</button>
+      <button class="btn-main" onclick="window._fnbNext()">${sub ? 'Add ' + money(sub) + ' & continue' : 'Continue'}</button>
+    </div>`;
+  };
+  window._fnbR = render; sheet(''); render();
+}
+
+function seatPayment(m, tIdx, seats) {
+  const time = m.times[tIdx];
+  const day = tkDates().find(d => d.key === window._tkDate).day;
+  const show = showKeyOf(m, tIdx);
+  const seatTotal = seats.reduce((a, s) => a + seatPrice(s[0]), 0);
+  const F = window._fnb || {};
+  const fnbLines = FNB.filter(x => F[x.id]).map(x => [x.name + ' × ' + F[x.id], x.price * F[x.id]]);
+  const fnbTotal = fnbLines.reduce((a, l) => a + l[1], 0);
+  const total = seatTotal + fnbTotal;
 
   checkoutSheet({
     title: m.title + ' · ' + seats.length + ' seats', icon: 'star',
-    meta: `${day} · ${time} · Seats ${seats.join(', ')} · held for you · zero convenience fee`,
-    lines: seats.map(s => ['Seat ' + s + ' (' + DB.seatTiers.find(t => t.rows.includes(s[0])).name + ')', seatPrice(s[0])]),
+    meta: `${day} · ${time} · Seats ${seats.join(', ')}${fnbTotal ? ' + snacks' : ''} · held for you`,
+    lines: [...seats.map(s => ['Seat ' + s + ' (' + DB.seatTiers.find(t => t.rows.includes(s[0])).name + ')', seatPrice(s[0])]), ...fnbLines],
     total,
     onPay: (final) => {
       if (!S.tickets) S.tickets = [];
-      const t = { id: 'TK' + rnd(10000, 99999), title: m.title, sub: `${day} · ${time} · Screen 2 · ${seats.join(', ')}`, seats, show, total: final, ts: Date.now(), grad: m.grad };
-      if (_seatHold) _seatHold.confirmed = true;      // stop the release-on-close
+      const t = { id: 'TK' + rnd(10000, 99999), title: m.title, sub: `${day} · ${time} · ${window._cinema || 'Screen 2'} · ${seats.join(', ')}`, seats, show, cinema: window._cinema, fnb: fnbLines.map(l => l[0]), total: final, ts: Date.now(), grad: m.grad };
+      if (_seatHold) _seatHold.confirmed = true;
       if (typeof cloudSeatsConfirm === 'function') cloudSeatsConfirm(show, seats, t.id);
       _seatHold = null;
       S.tickets.unshift(t); save();
@@ -277,6 +341,7 @@ view('ticket', args => {
       <div class="ticket-meta"><b>${t.id}</b><small>Paid ${money(t.total)}</small><small>${new Date(t.ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>
     </div>
     <div class="ticket-rip"></div>
+    ${(t.fnb && t.fnb.length) ? `<div class="ticket-fnb">${ic('bowl', 12)} Snacks: ${t.fnb.map(esc).join(', ')} — collect at the counter</div>` : ''}
     <div class="ticket-foot">${ic('shield', 12)} Fraud-proof: QR is single-scan, seat-locked &amp; ID-bound</div>
   </div>
   <button class="btn-main wide ghost" onclick="cancelTicket('${t.id}')">Cancel ticket (90% refund to wallet)</button>`;
@@ -335,6 +400,11 @@ function dineSheet(shopId) {
     $('#sheetBody').innerHTML = `
     <div class="sheet-grab"></div>
     <h3 class="sheet-title">Reserve at ${esc(s.name)}</h3>
+    <div class="ck-line"><span>★ ${s.rating} · ${esc(s.tag)}</span><span>${s.km} km</span></div>
+    <div class="menu-peek">
+      <small class="dim">Popular dishes</small>
+      ${s.items.slice(0, 4).map(i => `<div class="ck-line"><span>${esc(i.name)}<small class="dim"> · ${esc(i.qty)}</small></span><span>${money(i.price)}</span></div>`).join('')}
+    </div>
     <div class="fld"><span>Day</span><div class="chip-wrap">
       ${['Today', 'Tomorrow', 'Sat', 'Sun'].map(x => `<button class="chip ${d.day === x ? 'on' : ''}" onclick="window._dn.day='${x}';window._dnRender()">${x}</button>`).join('')}</div></div>
     <div class="fld"><span>Time</span><div class="chip-wrap">

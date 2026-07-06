@@ -23,9 +23,17 @@ view('estate', args => {
   }
 
   if (['buy', 'rent', 'plot', 'commercial'].includes(tab)) {
-    const list = [...DB.properties, ...(S.myListings || []), ..._commListings].filter(p => p.kind === tab);
+    let list = [...DB.properties, ...(S.myListings || []), ..._commListings].filter(p => p.kind === tab);
+    window._propSort = window._propSort || 'reco';
+    const ps = window._propSort;
+    const psort = { reco: (a, b) => (b.verified - a.verified), priceLo: (a, b) => a.price - b.price, priceHi: (a, b) => b.price - a.price, newest: (a, b) => (b.ts || 0) - (a.ts || 0) };
+    list.sort(psort[ps] || psort.reco);
+    const pOpts = [['reco', 'Recommended'], ['priceLo', 'Price: low'], ['priceHi', 'Price: high'], ['newest', 'Newest']];
     body = `
     <div class="tip-strip">${ic('shield', 13)} Every listing is GPS-pinned &amp; document-checked — precise location, zero fake listings.</div>
+    <div class="sortbar"><div class="sortscroll">
+      ${pOpts.map(o => `<button class="sortchip ${ps === o[0] ? 'on' : ''}" onclick="window._propSort='${o[0]}';VIEWS.estate(['${tab}'])">${o[1]}</button>`).join('')}
+    </div></div>
     ${list.length ? `<div class="prop-list">${list.map(p => `
       <div class="prop-card">
         <div class="prop-img">
@@ -50,10 +58,19 @@ view('estate', args => {
   }
 
   if (tab === 'hotels') {
+    window._staySort = window._staySort || 'reco';
+    const ss = window._staySort;
+    let hotels = [...DB.hotels];
+    const sorters = { reco: (a, b) => b.rating - a.rating, price: (a, b) => a.price - b.price, priceHi: (a, b) => b.price - a.price, rating: (a, b) => b.rating - a.rating };
+    hotels.sort(sorters[ss] || sorters.reco);
+    const sOpts = [['reco', 'Recommended'], ['price', 'Price: low'], ['priceHi', 'Price: high'], ['rating', 'Top rated']];
     body = `
     <div class="tip-strip">${ic('shield', 13)} Standardised stays — verified photos, fixed prices, clean-linen promise. Hosts: first month free, then tiered 25–100 CHF/yr.</div>
+    <div class="sortbar"><div class="sortscroll">
+      ${sOpts.map(o => `<button class="sortchip ${ss === o[0] ? 'on' : ''}" onclick="window._staySort='${o[0]}';VIEWS.estate(['hotels'])">${o[1]}</button>`).join('')}
+    </div></div>
     <div class="prop-list">
-      ${DB.hotels.map(h => `
+      ${hotels.map(h => `
       <div class="prop-card">
         <div class="prop-img">
           ${h.img ? `<img src="${h.img}" alt="" loading="lazy" onerror="this.remove()"/>` : `<span class="tile-ic">${ic('home', 34)}</span>`}
