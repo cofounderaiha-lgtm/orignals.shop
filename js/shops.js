@@ -347,6 +347,13 @@ function renderTrack(oid) {
 function rateOrder(oid, n) {
   const o = S.orders.find(x => x.id === oid); if (!o) return;
   o.rated = n; save(); confettiBurst(); toast('Thanks! ' + '★'.repeat(n) + ' given');
+  /* real rating: recompute the shop's average so every buyer sees it */
+  if (o.shopId && typeof cloudRateShop === 'function') {
+    cloudRateShop(o.shopId, n, o.id).then(agg => {
+      const s = findShop(o.shopId);
+      if (agg && s && agg.avg != null) { s.rating = agg.avg; s.ratings = agg.count; }
+    });
+  }
   renderTrack(oid);
 }
 function reorder(oid) {

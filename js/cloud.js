@@ -290,6 +290,15 @@ async function cloudShopsRefresh(onDone) {
   } catch (e) { console.warn('[shops] community refresh skipped:', e.message); }
 }
 
+/* real rating: recomputes the shop's average for everyone */
+function cloudRateShop(shopId, stars, orderRef) {
+  if (!CLOUD.on) return Promise.resolve(null);
+  return cloudFetch('rpc/rate_shop', {
+    method: 'POST',
+    body: JSON.stringify({ p_shop: shopId, p_device: S.deviceKey || 'anon', p_stars: stars, p_order: orderRef || '' })
+  }).catch(() => null);
+}
+
 /* ============================================================
    SEAT INVENTORY — real, no double-booking across devices
    ============================================================ */
