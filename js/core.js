@@ -383,6 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('hashchange', route);
   route();
   if (typeof cloudInit === 'function') cloudInit();
+  if (typeof opsBoot === 'function') setTimeout(opsBoot, 400);        // remote kill switches
+  if (typeof maybeShowConsent === 'function') setTimeout(maybeShowConsent, 700);  // first-run consent (DPDP)
   if (!S.notifs.length) notify('Welcome to Orignals', 'Purity-verified food, every shop nearby, earn as you go. ₹500 free in your wallet.');
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});

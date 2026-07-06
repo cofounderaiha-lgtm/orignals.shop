@@ -157,6 +157,7 @@ view('admin', args => {
     ${dbTable('rfqs_b2b', (S.rfqs || []).map(r => [esc(r.item) + ' × ' + r.qty, r.status === 'quoted' ? money(r.quote) + '/' + esc(r.unit) : 'awaiting quote']))}
     ${dbTable('earnings', S.earnings.map(e => [esc(e.what), e.pay ? '+' + money(e.pay) : 'seva']))}
     <div class="card-block"><h3>${ic('grid', 14)} Cloud database</h3>${typeof cloudStatusHTML === 'function' ? cloudStatusHTML() : ''}</div>
+    <div class="card-block"><h3>${ic('shield', 14)} Operations — monitoring &amp; kill switches</h3><div id="opsPanel"><div class="ck-line"><span class="dim">Loading…</span><span></span></div></div></div>
     <button class="btn-main wide ghost" onclick="exportState()">${ic('upload', 14)} Export full database (JSON)</button>`;
   }
 
@@ -217,6 +218,10 @@ view('admin', args => {
     }).join('')}
   </div>
   ${body}`;
+
+  if (tab === 'data' && typeof opsAdminHTML === 'function') {
+    opsAdminHTML().then(h => { const el = document.getElementById('opsPanel'); if (el) el.innerHTML = h; });
+  }
 });
 
 function exportState() {

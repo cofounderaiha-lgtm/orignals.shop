@@ -76,18 +76,22 @@ first-month-free claims). **Fix:** Supabase Auth phone OTP via **MSG91** (~₹0.
 1 lakh signups ≈ ₹20–40K one-time SMS cost. The wizard forms already collect
 everything else.
 
-### 7. Legal & compliance for a government-endorsed consumer platform
-- **Consumer Protection (E-Commerce) Rules 2020** — grievance officer named in-app, 48 h acknowledgement. (Admin L1 Support queue exists; needs a named human.)
-- **FSSAI aggregator license** for food delivery.
-- **DPDP Act 2023** — privacy policy, consent copy, data-deletion path (exportState/reset exist; wire a delete-my-data RPC).
-- **Partner insurance** (group accident cover per active partner — as promised in-app).
-- **Terms of service + refund policy pages.**
+### 7. Legal & compliance — ✅ BUILT (2026-07-06)
+- ✅ **Privacy Policy** (DPDP Act 2023) — `#/legal/privacy`, full data-rights section.
+- ✅ **Terms of Service** — `#/legal/terms`.
+- ✅ **Refund & Cancellation policy** — `#/legal/refund`.
+- ✅ **Shipping & Delivery policy** — `#/legal/shipping` (payment gateways require this).
+- ✅ **Grievance Redressal** (CP E-Commerce Rules 2020) — `#/legal/grievance`, named-officer block, 48 h acknowledgement / 30-day resolution promise.
+- ✅ **First-run consent** gate (DPDP) + specific location-permission consent.
+- ✅ **Data export & erasure** — `#/legal/data`; `erase_device()` RPC wipes personal data and de-identifies financial records (retention exemption). Linked from Account.
+- ⏳ **Founder to fill** the `[bracketed]` placeholders in `js/legal.js` / `docs/COMPLIANCE.md` once the entity + grievance officer are named.
+- ⏳ **FSSAI aggregator license** + **partner group insurance** — external filings, start alongside the entity.
 
-### 8. Launch-day operations
-- **Sentry** (free tier) for error monitoring — 10-line snippet.
-- **Load test** with k6: simulate 50K concurrent order placements against Supabase Pro *before* the announcement.
-- **Status page** + a WhatsApp support number on day one.
-- **Kill switches**: `config.js` flags already let us hard-swap tiles/geocoder/LLM lanes without redeploying user devices (config is fetched fresh each load).
+### 8. Launch-day operations — ✅ BUILT (2026-07-06)
+- ✅ **Own error monitoring** → `error_log` table (no Sentry account needed); auto-captured, deduped, self-trimming; visible in Admin → Database → Operations.
+- ✅ **Remote kill switches** → `platform_flags`: maintenance mode (freeze), payments on/off, broadcast banner — applied on next app open with no redeploy. Runbook: `docs/OPS.md`.
+- ✅ **Load test** → `docs/loadtest.js` (k6, ramps to 500 VUs against the real backend paths). Run against staging before the announcement.
+- ⏳ **Status page + WhatsApp support number** — external accounts; stand up on launch day.
 
 ---
 

@@ -374,6 +374,7 @@ async function cloudMarketStats() {
 let _payBusy = false;
 async function payViaRazorpay(amountRs, meta, onSuccess, onUnconfigured) {
   if (_payBusy) return;
+  if (typeof paymentsLive === 'function' && !paymentsLive()) { toast('Online payments are paused right now — pay by wallet'); return; }
   if (typeof Razorpay === 'undefined') { toast('Payment system loading — try again in a moment'); return; }
   _payBusy = true;
 

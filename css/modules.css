@@ -778,6 +778,41 @@
 .sec-head.slim{margin:10px 0 8px}
 .sec-head.slim h2{font-size:.95rem}
 
+/* ---------- legal & policy pages ---------- */
+.legal{max-width:640px;margin:0 auto;padding:2px 2px 20px;line-height:1.6}
+.legal h3{font-family:'Bricolage Grotesque',Inter,sans-serif;font-size:1rem;color:var(--ink);margin:20px 0 6px}
+.legal p, .legal li{color:var(--ink);font-size:.9rem;margin:0 0 8px}
+.legal ul, .legal ol{margin:0 0 10px;padding-left:20px}
+.legal li{margin-bottom:5px}
+.legal b{color:var(--ink)}
+.legal a{color:var(--primary);cursor:pointer;text-decoration:underline}
+.legal .card-block{margin:10px 0}
+.legal-foot{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);font-size:.76rem;color:var(--mut)}
+.foot-note a{color:var(--primary);cursor:pointer}
+
+/* ---------- first-run consent (DPDP) ---------- */
+#consentGate{position:fixed;inset:0;z-index:9500;background:rgba(20,18,12,.55);display:flex;align-items:flex-end;justify-content:center;padding:0;backdrop-filter:blur(2px)}
+.consent-card{background:var(--card);width:100%;max-width:460px;border-radius:22px 22px 0 0;padding:26px 22px 24px;text-align:center;box-shadow:0 -8px 40px rgba(0,0,0,.3);animation:sheetUp .3s ease}
+.consent-card svg{margin-bottom:8px}
+.consent-card h2{font-family:'Bricolage Grotesque',Inter,sans-serif;font-size:1.4rem;color:var(--ink);margin:0 0 8px}
+.consent-card p{font-size:.86rem;color:var(--mut);line-height:1.55;margin:0 0 10px}
+.consent-card b{color:var(--ink)}
+.consent-links a{color:var(--primary);cursor:pointer;text-decoration:underline}
+.consent-card .btn-main{margin-top:10px}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* ---------- maintenance screen ---------- */
+#maintScreen{position:fixed;inset:0;z-index:9800;background:var(--bg,#FAF6EE);display:flex;align-items:center;justify-content:center;padding:24px}
+.maint-box{text-align:center;max-width:360px}
+.maint-box svg{margin-bottom:14px;animation:spin 8s linear infinite}
+.maint-box h2{font-family:'Bricolage Grotesque',Inter,sans-serif;font-size:1.5rem;color:var(--ink);margin:0 0 8px}
+.maint-box p{color:var(--mut);font-size:.9rem;line-height:1.55}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- ops banner ---------- */
+.ops-banner{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--haldi,#E8A020);color:#3a2600;padding:9px 14px;font-size:.82rem;font-weight:600}
+.ops-banner button{background:transparent;border:none;color:#3a2600;font-size:1rem;cursor:pointer;padding:0 4px}
+
 /* ---------- verified host line (stays) ---------- */
 .host-line{display:flex;align-items:center;gap:5px;color:var(--mut);font-size:.72rem;margin:2px 0}
 .host-line b{color:var(--ink)}

@@ -121,11 +121,16 @@ view('account', () => {
     <span>${ic('pin', 20)}</span><div><b>Location</b><small>${esc(S.user.addr.name)} — use GPS for instant delivery</small></div><em>Change</em></button>
   <button class="role-row" onclick="go('mitra')">
     <span>${ic('spark', 20)}</span><div><b>Talk to Mitra</b><small>The platform's own intelligence — voice or text</small></div><em>Chat</em></button>
+  <button class="role-row" onclick="go('legal')">
+    <span>${ic('shield', 20)}</span><div><b>Legal &amp; policies</b><small>Privacy, terms, refunds, grievance officer</small></div><em>View</em></button>
+  <button class="role-row" onclick="go('legal/data')">
+    <span>${ic('lock', 20)}</span><div><b>Your data</b><small>Export everything or erase it — your right</small></div><em>Manage</em></button>
   <button class="role-row" onclick="resetDemo()">
     <span>${ic('trash', 20)}</span><div><b>Reset app data</b><small>Fresh start on this device — clears orders, wallet, roles</small></div><em>Reset</em></button>
 
   <div class="foot-note">Orignals · Safety · Purity · Sustainability — for all<br/>
-  <span class="dim">People-first: small shops thrive, neighbours earn, no one loses their job to a machine.</span></div>`;
+  <span class="dim">People-first: small shops thrive, neighbours earn, no one loses their job to a machine.</span><br/>
+  <span class="dim"><a onclick="go('legal/privacy')">Privacy</a> · <a onclick="go('legal/terms')">Terms</a> · <a onclick="go('legal/refund')">Refunds</a> · <a onclick="go('legal/grievance')">Grievance</a></span></div>`;
 });
 
 function buyMembership() {
