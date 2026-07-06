@@ -31,25 +31,59 @@ view('earn', () => {
 
 /* ---------- pitch + registration ---------- */
 function renderEarnPitch() {
+  const teaser = [...allJobs()].sort((a, b) => b.pay / b.km - a.pay / a.km).slice(0, 5);
+  const total = teaser.reduce((a, j) => a + j.pay, 0);
   $('#view').innerHTML = `
-  <div class="earn-hero">
-    <span class="earn-big">${ic('users', 54)}</span>
+  <div class="pitch-hero">
+    <div class="pitch-live"><i></i>${allJobs().length} jobs live near ${esc(S.user.addr.name)} · ${money(total)}+ on the table</div>
     <h1>Passing by anyway?<br/><span>Get paid for it.</span></h1>
-    <p>Carry a person like a taxi — solo or shared. Carry a tiffin, medicines, a parcel on the same pathway. End to end, one trip, multiple earnings. Or deliver free as seva — your choice.</p>
-    <div class="earn-stats">
-      <div><b>₹120–450</b><small>avg per day, part-time</small></div>
-      <div><b>Walk to truck</b><small>every vehicle counts</small></div>
-      <div><b>1–10 CHF/yr</b><small>by vehicle · first month free</small></div>
+    <p>People, tiffins, medicines, parcels — everything moving along your route stacks into one trip. Or carry free as seva. Your road, your rules.</p>
+    <div class="btn-pair hero-cta">
+      <button class="btn-cta" onclick="startPartnerReg()">Register &amp; verify — 2 min</button>
+      <button class="btn-cta ghost" onclick="document.getElementById('jobTeaser').scrollIntoView({behavior:'smooth'})">See the jobs first</button>
     </div>
-    <button class="btn-main wide lg" onclick="startPartnerReg()">Register &amp; verify — 2 minutes</button>
-    <div class="foot-note">${ic('shield', 12)} Face + vehicle verified by computer vision. Safety first, always.</div>
   </div>
-  <div class="how-grid">
-    <div class="how"><span>${ic('camera', 22)}</span><b>CV-verified identity</b><p>Live face scan matched to your govt ID by high-precision computer vision. The vehicle's plate &amp; model are scanned and verified too.</p></div>
+
+  <div class="sec-head" id="jobTeaser"><h2>On your path, right now</h2><small class="dim">register to accept</small></div>
+  <div class="teaser-scroll">
+    ${teaser.map(j => `
+      <div class="teaser-card" onclick="startPartnerReg()">
+        <span class="tz-ic">${jobIcon(j.type)}</span>
+        <b>${esc(j.what)}</b>
+        <small>${esc(j.from)} ${ic('arrowr', 10)} ${esc(j.to)}</small>
+        <div class="tz-foot"><em>+${money(j.pay)}</em><span>${j.km} km</span></div>
+      </div>`).join('')}
+    <div class="teaser-card more" onclick="startPartnerReg()"><b>+${allJobs().length - teaser.length} more</b><small>unlock the full feed</small><span class="tz-arrow">${ic('arrowr', 18)}</span></div>
+  </div>
+
+  <div class="earn-stats">
+    <div><span class="st-ic t1">${ic('cash', 16)}</span><b>₹120–450</b><small>avg per day, part-time</small></div>
+    <div><span class="st-ic t2">${ic('truck', 16)}</span><b>Walk to truck</b><small>every vehicle counts</small></div>
+    <div><span class="st-ic t3">${ic('shield', 16)}</span><b>1–10 CHF/yr</b><small>by vehicle · first month free</small></div>
+  </div>
+
+  <div class="steps-strip">
+    <div class="step"><i>1</i><div><b>Register</b><small>name, phone, vehicle — 2 minutes</small></div></div>
+    <div class="step-line"></div>
+    <div class="step"><i>2</i><div><b>CV-verify</b><small>face + vehicle scanned once</small></div></div>
+    <div class="step-line"></div>
+    <div class="step"><i>3</i><div><b>Earn</b><small>accept jobs on your route</small></div></div>
+  </div>
+
+  <div class="how-grid tinted">
+    <div class="how"><span>${ic('camera', 22)}</span><b>CV-verified identity</b><p>Live face scan matched to your govt ID by high-precision computer vision. The vehicle's plate &amp; model are verified too.</p></div>
     <div class="how"><span>${ic('pin', 22)}</span><b>Jobs on your path</b><p>Going somewhere? Rides and parcels along the same route stack into one trip — more earnings per kilometre.</p></div>
-    <div class="how"><span>${ic('cash', 22)}</span><b>Instant money</b><p>OTP handover, live GPS trace, money in your wallet the second you deliver. Cash out anytime.</p></div>
-    <div class="how"><span>${ic('gift', 22)}</span><b>Seva mode</b><p>Want to help a neighbour free? Toggle seva — deliver at zero charge and earn community karma instead.</p></div>
-  </div>`;
+    <div class="how"><span>${ic('cash', 22)}</span><b>Instant money</b><p>OTP handover, live GPS trace, money in your wallet the second you deliver. Withdraw to UPI anytime.</p></div>
+    <div class="how"><span>${ic('gift', 22)}</span><b>Seva mode</b><p>Help a neighbour free — toggle seva, deliver at zero charge, earn community karma instead.</p></div>
+  </div>
+
+  <div class="quote-strip">
+    <span class="q-ava">${ic('user', 20)}</span>
+    <div>"I drop 2 tiffins on my way to college. Petrol paid, plus ₹1,800 a month extra."<small>— Ravi K. · cycle partner · 4,820 trips · ★ 4.9</small></div>
+  </div>
+
+  <button class="btn-main wide lg" onclick="startPartnerReg()">Start earning on your route</button>
+  <div class="foot-note">${ic('shield', 12)} Face + vehicle verified by computer vision · OTP handovers · live GPS. Safety first, always.</div>`;
 }
 
 function startPartnerReg() {
