@@ -257,13 +257,33 @@ function toggleOnline() {
   renderJobFeed();
 }
 
+/* real neighbour-posted jobs from the cloud (cross-device marketplace) */
+let _cloudJobs = [], _cloudJobsAt = 0;
+function refreshCloudJobs() {
+  if (typeof cloudJobs !== 'function' || !CLOUD.on) return;
+  if (Date.now() - _cloudJobsAt < 20000) return;
+  _cloudJobsAt = Date.now();
+  cloudJobs().then(list => {
+    const had = _cloudJobs.length;
+    _cloudJobs = list || [];
+    /* re-render only if the feed is on screen and the job count changed */
+    if (_cloudJobs.length !== had && S.partner && S.partner.status !== 'verifying' &&
+        !S.activeJob && S.mode === 'earn' && (S.earnMode || 'deliver') === 'deliver') {
+      renderJobFeed();
+    }
+  }).catch(() => {});
+}
+
 function renderJobFeed() {
   const v = DB.vehicles.find(x => x.id === S.partner.veh);
   const on = partnerOnline();
-  const jobs = on ? availableJobs() : [];
+  const local = on ? availableJobs() : [];
+  const cloud = on ? _cloudJobs.filter(j => jobFits(j, v)) : [];
+  const jobs = [...cloud, ...local];
   const waiting = jobs.reduce((a, j) => a + j.pay, 0);
   const seva = window._sevaMode;
   const hour = new Date().getHours();
+  if (on) refreshCloudJobs();
 
   $('#view').innerHTML = `
   ${earnToggle('deliver')}
@@ -299,7 +319,7 @@ function renderJobFeed() {
   : jobs.length ? jobs.map(j => `
     <div class="job-card">
       <div class="job-top"><span class="job-emoji">${jobIcon(j.type)}</span>
-        <div><b>${esc(j.what)}</b><small>by ${esc(j.by)}${j.type === 'ride' ? ' · end-to-end or shared' : ''}</small></div>
+        <div><b>${esc(j.what)}</b><small>by ${esc(j.by)}${j.cloud ? ' · <b class="ok">LIVE — posted from another device</b>' : ''}${j.type === 'ride' ? ' · end-to-end or shared' : ''}</small></div>
         <em class="job-pay">${seva ? 'SEVA' : '+' + money(j.pay)}</em></div>
       <div class="job-route"><i class="pin g"></i>${esc(j.from)}<span class="job-arrow">${ic('arrowr', 11)}</span><i class="pin r"></i>${esc(j.to)}<b>· ${j.km} km</b></div>
       ${j.note ? `<div class="job-note">${esc(j.note)}</div>` : ''}
@@ -312,16 +332,38 @@ function renderJobFeed() {
 }
 
 function acceptJob(jobId, seva) {
+  const cj = _cloudJobs.find(x => x.id === jobId);
+  if (cj) { acceptCloudJob(cj, seva); return; }
   const j = allJobs().find(x => x.id === jobId); if (!j) return;
   S.activeJob = { jobId, stage: 0, seva: !!seva, otpPick: rnd(1000, 9999), otpDrop: rnd(1000, 9999), acceptedAt: Date.now() };
   save(); toast(seva ? 'Seva accepted — you are gold' : 'Job accepted — head to pickup');
   renderActiveJob();
 }
 
+/* claim a neighbour-posted job atomically — first partner wins, others
+   get an honest "already taken" the moment they try */
+async function acceptCloudJob(j, seva) {
+  toast('Claiming job…');
+  try {
+    const ok = await cloudJobClaim(j.id);
+    if (ok !== true) {
+      _cloudJobs = _cloudJobs.filter(x => x.id !== j.id);
+      toast('Another partner just took this one');
+      renderJobFeed();
+      return;
+    }
+    S.activeJob = { jobId: j.id, cloudJob: j, cloud: true, stage: 0, seva: !!seva, otpPick: rnd(1000, 9999), otpDrop: rnd(1000, 9999), acceptedAt: Date.now() };
+    _cloudJobs = _cloudJobs.filter(x => x.id !== j.id);
+    save(); toast(seva ? 'Seva accepted — you are gold' : 'Job claimed — head to pickup');
+    renderActiveJob();
+  } catch (e) { toast('Could not claim the job — check connection'); }
+}
+
 /* ---------- active job ---------- */
-/* job endpoints: stable real coordinates — its true km from base at a
-   bearing derived from the job id (until posters pin exact GPS) */
+/* job endpoints: real GPS when the poster pinned it (cloud jobs carry the
+   sender's actual coordinates); otherwise a stable derived position */
 function jobGeo(j) {
+  if (j.geo && j.geo.from && j.geo.from.lat != null) return j.geo;
   let h = 0; const id = String(j.id);
   for (let i = 0; i < id.length; i++) h = (h * 37 + id.charCodeAt(i)) >>> 0;
   const base = DB.places[0];
@@ -332,7 +374,7 @@ function jobGeo(j) {
 
 function renderActiveJob() {
   const A = S.activeJob;
-  const j = allJobs().find(x => x.id === A.jobId);
+  const j = A.cloudJob || allJobs().find(x => x.id === A.jobId);
   const steps = ['Head to pickup', j.type === 'ride' ? 'Start ride with OTP' : 'Collect with OTP', j.type === 'ride' ? 'End ride with OTP' : 'Deliver with OTP'];
 
   $('#view').innerHTML = `
@@ -372,13 +414,19 @@ function renderActiveJob() {
 
 function dropJobConfirm() {
   if (confirm('Drop this job? It goes back to the feed for other partners.')) {
+    const A = S.activeJob;
+    if (A && A.cloud && CLOUD.on) {
+      cloudFetch('rpc/job_reopen', { method: 'POST', body: JSON.stringify({ p_job: A.jobId, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+    }
     S.activeJob = null; save(); VIEWS.earn([]);
   }
 }
 function completeJob() {
   const A = S.activeJob;
-  const j = allJobs().find(x => x.id === A.jobId);
+  const j = A.cloudJob || allJobs().find(x => x.id === A.jobId);
   const pay = A.seva ? 0 : j.pay;
+  /* cross-device job: mark done in the cloud so the poster's side updates */
+  if (A.cloud && typeof cloudJobDone === 'function') cloudJobDone(A.jobId).catch(() => {});
   S.earnings.unshift({ id: uid(), jobId: j.id, ts: Date.now(), what: j.what + (A.seva ? ' (seva)' : ''), pay });
   S.partner.jobs += 1;
   if (A.seva) S.partner.seva = (S.partner.seva || 0) + 1;

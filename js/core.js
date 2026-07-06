@@ -203,14 +203,23 @@ function createOrder(o) {
   o.id = 'OM' + rnd(10000, 99999);
   o.placedAt = Date.now();
   o.lastStage = 0;
+  /* stage times scale with the real trip distance: longer routes
+     genuinely take longer (proportions of the flow preserved) */
+  if (o.km != null && FLOW_T[o.flow]) {
+    const pattern = FLOW_T[o.flow];
+    const last = pattern[pattern.length - 1];
+    const total = Math.min(Math.max(40 + o.km * 16, 55), 220);
+    o.flowT = pattern.map(t => Math.round(t / last * total));
+  }
   if (!o.partner && o.flow !== 'shop_self') o.partner = Object.assign({ otp: rnd(1000, 9999) }, pick(DB.partners));
   S.orders.unshift(o); save();
   notify('Order ' + o.id + ' placed', o.title, '🧾');
   return o;
 }
+function orderTimes(o) { return o.flowT || FLOW_T[o.flow]; }
 function orderStage(o) {
   const el = (Date.now() - o.placedAt) / 1000;
-  const times = FLOW_T[o.flow];
+  const times = orderTimes(o);
   let idx = 0;
   for (let i = 0; i < times.length; i++) if (el >= times[i]) idx = i;
   return idx;

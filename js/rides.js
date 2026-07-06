@@ -64,7 +64,7 @@ function rideCheckout(km) {
     total: fare,
     onPay: (final) => {
       const o = createOrder({
-        kind: 'ride', flow: 'ride',
+        kind: 'ride', flow: 'ride', km,
         geo: (RIDE.from.lat != null && RIDE.to.lat != null) ? { from: { lat: +RIDE.from.lat, lng: +RIDE.from.lng }, to: { lat: +RIDE.to.lat, lng: +RIDE.to.lng } } : undefined,
         title: v.name + ' to ' + RIDE.to.name + (RIDE.share ? ' (shared)' : ''),
         total: final,

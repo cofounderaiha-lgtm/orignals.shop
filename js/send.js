@@ -88,12 +88,20 @@ function sendCheckout(km) {
     lines: [['Partner fare (' + v.name + ')', fare - 5], ['Platform fee', 5]], total: fare,
     onPay: (final) => {
       const o = createOrder({
-        kind: 'send', flow: 'send',
+        kind: 'send', flow: 'send', km,
         geo: (SEND.from.lat != null && SEND.to.lat != null) ? { from: { lat: +SEND.from.lat, lng: +SEND.from.lng }, to: { lat: +SEND.to.lat, lng: +SEND.to.lng } } : undefined,
         title: pt.name + ' → ' + SEND.to.name,
         total: final,
         detail: `${SEND.from.name} → ${SEND.to.name} · ${km.toFixed(1)} km · ${v.name}` + (SEND.note ? ' · "' + SEND.note + '"' : ''),
         items: [{ name: pt.name + ' (' + v.name + ' partner)', q: 1, price: final }]
+      });
+      /* this parcel is now a REAL claimable job for every partner nearby */
+      if (typeof cloudPostJob === 'function') cloudPostJob({
+        id: 'lj_' + o.id, what: 'Deliver ' + pt.name, jtype: SEND.type,
+        from_name: SEND.from.name, to_name: SEND.to.name,
+        from_lat: SEND.from.lat, from_lng: SEND.from.lng,
+        to_lat: SEND.to.lat, to_lng: SEND.to.lng,
+        km, pay: Math.max(Math.round(final * 0.8), 10), note: SEND.note, order_ref: o.id
       });
       SEND.done = true;
       go('track/' + o.id);

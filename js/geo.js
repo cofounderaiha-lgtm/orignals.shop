@@ -290,7 +290,7 @@ function orderGeo(o) {
 
 /* continuous 0→1 journey progress from real elapsed time */
 function orderProg(o) {
-  const times = FLOW_T[o.flow];
+  const times = (typeof orderTimes === 'function') ? orderTimes(o) : FLOW_T[o.flow];
   return Math.min((Date.now() - o.placedAt) / 1000 / times[times.length - 1], 1);
 }
 

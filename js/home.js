@@ -40,6 +40,7 @@ function activeStripHTML() {
 
 view('home', () => {
   if (S.mode === 'earn') { VIEWS.earn([]); return; }
+  if (typeof cloudShopsRefresh === 'function') cloudShopsRefresh();
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const nearby = [...DB.shops].sort((a, b) => a.km - b.km).slice(0, 6);

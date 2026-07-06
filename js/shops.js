@@ -50,6 +50,11 @@ function shopCardHTML(s, featured) {
 
 /* ---------- SHOP LIST ---------- */
 view('shops', args => {
+  /* pull in shops registered on other devices (throttled to 1/min);
+     when new ones arrive while the list is open, re-render seamlessly */
+  if (typeof cloudShopsRefresh === 'function') {
+    cloudShopsRefresh(() => { if (location.hash.replace('#/', '').split('/')[0] === 'shops') VIEWS.shops(args); });
+  }
   const filt = args[0] || 'all';
   const q = (window._shopQ || '').toLowerCase();
   let list = [...DB.shops].sort((a, b) => a.km - b.km);
@@ -228,6 +233,7 @@ function cartCheckout() {
       const items = Object.entries(S.cart.items).map(([iid, q]) => { const it = findItem(shop, iid); return { name: it.name, q, price: it.price }; });
       const o = createOrder({
         kind: 'shop', flow: S.cart.deliv === 'self' ? 'shop_self' : 'shop_partner',
+        km: +shop.km || undefined,
         title: shop.name + ' · ' + items.length + ' item' + (items.length > 1 ? 's' : ''),
         shopId: shop.id, items, total: final, addr: S.user.addr
       });
@@ -268,7 +274,7 @@ view('track', args => {
 });
 
 function trackEtaText(o) {
-  const times = FLOW_T[o.flow];
+  const times = orderTimes(o);
   return `~${Math.max(1, Math.round((times[times.length - 1] - (Date.now() - o.placedAt) / 1000) / 60 * 10) / 10)} min left · Live`;
 }
 
@@ -303,7 +309,7 @@ function renderTrack(oid) {
     <span class="pc-ava">${ic('user', 22)}</span>
     <div class="pc-info"><b>${esc(o.partner.name)} <small class="dim">★ ${o.partner.rating}</small></b>
       <small>${o.partner.car ? esc(o.partner.car) + ' · ' : ''}${esc(o.partner.veh)} · ${o.partner.trips.toLocaleString('en-IN')} trips</small>
-      ${!done && !o.cancelled ? `<small class="ok">${orderStage(o) < FLOWS[o.flow].length - 2 ? 'Arriving in ~' + Math.max(1, Math.round((FLOW_T[o.flow][FLOW_T[o.flow].length - 1] - (Date.now() - o.placedAt) / 1000) / 60)) + ' min' : 'Almost there'}</small>` : ''}</div>
+      ${!done && !o.cancelled ? `<small class="ok">${orderStage(o) < FLOWS[o.flow].length - 2 ? 'Arriving in ~' + Math.max(1, Math.round((orderTimes(o)[orderTimes(o).length - 1] - (Date.now() - o.placedAt) / 1000) / 60)) + ' min' : 'Almost there'}</small>` : ''}</div>
     ${done ? '' : `<div class="pc-otp">OTP<b>${o.partner.otp}</b></div>`}
     <button class="pc-call" onclick="toast('Connecting to ${esc(o.partner.name)} via masked number — your number stays private')">${ic('phone', 16)}</button>
   </div>

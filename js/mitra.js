@@ -387,6 +387,7 @@ function mitraPlaceOrder(shopId, itemId, q) {
   walletPay(total, 'Order · ' + shop.name + ' (via Mitra)');
   const o = createOrder({
     kind: 'shop', flow: shop.delivery === 'self' ? 'shop_self' : 'shop_partner',
+    km: +shop.km || undefined,
     title: shop.name + ' · ' + item.name, emoji: shop.emoji, shopId: shop.id,
     items: [{ name: item.name, emoji: item.emoji, q, price: item.price }],
     total, addr: S.user.addr

@@ -111,7 +111,8 @@ async function cloudPush() {
       });
     }
 
-    /* 3 — mirror the user's own shop + items */
+    /* 3 — mirror the user's own shop + items (with real GPS location so
+       buyers on every other device can find and order from it) */
     if (S.myShop) {
       const shopId = 'my_' + S.deviceKey.slice(0, 12);
       await cloudFetch('shops?on_conflict=id', {
@@ -122,6 +123,11 @@ async function cloudPush() {
           tagline: 'Seller on Orignals', delivery: S.myShop.delivery || 'both',
           pure_veg: !!S.myShop.veg, gst: S.myShop.gst || null, fssai: S.myShop.fssai || null,
           is_open: !!S.myShop.online,
+          lat: (S.myShop.addr && S.myShop.addr.lat != null) ? +S.myShop.addr.lat : null,
+          lng: (S.myShop.addr && S.myShop.addr.lng != null) ? +S.myShop.addr.lng : null,
+          addr: S.myShop.addr ? (S.myShop.addr.name + (S.myShop.addr.sub ? ', ' + S.myShop.addr.sub : '')) : null,
+          phone: S.myShop.phone || null,
+          open_from: S.myShop.open || null, open_till: S.myShop.close || null,
           offer_label: S.myShop.offer ? S.myShop.offer.label : null,
           offer_pct: S.myShop.offer ? S.myShop.offer.pct : null
         }])
@@ -190,6 +196,96 @@ function cloudStatusHTML() {
     ${CLOUD.on ? `<div class="btn-pair">
       <button class="btn-main sm ghost" onclick="cloudPush().then(()=>{toast('Pushed to cloud');VIEWS.admin(['data'])})">Sync now</button>
       <button class="btn-main sm ghost" onclick="cloudBoot()">Pull from cloud</button></div>` : ''}`;
+}
+
+/* ============================================================
+   LIVE MARKETPLACE — the inner engine, cross-device.
+   Parcels posted anywhere appear as claimable jobs for every
+   partner; shops registered anywhere appear for every buyer.
+   ============================================================ */
+
+/* a Send order becomes a real job for all nearby partners */
+function cloudPostJob(j) {
+  if (!CLOUD.on) return;
+  cloudFetch('live_jobs?on_conflict=id', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=ignore-duplicates' },
+    body: JSON.stringify([{
+      id: j.id, device_key: S.deviceKey || 'anon',
+      what: String(j.what).slice(0, 90), jtype: j.jtype || 'box',
+      from_name: j.from_name, to_name: j.to_name,
+      from_lat: j.from_lat != null ? +j.from_lat : null, from_lng: j.from_lng != null ? +j.from_lng : null,
+      to_lat: j.to_lat != null ? +j.to_lat : null, to_lng: j.to_lng != null ? +j.to_lng : null,
+      km: j.km != null ? +(+j.km).toFixed(1) : null, pay: Math.max(Math.round(j.pay || 0), 0),
+      note: j.note ? String(j.note).slice(0, 200) : null, order_ref: j.order_ref || null
+    }])
+  }).catch(e => console.warn('[jobs] post skipped:', e.message));
+}
+
+/* open jobs posted by OTHER devices in the last 24 h */
+async function cloudJobs() {
+  if (!CLOUD.on) return [];
+  const since = new Date(Date.now() - 864e5).toISOString();
+  const rows = await cloudFetch(
+    'live_jobs?status=eq.open&device_key=neq.' + encodeURIComponent(S.deviceKey || 'anon') +
+    '&created_at=gte.' + since + '&order=created_at.desc&limit=20');
+  return (rows || []).map(r => ({
+    id: r.id, cloud: true, what: r.what,
+    type: r.jtype === 'ride' ? 'ride' : (DB.parcelTypes.some(p => p.id === r.jtype) ? r.jtype : 'box'),
+    from: r.from_name || 'Pickup point', to: r.to_name || 'Drop point',
+    km: r.km != null ? +r.km : 1, pay: +r.pay || 0,
+    by: 'Neighbour · verified buyer', note: r.note || '',
+    geo: (r.from_lat != null && r.to_lat != null)
+      ? { from: { lat: +r.from_lat, lng: +r.from_lng }, to: { lat: +r.to_lat, lng: +r.to_lng } } : null
+  }));
+}
+function cloudJobClaim(id) {
+  return cloudFetch('rpc/job_claim', { method: 'POST', body: JSON.stringify({ p_job: id, p_device: S.deviceKey || 'anon' }) });
+}
+function cloudJobDone(id) {
+  return cloudFetch('rpc/job_done', { method: 'POST', body: JSON.stringify({ p_job: id, p_device: S.deviceKey || 'anon' }) });
+}
+
+/* community shops: every shop registered on any device joins DB.shops */
+let _commShopsAt = 0;
+async function cloudShopsRefresh(onDone) {
+  if (!CLOUD.on) return;
+  if (Date.now() - _commShopsAt < 60000) return;     // refresh at most 1/min
+  _commShopsAt = Date.now();
+  try {
+    const own = 'my_' + (S.deviceKey || '').slice(0, 12);
+    const shops = await cloudFetch(
+      'shops?id=like.my_*&id=neq.' + own + '&is_open=eq.true&deleted_at=is.null&select=*&limit=40');
+    if (!shops || !shops.length) return;
+    const ids = shops.map(s => '"' + s.id + '"').join(',');
+    const items = await cloudFetch('shop_items?shop_id=in.(' + ids + ')&in_stock=eq.true&limit=300') || [];
+    const byShop = {};
+    items.forEach(it => { (byShop[it.shop_id] = byShop[it.shop_id] || []).push(it); });
+    const here = (S.user.addr && S.user.addr.lat != null) ? S.user.addr : DB.places[0];
+    let added = 0;
+    shops.forEach(cs => {
+      const its = (byShop[cs.id] || []).map(it => ({
+        id: it.id, name: it.name, qty: it.qty_label || '', price: +it.price,
+        mrp: it.mrp ? +it.mrp : undefined, bestseller: !!it.bestseller
+      }));
+      if (!its.length) return;
+      const km = (cs.lat != null && here.lat != null)
+        ? +geoKm({ lat: +cs.lat, lng: +cs.lng }, { lat: +here.lat, lng: +here.lng }).toFixed(1) : 2.0;
+      const mapped = {
+        id: cs.id, name: cs.name, community: true,
+        type: DB.shopTypes.some(t => t.id === cs.category) ? cs.category : 'grocery',
+        rating: cs.rating != null ? +cs.rating : 5.0, ratings: cs.ratings_count || 'New',
+        km, time: Math.max(9, Math.round(km * 4 + 8)),
+        open: !!cs.is_open, delivery: cs.delivery || 'both', veg: !!cs.pure_veg,
+        offer: cs.offer_label || '', tag: cs.addr ? cs.addr.slice(0, 60) : 'Seller on Orignals',
+        lat: cs.lat != null ? +cs.lat : undefined, lng: cs.lng != null ? +cs.lng : undefined,
+        items: its
+      };
+      const at = DB.shops.findIndex(x => x.id === cs.id);
+      if (at >= 0) DB.shops[at] = mapped; else { DB.shops.push(mapped); added++; }
+    });
+    if (added && onDone) onDone(added);
+  } catch (e) { console.warn('[shops] community refresh skipped:', e.message); }
 }
 
 /* ============================================================
