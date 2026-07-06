@@ -21,6 +21,12 @@ window.ORIGNALS_CONFIG = {
     apiKey: 'YOUR-ANTHROPIC-API-KEY',
     model: 'claude-haiku-4-5'
   },
+  /* Payments: Razorpay. The Key ID is public by design (it identifies the
+     merchant in Checkout). The key SECRET is never here — server-side flows
+     use Supabase secrets (RZP_KEY_SECRET / RZP_WEBHOOK_SECRET) only. */
+  pay: {
+    keyId: 'rzp_live_StUJDjsi0hfYyx'
+  },
   /* Maps: 100% open-source, zero cost (founder decision 2026-07-06).
      The app tries these tile sources in order and AUTO-FAILS-OVER if one
      throttles or goes down — no single point of failure, no paid vendor.

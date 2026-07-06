@@ -201,54 +201,108 @@ function cloudStatusHTML() {
 let _payBusy = false;
 async function payViaRazorpay(amountRs, meta, onSuccess, onUnconfigured) {
   if (_payBusy) return;
-  if (!CLOUD.on) { toast('Online payment needs a connection — pay by wallet'); return; }
   if (typeof Razorpay === 'undefined') { toast('Payment system loading — try again in a moment'); return; }
   _payBusy = true;
-  try {
-    const r = await fetch(CLOUD.url + '/functions/v1/razorpay-order', {
-      method: 'POST', headers: cloudHeaders(),
-      body: JSON.stringify({
-        amount: Math.round(amountRs * 100),
-        purpose: meta.purpose || 'order',
-        ref: String(meta.ref || '').slice(0, 50),
-        device: S.deviceKey || ''
-      })
-    });
-    const d = await r.json();
-    if (!r.ok || d.error) {
-      _payBusy = false;
-      if (d && d.error === 'payments not configured') {
-        if (onUnconfigured) onUnconfigured();
-        else toast('Online payments activate soon — pay by wallet meanwhile');
-      } else toast('Could not start payment — try wallet');
-      return;
+
+  /* Lane A (strongest): server-created order + signature verify.
+     Needs RZP_KEY_SECRET in Supabase secrets. */
+  if (CLOUD.on) {
+    try {
+      const r = await fetch(CLOUD.url + '/functions/v1/razorpay-order', {
+        method: 'POST', headers: cloudHeaders(),
+        body: JSON.stringify({
+          amount: Math.round(amountRs * 100),
+          purpose: meta.purpose || 'order',
+          ref: String(meta.ref || '').slice(0, 50),
+          device: S.deviceKey || ''
+        })
+      });
+      const d = await r.json();
+      if (r.ok && !d.error) { _rzpOpenOrder(d, amountRs, meta, onSuccess); return; }
+      if (!(d && d.error === 'payments not configured')) {
+        _payBusy = false; toast('Could not start payment — try wallet'); return;
+      }
+      /* not configured → fall through to Lane B */
+    } catch (e) { /* network issue → try Lane B */ }
+  }
+
+  /* Lane B (keyless): direct Checkout with the public Key ID; Razorpay's
+     webhook confirms the captured payment server-side into our ledger. */
+  const keyId = ((window.ORIGNALS_CONFIG || {}).pay || {}).keyId;
+  if (!keyId || keyId.indexOf('rzp_') !== 0) {
+    _payBusy = false;
+    if (onUnconfigured) onUnconfigured();
+    else toast('Online payments activate soon — pay by wallet meanwhile');
+    return;
+  }
+  _rzpOpenDirect(keyId, amountRs, meta, onSuccess);
+}
+
+function _rzpBase(amountPaise, meta) {
+  return {
+    amount: amountPaise, currency: 'INR',
+    name: 'Orignals', description: String(meta.desc || 'Orignals').slice(0, 80),
+    prefill: { name: S.user.name && S.user.name !== 'Friend' ? S.user.name : '' },
+    notes: {
+      purpose: String(meta.purpose || 'order').slice(0, 30),
+      ref: String(meta.ref || '').slice(0, 50),
+      device: S.deviceKey || ''
+    },
+    theme: { color: '#1A5632' },
+    modal: { ondismiss: () => { _payBusy = false; toast('Payment cancelled'); } }
+  };
+}
+
+function _rzpOpenOrder(d, amountRs, meta, onSuccess) {
+  const opts = Object.assign(_rzpBase(d.amount, meta), {
+    key: d.keyId, order_id: d.orderId,
+    handler: async (resp) => {
+      try {
+        const v = await fetch(CLOUD.url + '/functions/v1/razorpay-verify', {
+          method: 'POST', headers: cloudHeaders(),
+          body: JSON.stringify({ orderId: d.orderId, paymentId: resp.razorpay_payment_id, signature: resp.razorpay_signature })
+        });
+        const vd = await v.json();
+        _payBusy = false;
+        if (vd && vd.verified) onSuccess(resp.razorpay_payment_id);
+        else toast('Payment could not be verified — if money left your account it auto-refunds in 5–7 days');
+      } catch (e) {
+        _payBusy = false;
+        toast('Verification failed — note payment ID ' + String(resp.razorpay_payment_id || '').slice(-8));
+      }
     }
-    const rz = new Razorpay({
-      key: d.keyId, order_id: d.orderId, amount: d.amount, currency: 'INR',
-      name: 'Orignals', description: String(meta.desc || 'Orignals').slice(0, 80),
-      prefill: { name: S.user.name && S.user.name !== 'Friend' ? S.user.name : '' },
-      theme: { color: '#1A5632' },
-      modal: { ondismiss: () => { _payBusy = false; toast('Payment cancelled'); } },
-      handler: async (resp) => {
-        try {
-          const v = await fetch(CLOUD.url + '/functions/v1/razorpay-verify', {
-            method: 'POST', headers: cloudHeaders(),
-            body: JSON.stringify({ orderId: d.orderId, paymentId: resp.razorpay_payment_id, signature: resp.razorpay_signature })
-          });
-          const vd = await v.json();
-          _payBusy = false;
-          if (vd && vd.verified) onSuccess(resp.razorpay_payment_id);
-          else toast('Payment could not be verified — if money left your account it auto-refunds in 5–7 days');
-        } catch (e) {
-          _payBusy = false;
-          toast('Verification failed — note payment ID ' + String(resp.razorpay_payment_id || '').slice(-8));
+  });
+  const rz = new Razorpay(opts);
+  if (rz.on) rz.on('payment.failed', () => { _payBusy = false; toast('Payment failed — no money taken, try again'); });
+  rz.open();
+}
+
+function _rzpOpenDirect(keyId, amountRs, meta, onSuccess) {
+  const opts = Object.assign(_rzpBase(Math.round(amountRs * 100), meta), {
+    key: keyId,
+    handler: async (resp) => {
+      /* poll our ledger for the webhook-confirmed row (payment.captured) */
+      toast('Payment received — confirming with bank…');
+      let state = 'pending';
+      if (CLOUD.on) {
+        for (let i = 0; i < 6; i++) {
+          await new Promise(res => setTimeout(res, 2500));
+          try {
+            const rows = await cloudFetch('payments?rzp_payment_id=eq.' + encodeURIComponent(resp.razorpay_payment_id) + '&select=status');
+            if (rows && rows[0]) {
+              if (rows[0].status === 'verified') { state = 'verified'; break; }
+              if (rows[0].status === 'failed') { state = 'failed'; break; }
+            }
+          } catch (e) { /* keep polling */ }
         }
       }
-    });
-    if (rz.on) rz.on('payment.failed', () => { _payBusy = false; toast('Payment failed — no money taken, try again'); });
-    rz.open();
-  } catch (e) {
-    _payBusy = false;
-    toast('Could not start payment — check your connection');
-  }
+      _payBusy = false;
+      if (state === 'failed') { toast('Bank reported a failure — any deducted money auto-refunds'); return; }
+      onSuccess(resp.razorpay_payment_id, state === 'verified');
+      if (state !== 'verified') toast('Payment recorded — bank confirmation syncs in the background');
+    }
+  });
+  const rz = new Razorpay(opts);
+  if (rz.on) rz.on('payment.failed', () => { _payBusy = false; toast('Payment failed — no money taken, try again'); });
+  rz.open();
 }
