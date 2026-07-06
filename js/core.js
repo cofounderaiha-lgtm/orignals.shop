@@ -328,7 +328,8 @@ function realMap(elId, lat, lng, label) {
   if (!el || !window.L || !navigator.onLine) return false;
   try {
     const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([lat, lng], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    const _mapCfg = (window.ORIGNALS_CONFIG || {}).map || {};
+    L.tileLayer(_mapCfg.tileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     L.marker([lat, lng]).addTo(map).bindPopup(label || 'Precise location').openPopup();
     return true;
   } catch (e) { return false; }

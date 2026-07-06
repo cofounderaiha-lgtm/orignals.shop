@@ -226,6 +226,8 @@ function cartCheckout() {
 function pickAddress(onDone) {
   window._addrDone = onDone;
   sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Deliver where?</h3>
+    <div class="search-row"><input placeholder="Search any address in India…" oninput="geoPickSearch(this.value)"/></div>
+    <div id="geoResults"></div>
     <button class="place-row gps" onclick="useGPS()">
       <span class="gps-ic">${ic('pin', 18)}</span><div><b>Use my current location</b><small>Live GPS — for instant 10–20 min delivery</small></div><em>Locate</em></button>
     ${DB.places.map((p, i) => `<button class="place-row" onclick="S.user.addr=DB.places[${i}];save();closeSheet();refreshChrome();window._addrDone&&window._addrDone()">

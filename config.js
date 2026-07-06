@@ -21,6 +21,12 @@ window.ORIGNALS_CONFIG = {
     apiKey: 'YOUR-ANTHROPIC-API-KEY',
     model: 'claude-haiku-4-5'
   },
+  /* Maps: open-source lane (OpenStreetMap) now; when our own tiles are
+     ready (Protomaps .pmtiles on a CDN — see docs/MAPS.md) this one line
+     switches the whole app to OUR basemap. */
+  map: {
+    tileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+  },
   supabaseUrl: 'https://wvprqdfhjcammghjwoqj.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2cHJxZGZoamNhbW1naGp3b3FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyOTU4MDksImV4cCI6MjA5ODg3MTgwOX0.kPSSYOde8j_G5pQ-8vOQvn5NnGjAOjXsTpsMXkqhMW4'
 };
