@@ -17,7 +17,7 @@ view('wallet', () => {
 
   <div class="sec-head"><h2>Add money</h2></div>
   <div class="topup-row">
-    ${[100, 200, 500, 1000].map(a => `<button class="topup" onclick="walletAdd(${a},'Added via UPI');toast('${money(a).replace(/'/g, '')} added');VIEWS.wallet([])">+${money(a)}</button>`).join('')}
+    ${[100, 200, 500, 1000].map(a => `<button class="topup" onclick="topupWallet(${a})">+${money(a)}</button>`).join('')}
   </div>
   <div class="foot-note">Top-ups are instant · UPI, cards &amp; netbanking · zero fees</div>
 
@@ -29,6 +29,22 @@ view('wallet', () => {
       <b class="${t.amt >= 0 ? 'ok' : 'red'}">${t.amt >= 0 ? '+' : '−'}${money(Math.abs(t.amt))}</b>
     </div>`).join('')}`;
 });
+
+/* real UPI top-up via Razorpay; before keys are configured the amount is
+   credited as clearly-labelled complimentary pre-launch balance */
+function topupWallet(a) {
+  payViaRazorpay(a, { purpose: 'wallet_topup', ref: 'wallet', desc: 'Orignals wallet top-up' },
+    (payId) => {
+      walletAdd(a, 'Added via UPI · ' + String(payId).slice(-6));
+      toast(money(a) + ' added to your wallet');
+      VIEWS.wallet([]);
+    },
+    () => {
+      walletAdd(a, 'Complimentary credit (pre-launch)');
+      toast('Payments go live shortly — ' + money(a) + ' credited as complimentary balance');
+      VIEWS.wallet([]);
+    });
+}
 
 /* ---------- NOTIFICATIONS ---------- */
 view('notifs', () => {

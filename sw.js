@@ -48,8 +48,9 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  /* never cache API traffic — orders/state must always be live */
-  if (url.hostname.endsWith('supabase.co') || url.hostname.includes('nominatim') || url.hostname.includes('anthropic')) return;
+  /* never cache API/payment traffic — orders, money and state must always be live */
+  if (url.hostname.endsWith('supabase.co') || url.hostname.includes('nominatim') ||
+      url.hostname.includes('anthropic') || url.hostname.endsWith('razorpay.com')) return;
 
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {

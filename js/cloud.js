@@ -191,3 +191,64 @@ function cloudStatusHTML() {
       <button class="btn-main sm ghost" onclick="cloudPush().then(()=>{toast('Pushed to cloud');VIEWS.admin(['data'])})">Sync now</button>
       <button class="btn-main sm ghost" onclick="cloudBoot()">Pull from cloud</button></div>` : ''}`;
 }
+
+/* ============================================================
+   REAL PAYMENTS — Razorpay via Supabase edge functions.
+   The key secret never exists client-side: razorpay-order creates
+   the order server-side, razorpay-verify checks the HMAC signature
+   server-side. Money is only trusted after verification.
+   ============================================================ */
+let _payBusy = false;
+async function payViaRazorpay(amountRs, meta, onSuccess, onUnconfigured) {
+  if (_payBusy) return;
+  if (!CLOUD.on) { toast('Online payment needs a connection — pay by wallet'); return; }
+  if (typeof Razorpay === 'undefined') { toast('Payment system loading — try again in a moment'); return; }
+  _payBusy = true;
+  try {
+    const r = await fetch(CLOUD.url + '/functions/v1/razorpay-order', {
+      method: 'POST', headers: cloudHeaders(),
+      body: JSON.stringify({
+        amount: Math.round(amountRs * 100),
+        purpose: meta.purpose || 'order',
+        ref: String(meta.ref || '').slice(0, 50),
+        device: S.deviceKey || ''
+      })
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) {
+      _payBusy = false;
+      if (d && d.error === 'payments not configured') {
+        if (onUnconfigured) onUnconfigured();
+        else toast('Online payments activate soon — pay by wallet meanwhile');
+      } else toast('Could not start payment — try wallet');
+      return;
+    }
+    const rz = new Razorpay({
+      key: d.keyId, order_id: d.orderId, amount: d.amount, currency: 'INR',
+      name: 'Orignals', description: String(meta.desc || 'Orignals').slice(0, 80),
+      prefill: { name: S.user.name && S.user.name !== 'Friend' ? S.user.name : '' },
+      theme: { color: '#1A5632' },
+      modal: { ondismiss: () => { _payBusy = false; toast('Payment cancelled'); } },
+      handler: async (resp) => {
+        try {
+          const v = await fetch(CLOUD.url + '/functions/v1/razorpay-verify', {
+            method: 'POST', headers: cloudHeaders(),
+            body: JSON.stringify({ orderId: d.orderId, paymentId: resp.razorpay_payment_id, signature: resp.razorpay_signature })
+          });
+          const vd = await v.json();
+          _payBusy = false;
+          if (vd && vd.verified) onSuccess(resp.razorpay_payment_id);
+          else toast('Payment could not be verified — if money left your account it auto-refunds in 5–7 days');
+        } catch (e) {
+          _payBusy = false;
+          toast('Verification failed — note payment ID ' + String(resp.razorpay_payment_id || '').slice(-8));
+        }
+      }
+    });
+    if (rz.on) rz.on('payment.failed', () => { _payBusy = false; toast('Payment failed — no money taken, try again'); });
+    rz.open();
+  } catch (e) {
+    _payBusy = false;
+    toast('Could not start payment — check your connection');
+  }
+}

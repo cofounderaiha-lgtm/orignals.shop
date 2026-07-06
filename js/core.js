@@ -305,7 +305,16 @@ function renderCheckout() {
 function paySelected(final, off, method) {
   const cfg = window._ckCfg;
   if (method === 'wallet' && !walletPay(final, cfg.title)) { toast('Wallet balance is low', '👛'); return; }
-  if (method === 'upi') S.wallet.txns.unshift({ id: uid(), ts: Date.now(), label: cfg.title + ' · UPI', amt: -final, ext: true });
+  if (method === 'upi') {
+    /* real money: Razorpay order → checkout → server-side signature verify */
+    payViaRazorpay(final, { purpose: 'order', ref: cfg.title, desc: cfg.title }, (payId) => {
+      S.wallet.txns.unshift({ id: uid(), ts: Date.now(), label: cfg.title + ' · UPI ·' + String(payId).slice(-6), amt: -final, ext: true });
+      save();
+      closeSheet(); confettiBurst();
+      cfg.onPay(final, off, 'upi');
+    });
+    return;
+  }
   save();
   closeSheet(); confettiBurst();
   cfg.onPay(final, off, method);
