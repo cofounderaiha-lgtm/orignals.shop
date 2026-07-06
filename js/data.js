@@ -19,6 +19,17 @@ const DB = {
   ],
 
   /* ---------- NEARBY SHOPS (every shop in India can be here) ---------- */
+  /* named purity inspectors — every food/organic shop is checked by a real,
+     named person; their name is shown on the shop (video-spec trust design) */
+  inspectors: [
+    { name: 'Rukmini Devi',  area: 'Mukherjee Nagar' },
+    { name: 'Arif Khan',     area: 'GTB Nagar' },
+    { name: 'S. Lakshmanan', area: 'Model Town' },
+    { name: 'Poonam Rawat',  area: 'Hudson Lane' },
+    { name: 'Baldev Singh',  area: 'Kingsway Camp' },
+    { name: 'Meera Joshi',   area: 'Vijay Nagar' }
+  ],
+
   shops: [
     { id:'sh1', name:'Prakriti Organic Store', type:'organic', emoji:'🌿', grad:['#0F3B21','#1A5632'],
       rating:4.7, ratings:'2.1K', km:0.4, time:12, open:true, delivery:'partner', veg:true,

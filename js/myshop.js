@@ -61,7 +61,7 @@ function renderShopReg() {
   if (st === 2) body = `
     <div class="wiz-q">Where & when</div>
     <div class="addr-row" onclick="shopPickAddr()">
-      <span>${SREG.addr.icon}</span><div><b>${esc(SREG.addr.name)}</b><small>${esc(SREG.addr.sub)}</small></div><em>Change</em></div>
+      <span>${ic('pin', 18)}</span><div><b>${esc(SREG.addr.name)}</b><small>${esc(SREG.addr.sub)}</small></div><em>Change</em></div>
     <div class="fld"><span>Open from</span>
       <div class="chip-wrap">${['6 am','8 am','10 am','12 pm'].map(t => `<button class="chip ${SREG.open === t ? 'on' : ''}" onclick="SREG.open='${t}';renderShopReg()">${t}</button>`).join('')}</div></div>
     <div class="fld"><span>Open till</span>
@@ -115,9 +115,13 @@ function shopRegNext1() {
   SREG.step = 2; renderShopReg();
 }
 function shopPickAddr() {
-  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Shop location</h3>
-    ${DB.places.map((p, i) => `<button class="place-row" onclick="SREG.addr=DB.places[${i}];closeSheet();renderShopReg()">
-      <span>${p.icon}</span><div><b>${esc(p.name)}</b><small>${esc(p.sub)}</small></div></button>`).join('')}`);
+  /* real address search + GPS — the shop's exact pin is what buyers,
+     partners and the purity inspector all navigate to */
+  placePickerSheet('Shop location — search or use GPS', (p) => {
+    SREG.addr = { name: p.name, sub: p.sub, lat: p.lat, lng: p.lng };
+    if (p.lat != null) geoLog(p, 'shop');
+    renderShopReg();
+  });
 }
 function submitShopReg() {
   S.myShop = {
@@ -214,7 +218,7 @@ function renderShopDash() {
   ${!M.items.length ? `<div class="tip-strip">Add your first items — orders start coming once your shelf isn't empty!</div>` : ''}
 
   ${pend.length ? `<div class="sec-head"><h2>Orders <span class="live-dot"></span></h2></div>${pend.map(orderCard).join('')}` :
-    M.items.length ? `<div class="tip-strip"> You're online — orders from nearby customers will pop up here. (Demo: one arrives every ~30 s)</div>` : ''}
+    M.items.length ? `<div class="tip-strip"> You're online — orders from nearby customers pop up here the moment they're placed.</div>` : ''}
 
   ${M.items.length ? `<div class="sec-head"><h2>Your shelf (${M.items.length})</h2></div>
   ${M.items.map((it, i) => `<div class="item-row slim">
@@ -306,7 +310,7 @@ view('storefront', () => {
   <div class="shop-sheet">
     <div class="shop-head"><div><h1>${esc(M.name)}</h1><small>${cat ? cat.name : ''} · ${M.open}–${M.close} ${M.veg ? '· Pure veg' : ''}</small></div>
       <div class="rate big">★ New<small>Just joined</small></div></div>
-    <div class="shop-meta"><span>📍 ${esc(M.addr.name)}</span>
+    <div class="shop-meta"><span>${ic('pin', 12)} ${esc(M.addr.name)}</span>
       ${M.delivery === 'self' ? '<span class="dbadge self">Shop delivers itself</span>' : M.delivery === 'partner' ? '<span class="dbadge partner">Orignals partner delivery</span>' : '<span class="dbadge both">🏪+Self or partner delivery</span>'}</div>
     ${M.gst || M.fssai ? `<div class="offer-strip">✅ ${[M.gst && 'GST verified', M.fssai && 'FSSAI licensed'].filter(Boolean).join(' · ')}</div>` : ''}
     <div class="sec-head"><h2>All items (${M.items.length})</h2></div>

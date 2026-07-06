@@ -2,6 +2,30 @@
    HOME — buy-mode landing + mega category directory
    ============================================================ */
 
+/* "Your usual" — one-tap reorder of what you actually buy (video spec) */
+function usualStripHTML() {
+  const past = S.orders.filter(o => o.kind === 'shop' && o.shopId && orderDone(o) && !o.cancelled);
+  if (!past.length) return '';
+  const seen = new Set(), usual = [];
+  for (const o of past) {
+    if (seen.has(o.shopId)) continue;
+    seen.add(o.shopId);
+    const shop = findShop(o.shopId);
+    if (!shop) continue;
+    usual.push({ o, shop });
+    if (usual.length >= 4) break;
+  }
+  if (!usual.length) return '';
+  return `<div class="sec-head slim"><h2>Your usual</h2></div>
+  <div class="usual-strip">
+    ${usual.map(u => `<button class="usual" onclick="reorder('${u.o.id}')">
+      <span class="u-ic">${typeIcon(u.shop.type, 17)}</span>
+      <div><b>${esc(u.o.items && u.o.items.length ? u.o.items.map(i => i.name).slice(0, 2).join(', ') : u.o.title)}</b>
+      <small>${esc(u.shop.name)}</small></div>
+      <em>${money(u.o.total)} ↻</em></button>`).join('')}
+  </div>`;
+}
+
 function activeStripHTML() {
   const act = activeOrders();
   if (!act.length) return '';
@@ -34,6 +58,8 @@ view('home', () => {
   </div>
 
   <div id="activeStrip" class="active-strip">${activeStripHTML()}</div>
+
+  ${usualStripHTML()}
 
   <!-- 3-tint category system (spec §6): commerce=leaf · movement=haldi · lifestyle=cream -->
   <div class="svc-grid">
@@ -81,8 +107,10 @@ view('home', () => {
   </div>
   </section>
 
+  <button class="promise-strip" onclick="go('promise')">${ic('shield', 14)} <b>One promise, kept.</b> Verified by named inspectors · delivered by neighbours ${ic('arrowr', 12)}</button>
+
   <div class="foot-note">Orignals — every shop, every street, everyone earns<br/>
-  <span class="dim">First month free · Buyers 1 CHF/yr · Sellers tiered 1–100 CHF/yr · Demo build</span></div>`;
+  <span class="dim">First month free · Buyers 1 CHF/yr · Sellers tiered 1–100 CHF/yr</span></div>`;
 
   const hints = ['"Order 2 milk from the kirana…"', '"Send this tiffin to grandma"', '"Book 2 tickets for the 6:30 show"', '"Book a bike to the station"', '"Kya mera order aa gaya?"'];
   let hi = 0;
@@ -109,4 +137,35 @@ view('categories', () => {
       </div>`).join('')}
   </div>
   <div class="join-strip" onclick="go('myshop')">Sell in any of these categories — <b>list your shop free</b> ${ic('arrowr', 12)}</div>`;
+});
+
+/* ---------- ONE PROMISE, KEPT (video spec) ---------- */
+view('promise', () => {
+  $('#view').innerHTML = `
+  <div class="page-head"><button class="back" onclick="go('home')">${ic('chevl', 16)}</button>
+    <div><h1>The Orignals promise</h1><small>One promise across every service</small></div></div>
+  <div class="promise-page">
+    <svg class="seal" width="120" height="120" viewBox="0 0 150 150">
+      <defs><path id="sealArc2" d="M75 20 a55 55 0 1 1 -0.01 0"/></defs>
+      <circle cx="75" cy="75" r="72" fill="none" stroke="#1A5632" stroke-width="2.5"/>
+      <circle cx="75" cy="75" r="63" fill="none" stroke="#1A5632" stroke-width="1.2" stroke-dasharray="2 5"/>
+      <circle cx="75" cy="75" r="42" fill="none" stroke="#1A5632" stroke-width="2"/>
+      <text font-size="11.5" font-weight="700" letter-spacing="3.5" fill="#1A5632" font-family="Inter,sans-serif">
+        <textPath href="#sealArc2" startOffset="0%">PURITY · VERIFIED · ORIGNALS ·</textPath></text>
+      <g transform="translate(75,75)">
+        <path d="M0-22c7 0 14 5.4 14 12.6 0 6.4-5.4 11-11.4 11.4V9h-5.2V2C-8.6 1.6-14-3-14-9.4-14-16.6-7-22 0-22z" fill="#1A5632"/>
+        <path d="M-9 9h18" stroke="#1A5632" stroke-width="2.4" stroke-linecap="round"/></g>
+    </svg>
+    <h1>One promise, kept.</h1>
+    <div class="promise-list">
+      <div class="promise-row"><i>${ic('check', 13)}</i><div><b>Verified by named inspectors</b>
+        <small>A real person with a real name checks every food shop — and you see who checked it, and when. Adulterated ghee and fake paneer end here.</small></div></div>
+      <div class="promise-row"><i>${ic('check', 13)}</i><div><b>Delivered by neighbours you can see</b>
+        <small>Every partner is ID-, face- and vehicle-verified. You see their name, their rating, their trips — and they see yours.</small></div></div>
+      <div class="promise-row"><i>${ic('check', 13)}</i><div><b>The price on the card is the price you pay</b>
+        <small>No surge, no hidden fees, no dark patterns. Cancel before pickup and every rupee returns to your wallet instantly.</small></div></div>
+    </div>
+    <div class="promise-foot">One promise across every service</div>
+    <button class="btn-main wide" onclick="go('shops')">Shop with the promise</button>
+  </div>`;
 });

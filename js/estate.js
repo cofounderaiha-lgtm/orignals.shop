@@ -96,7 +96,7 @@ function propContact(pid) {
   const p = findProp(pid);
   sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${esc(p.title)}</h3>
     <div class="trust-row">${ic('shield', 13)} Contact is masked-number protected — fraud-safe for both sides.</div>
-    <button class="place-row" onclick="toast('Calling via masked number… (demo)')">
+    <button class="place-row" onclick="toast('Connecting via masked number — your number stays private')">
       <span>${ic('phone', 17)}</span><div><b>Call ${esc(p.by)}</b><small>Masked number · recorded for safety</small></div><em>Call</em></button>
     <button class="place-row" onclick="closeSheet();toast('Chat opening — talk via Mitra');setTimeout(()=>go('mitra'),500)">
       <span>${ic('spark', 17)}</span><div><b>Chat via Mitra</b><small>Negotiate, ask docs, schedule — in chat</small></div><em>Chat</em></button>`);

@@ -700,3 +700,80 @@
 .ride-map{position:relative;margin:6px 0 12px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
 .ride-map .eta-pill{z-index:500}
 .leaflet-container{background:var(--surface-2)!important;font:inherit}
+
+/* ---------- splash seal (video spec) ---------- */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg,#FAF6EE);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;transition:opacity .45s ease}
+#splash.bye{opacity:0;pointer-events:none}
+#splash .seal{animation:sealIn .7s cubic-bezier(.2,1.4,.4,1)}
+#splash .splash-word{font-family:'Bricolage Grotesque',Inter,sans-serif;font-weight:800;font-size:2.1rem;
+  color:#2B2B26;letter-spacing:-.5px}
+#splash .splash-word b{color:#1A5632}
+#splash .splash-line{font-size:.8rem;font-weight:600;color:#8A8578;letter-spacing:2px;text-transform:uppercase}
+@keyframes sealIn{0%{transform:scale(.6) rotate(-14deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+
+/* ---------- live tracking real map ---------- */
+.track-map.real{position:relative;margin:4px 0 14px;border-radius:var(--r);overflow:hidden;
+  border:1px solid var(--line);box-shadow:var(--shadow)}
+.track-map.real .route-canvas{height:230px}
+.track-map.real .eta-pill{z-index:500}
+
+/* ---------- named-inspector line + VERIFIED badge (video spec) ---------- */
+.inspector-line{display:flex;align-items:center;gap:7px;margin:8px 0 2px;padding:9px 12px;border-radius:12px;
+  background:color-mix(in srgb,var(--primary) 7%,transparent);border:1px dashed color-mix(in srgb,var(--primary) 35%,transparent);
+  font-size:.76rem;color:var(--ink)}
+.inspector-line b{color:var(--primary)}
+.inspector-line svg{color:var(--primary);flex:none}
+.vbadge{display:inline-flex;align-items:center;gap:3px;margin-left:7px;padding:2px 7px;border-radius:50px;
+  background:var(--primary);color:#fff;font-size:.55rem;font-weight:800;letter-spacing:.8px;vertical-align:2px}
+.vbadge svg{width:8px;height:8px}
+
+/* ---------- "Your usual" one-tap reorder strip ---------- */
+.usual-strip{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;margin:0 0 6px}
+.usual-strip::-webkit-scrollbar{display:none}
+.usual{flex:none;display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:9px 13px;cursor:pointer;font-family:inherit;text-align:left;box-shadow:var(--shadow)}
+.usual .u-ic{width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--primary) 10%,transparent);
+  display:flex;align-items:center;justify-content:center;color:var(--primary);flex:none}
+.usual b{display:block;font-size:.76rem;color:var(--ink);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usual small{font-size:.66rem;color:var(--mut);font-weight:600}
+.usual em{font-style:normal;font-size:.68rem;font-weight:800;color:var(--primary);white-space:nowrap}
+
+/* ---------- One promise, kept ---------- */
+.promise-page{display:flex;flex-direction:column;align-items:center;text-align:center;padding:26px 18px 10px}
+.promise-page .seal{margin-bottom:18px}
+.promise-page h1{font-family:'Bricolage Grotesque',Inter,sans-serif;font-weight:800;font-size:1.7rem;color:var(--ink);margin:0 0 22px}
+.promise-list{display:flex;flex-direction:column;gap:13px;width:100%;max-width:420px;margin:0 auto 22px;text-align:left}
+.promise-row{display:flex;align-items:flex-start;gap:11px;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:13px 15px;box-shadow:var(--shadow)}
+.promise-row i{width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--haldi,#E8A020) 22%,transparent);
+  color:#8a5c05;display:flex;align-items:center;justify-content:center;flex:none;font-style:normal}
+[data-theme="dark"] .promise-row i{color:#E8A020}
+.promise-row b{display:block;font-size:.86rem;color:var(--ink)}
+.promise-row small{font-size:.74rem;color:var(--mut);line-height:1.45}
+.promise-foot{font-size:.72rem;color:var(--mut);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin:6px 0 14px}
+
+/* ---------- partner online/offline (Go online) ---------- */
+.online-bar{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);padding:14px 16px;margin:2px 0 14px;box-shadow:var(--shadow)}
+.online-bar .ob-dot{width:11px;height:11px;border-radius:50%;background:var(--mut);flex:none}
+.online-bar.on .ob-dot{background:#1A9A50;box-shadow:0 0 0 4px color-mix(in srgb,#1A9A50 22%,transparent);animation:pulse 1.6s infinite}
+.online-bar b{font-size:.95rem;color:var(--ink)}
+.online-bar small{display:block;font-size:.72rem;color:var(--mut)}
+.online-bar .ob-info{flex:1}
+.ob-switch{position:relative;width:54px;height:30px;border-radius:50px;border:none;cursor:pointer;
+  background:var(--surface-2);border:1px solid var(--line);transition:background .2s;flex:none}
+.ob-switch::after{content:'';position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:transform .2s}
+.ob-switch.on{background:#1A5632}
+.ob-switch.on::after{transform:translateX(24px)}
+
+/* ---------- promise strip (home footer) ---------- */
+.promise-strip{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:16px 0 4px;
+  padding:13px 16px;border-radius:var(--r);border:1px dashed color-mix(in srgb,var(--primary) 45%,transparent);
+  background:color-mix(in srgb,var(--primary) 6%,transparent);color:var(--ink);font-family:inherit;
+  font-size:.78rem;cursor:pointer;flex-wrap:wrap}
+.promise-strip b{color:var(--primary)}
+.promise-strip svg{color:var(--primary);flex:none}
+.sec-head.slim{margin:10px 0 8px}
+.sec-head.slim h2{font-size:.95rem}

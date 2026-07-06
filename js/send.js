@@ -89,6 +89,7 @@ function sendCheckout(km) {
     onPay: (final) => {
       const o = createOrder({
         kind: 'send', flow: 'send',
+        geo: (SEND.from.lat != null && SEND.to.lat != null) ? { from: { lat: +SEND.from.lat, lng: +SEND.from.lng }, to: { lat: +SEND.to.lat, lng: +SEND.to.lng } } : undefined,
         title: pt.name + ' → ' + SEND.to.name,
         total: final,
         detail: `${SEND.from.name} → ${SEND.to.name} · ${km.toFixed(1)} km · ${v.name}` + (SEND.note ? ' · "' + SEND.note + '"' : ''),

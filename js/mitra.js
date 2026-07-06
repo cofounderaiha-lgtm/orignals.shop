@@ -128,7 +128,7 @@ function mitraThink(raw) {
     const addM = t.match(/(?:add|dal|put|load)[^\d]*(\d+)/);
     if (addM) {
       const amt = Math.min(parseInt(addM[1], 10), 10000);
-      walletAdd(amt, 'Added via Mitra · UPI (demo)');
+      walletAdd(amt, 'Added via Mitra · UPI');
       mitraReply(`Done! ✅ Added <b>${money(amt)}</b> to your wallet.<br/>New balance: <b>${money(S.wallet.bal)}</b> 👛`, ['Order milk 🥛', 'Book a ride 🏍️'], `Added ${amt} rupees. New balance ${S.wallet.bal} rupees`);
     } else {
       const a = regAction(() => go('wallet'));

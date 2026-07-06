@@ -108,7 +108,7 @@ view('admin', args => {
       <span class="or-emoji">${kindIcon(o.kind, 18)}</span>
       <div class="or-info"><b>${o.id} · ${esc(o.title)}</b><small>${orderStatus(o).t} · ${o.partner ? esc(o.partner.name) : 'shop staff'}</small></div>
       <div class="or-right"><b>${money(o.total)}</b><span class="or-status ${orderDone(o) ? 'done' : 'live'}">${orderDone(o) ? 'Done' : 'Live'}</span></div></div>`).join('')
-    : `<div class="empty"><span>${ic('receipt', 40)}</span><b>No orders yet in this demo</b></div>`;
+    : `<div class="empty"><span>${ic('receipt', 40)}</span><b>No orders yet</b></div>`;
 
   if (tab === 'plans') body = `
     <div class="tip-strip">Market-standard pricing, all in CHF. Purpose over profit — small sellers must survive and win.</div>

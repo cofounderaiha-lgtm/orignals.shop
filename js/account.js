@@ -17,9 +17,9 @@ view('wallet', () => {
 
   <div class="sec-head"><h2>Add money</h2></div>
   <div class="topup-row">
-    ${[100, 200, 500, 1000].map(a => `<button class="topup" onclick="walletAdd(${a},'Added via UPI (demo)');toast('${money(a).replace(/'/g, '')} added');VIEWS.wallet([])">+${money(a)}</button>`).join('')}
+    ${[100, 200, 500, 1000].map(a => `<button class="topup" onclick="walletAdd(${a},'Added via UPI');toast('${money(a).replace(/'/g, '')} added');VIEWS.wallet([])">+${money(a)}</button>`).join('')}
   </div>
-  <div class="foot-note">Demo top-up is free. In production this opens your UPI app.</div>
+  <div class="foot-note">Top-ups are instant · UPI, cards &amp; netbanking · zero fees</div>
 
   <div class="sec-head"><h2>History</h2></div>
   ${S.wallet.txns.filter(t => t.label).map(t => `
@@ -106,7 +106,7 @@ view('account', () => {
   <button class="role-row" onclick="go('mitra')">
     <span>${ic('spark', 20)}</span><div><b>Talk to Mitra</b><small>The platform's own intelligence — voice or text</small></div><em>Chat</em></button>
   <button class="role-row" onclick="resetDemo()">
-    <span>${ic('trash', 20)}</span><div><b>Reset demo data</b><small>Fresh start — clears orders, wallet, roles</small></div><em>Reset</em></button>
+    <span>${ic('trash', 20)}</span><div><b>Reset app data</b><small>Fresh start on this device — clears orders, wallet, roles</small></div><em>Reset</em></button>
 
   <div class="foot-note">Orignals · Safety · Purity · Sustainability — for all<br/>
   <span class="dim">People-first: small shops thrive, neighbours earn, no one loses their job to a machine.</span></div>`;

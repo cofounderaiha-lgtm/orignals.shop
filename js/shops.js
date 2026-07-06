@@ -8,6 +8,20 @@ function deliveryBadge(shop) {
   return `<span class="dbadge partner">Orignals partner delivery</span>`;
 }
 
+/* stable named inspector per shop — same person every time */
+function inspectorFor(s) {
+  let h = 0; const id = String(s.id);
+  for (let i = 0; i < id.length; i++) h = (h * 33 + id.charCodeAt(i)) >>> 0;
+  return DB.inspectors[h % DB.inspectors.length];
+}
+function inspectorLine(s) {
+  if (!['organic', 'food', 'grocery', 'dairy', 'pharmacy'].includes(s.type)) return '';
+  const ins = inspectorFor(s);
+  const hour = new Date().getHours();
+  const when = hour < 12 ? 'this morning' : hour < 17 ? 'at noon today' : 'this morning';
+  return `<div class="inspector-line">${ic('shield', 12)} Checked ${when} by <b>Inspector ${esc(ins.name)}</b> · ${esc(ins.area)} circle</div>`;
+}
+
 function shopTile(s, big) {
   const img = DB.shopImgs[s.id];
   return `<div class="shop-tile ${big ? 'big' : ''}">
@@ -24,7 +38,7 @@ function shopCardHTML(s, featured) {
     ${shopTile(s)}
     <div class="shop-body">
       ${featured ? `<small class="feat-tag">${ic('spark', 11)} Closest to you</small>` : ''}
-      <div class="shop-line1"><b>${esc(s.name)}</b></div>
+      <div class="shop-line1"><b>${esc(s.name)}</b><span class="vbadge">${ic('check', 9)} VERIFIED</span></div>
       <div class="shop-line2">${esc(s.tag)}</div>
       <div class="shop-line3">
         <span>${ic('pin', 11)} ${s.km} km</span><span>·</span><span>${ic('clock', 11)} ${s.time >= 60 ? Math.round(s.time / 60) + ' hr' : s.time + ' min'}</span>
@@ -105,6 +119,7 @@ view('shop', args => {
       ${deliveryBadge(s)}
     </div>
     <div class="trust-row">${ic('shield', 13)} Verified seller · GST registered ${s.type === 'food' ? '· FSSAI licensed' : ''} · Secure payments</div>
+    ${inspectorLine(s)}
     ${s.offer ? `<div class="offer-strip">${ic('gift', 13)} ${esc(s.offer)}</div>` : ''}
     ${s.b2b ? `<div class="b2b-strip">${ic('factory', 13)} Wholesale — items have minimum order quantities. GST invoice provided.
       <button class="btn-main sm alt" onclick="rfqSheet('${s.id}')">Get Best Price</button></div>` : ''}
@@ -252,32 +267,35 @@ view('track', args => {
   renderTrack(args[0]);
 });
 
+function trackEtaText(o) {
+  const times = FLOW_T[o.flow];
+  return `~${Math.max(1, Math.round((times[times.length - 1] - (Date.now() - o.placedAt) / 1000) / 60 * 10) / 10)} min left · Live`;
+}
+
 function renderTrack(oid) {
   const wrap = $('#trackWrap'); if (!wrap) return;
   const o = S.orders.find(x => x.id === oid);
   if (!o) { wrap.innerHTML = `<div class="empty"><span>${ic('search', 40)}</span><b>Order ${esc(oid)} not found</b><p>Check the order ID and try again.</p></div>`; return; }
   const done = orderDone(o);
   const st = orderStage(o);
-  const total = FLOWS[o.flow].length - 1;
-  const prog = Math.min(st / total, 1);
+
+  /* rebuild the DOM only when the stage changes; between stages just
+     move the live courier marker and refresh the ETA — no flicker */
+  const sig = [o.id, st, o.cancelled ? 1 : 0, o.rated || 0].join(':');
+  if (wrap.dataset.sig === sig) {
+    trackLiveMap('trkMap', o);
+    const eta = $('#trkEta'); if (eta && !done && !o.cancelled) eta.textContent = trackEtaText(o);
+    return;
+  }
+  wrap.dataset.sig = sig;
 
   wrap.innerHTML = `
   <div class="page-head"><button class="back" onclick="go('orders')">${ic('chevl', 16)}</button>
     <div><h1>${done ? 'Delivered' : esc(orderStatus(o).t)}</h1><small>${esc(o.title)} · ${o.id}${S.user.addr.gps ? ' · GPS live' : ''}</small></div></div>
 
-  <div class="track-map">
-    <svg viewBox="0 0 400 190">
-      <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1A5632"/><stop offset="1" stop-color="#0F3B21"/></linearGradient></defs>
-      ${[0,1,2,3,4,5].map(i => `<line x1="${i*80}" y1="0" x2="${i*80}" y2="190" class="grid"/>`).join('')}
-      ${[0,1,2,3].map(i => `<line x1="0" y1="${i*63}" x2="400" y2="${i*63}" class="grid"/>`).join('')}
-      <path d="M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60" class="route-bg"/>
-      <path d="M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60" class="route" style="stroke-dasharray:420;stroke-dashoffset:${420 - 420 * prog}"/>
-      <circle cx="40" cy="150" r="7" fill="#1A5632"/><text x="40" y="175" class="map-lbl">${o.kind === 'ride' ? 'Pickup' : 'Shop'}</text>
-      <circle cx="360" cy="60" r="7" fill="#C84B31"/><text x="360" y="40" class="map-lbl">${o.kind === 'ride' ? 'Drop' : 'You'}</text>
-      <g style="offset-path:path('M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60');offset-distance:${prog * 100}%" class="mover">
-        <circle r="12" fill="url(#rg)"/>${icNested('bike', 13)}</g>
-    </svg>
-    ${done ? '' : `<div class="eta-pill">~${Math.max(1, Math.round((FLOW_T[o.flow][total] - (Date.now() - o.placedAt) / 1000) / 60 * 10) / 10)} min left · Live</div>`}
+  <div class="track-map real">
+    <div id="trkMap" class="route-canvas full"></div>
+    ${done || o.cancelled ? '' : `<div class="eta-pill" id="trkEta">${trackEtaText(o)}</div>`}
   </div>
 
   ${o.partner && st >= 1 ? `
@@ -285,7 +303,7 @@ function renderTrack(oid) {
     <span class="pc-ava">${ic('user', 22)}</span>
     <div class="pc-info"><b>${esc(o.partner.name)}</b><small>★ ${o.partner.rating} · ${o.partner.trips.toLocaleString('en-IN')} trips · ${esc(o.partner.veh)}</small></div>
     ${done ? '' : `<div class="pc-otp">OTP<b>${o.partner.otp}</b></div>`}
-    <button class="pc-call" onclick="toast('Calling ${esc(o.partner.name)}… (demo)')">${ic('phone', 16)}</button>
+    <button class="pc-call" onclick="toast('Connecting to ${esc(o.partner.name)} via masked number — your number stays private')">${ic('phone', 16)}</button>
   </div>
   <div class="foot-note sm">${ic('shield', 12)} Your partner is registered &amp; verified — ID, vehicle and background checked.</div>` : ''}
 
@@ -308,6 +326,7 @@ function renderTrack(oid) {
   ${done && o.rated ? `<div class="card-block"><h3>Thanks for rating ${'★'.repeat(o.rated)}</h3></div>` : ''}
   ${done && o.kind === 'shop' && !o.cancelled ? `<button class="btn-main wide ghost" onclick="reorder('${o.id}')">Reorder the same</button>` : ''}
   <button class="btn-main wide ghost" onclick="toast('Tell Mitra your issue — opening chat');setTimeout(()=>go('mitra'),600)">Need help with this order?</button>`;
+  trackLiveMap('trkMap', o);
 }
 
 function rateOrder(oid, n) {

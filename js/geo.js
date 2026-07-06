@@ -10,10 +10,44 @@
    database first; OSM only fills the gaps. Roadmap: docs/MAPS.md
    ============================================================ */
 
+/* geocode cache — at lakh-user scale we must NOT hammer the geocoder.
+   Every query is answered from cache (memory + localStorage, 24 h TTL)
+   before any network call; identical in-flight queries are deduped. */
+const _geoMem = {};
+let _geoInflight = {};
+function _geoCacheGet(q) {
+  const k = q.toLowerCase();
+  if (_geoMem[k] && Date.now() - _geoMem[k].t < 864e5) return _geoMem[k].res;
+  try {
+    const disk = JSON.parse(localStorage.getItem('omny_geocache') || '{}');
+    if (disk[k] && Date.now() - disk[k].t < 864e5) { _geoMem[k] = disk[k]; return disk[k].res; }
+  } catch (e) {}
+  return null;
+}
+function _geoCachePut(q, res) {
+  const k = q.toLowerCase();
+  _geoMem[k] = { t: Date.now(), res };
+  try {
+    const disk = JSON.parse(localStorage.getItem('omny_geocache') || '{}');
+    disk[k] = _geoMem[k];
+    const keys = Object.keys(disk);
+    if (keys.length > 120) keys.sort((a, b) => disk[a].t - disk[b].t).slice(0, keys.length - 120).forEach(x => delete disk[x]);
+    localStorage.setItem('omny_geocache', JSON.stringify(disk));
+  } catch (e) {}
+}
+
 /* own-places-first address search */
 async function geoSearch(q) {
   q = String(q || '').trim();
   if (q.length < 3) return [];
+  const hit = _geoCacheGet(q);
+  if (hit) return hit;
+  if (_geoInflight[q.toLowerCase()]) return _geoInflight[q.toLowerCase()];
+  const p = _geoSearchNet(q);
+  _geoInflight[q.toLowerCase()] = p;
+  try { return await p; } finally { delete _geoInflight[q.toLowerCase()]; }
+}
+async function _geoSearchNet(q) {
   let own = [];
   try {
     if (typeof CLOUD !== 'undefined' && CLOUD.on) {
@@ -37,7 +71,9 @@ async function geoSearch(q) {
   } catch (e) { /* offline — own results only */ }
 
   const seen = new Set(own.map(p => p.name.toLowerCase()));
-  return [...own, ...osm.filter(p => !seen.has(p.name.toLowerCase()))].slice(0, 6);
+  const res = [...own, ...osm.filter(p => !seen.has(p.name.toLowerCase()))].slice(0, 6);
+  if (res.length) _geoCachePut(q, res);
+  return res;
 }
 
 /* the flywheel: every used location grows OUR places database */
@@ -117,7 +153,7 @@ function placePickerSheet(title, onPick) {
       <div><b>Use my current location</b><small>Live GPS</small></div><em>Locate</em></button>
     <div class="foot-note sm" style="text-align:left;margin:8px 0 4px">Saved places</div>
     ${DB.places.map((p, i) => `<button class="place-row" onclick="ppChoose(${i})">
-      <span>${p.icon || ic('pin', 17)}</span><div><b>${esc(p.name)}</b><small>${esc(p.sub)}</small></div><em>${p.km} km</em></button>`).join('')}`);
+      <span>${ic(p.id === 'home' ? 'home' : p.id === 'work' ? 'chart' : 'pin', 17)}</span><div><b>${esc(p.name)}</b><small>${esc(p.sub)}</small></div><em>${p.km} km</em></button>`).join('')}`);
   setTimeout(() => { const el = document.getElementById('ppSearch'); if (el) el.focus(); }, 60);
 }
 function ppChoose(i) {
@@ -189,4 +225,71 @@ function routeMap(elId, from, to) {
     el._map = map;
     setTimeout(() => map.invalidateSize(), 120);
   } catch (e) { console.warn('[map] render failed', e); }
+}
+
+/* ============================================================
+   LIVE TRACKING GEO — real coordinates + moving courier
+   ============================================================ */
+
+/* geodesic destination point: real position `km` away at `bearing`° */
+function geoDest(lat, lng, km, bearing) {
+  const R = 6371, r = Math.PI / 180, br = bearing * r, d = km / R;
+  const la1 = lat * r, lo1 = lng * r;
+  const la2 = Math.asin(Math.sin(la1) * Math.cos(d) + Math.cos(la1) * Math.sin(d) * Math.cos(br));
+  const lo2 = lo1 + Math.atan2(Math.sin(br) * Math.sin(d) * Math.cos(la1), Math.cos(d) - Math.sin(la1) * Math.sin(la2));
+  return { lat: la2 / r, lng: lo2 / r };
+}
+
+/* every shop gets a stable real position: its true km from the user's
+   base at a bearing derived from its id (until the shop pins its own GPS) */
+function shopLatLng(s) {
+  if (!s) return null;
+  if (s.lat != null) return { lat: +s.lat, lng: +s.lng };
+  let h = 0; const id = String(s.id);
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  const base = DB.places[0];
+  return geoDest(base.lat, base.lng, Math.max(+s.km || 0.5, 0.2), h % 360);
+}
+
+/* resolve an order's route endpoints (stored at creation, or derived) */
+function orderGeo(o) {
+  if (o.geo && o.geo.from && o.geo.from.lat != null && o.geo.to && o.geo.to.lat != null) return o.geo;
+  const to = (S.user.addr && S.user.addr.lat != null) ? { lat: +S.user.addr.lat, lng: +S.user.addr.lng }
+    : { lat: DB.places[0].lat, lng: DB.places[0].lng };
+  if (o.shopId) { const s = findShop(o.shopId); const f = shopLatLng(s); if (f) return { from: f, to }; }
+  return null;
+}
+
+/* continuous 0→1 journey progress from real elapsed time */
+function orderProg(o) {
+  const times = FLOW_T[o.flow];
+  return Math.min((Date.now() - o.placedAt) / 1000 / times[times.length - 1], 1);
+}
+
+/* live tracking map: built once per stage, courier marker moves every tick */
+function trackLiveMap(elId, o) {
+  const el = document.getElementById(elId);
+  if (!el || typeof L === 'undefined') return;
+  const g = orderGeo(o);
+  if (!g) return;
+  const prog = o.cancelled ? 0 : orderProg(o);
+  const A = [g.from.lat, g.from.lng], B = [g.to.lat, g.to.lng];
+  const cur = [A[0] + (B[0] - A[0]) * prog, A[1] + (B[1] - A[1]) * prog];
+  try {
+    if (el._map && el._courier) { el._courier.setLatLng(cur); return; }
+    if (el._map) { el._map.remove(); el._map = null; }
+    const cfg = (window.ORIGNALS_CONFIG || {}).map || {};
+    const map = L.map(el, { zoomControl: false, attributionControl: false, scrollWheelZoom: false });
+    L.tileLayer(cfg.tileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    const pin = (c) => L.divIcon({ className: '', html: `<div style="width:15px;height:15px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>`, iconSize: [15, 15], iconAnchor: [8, 8] });
+    L.marker(A, { icon: pin('#1A5632') }).addTo(map);
+    L.marker(B, { icon: pin('#C84B31') }).addTo(map);
+    L.polyline([A, B], { color: '#1A5632', weight: 4, opacity: .75, dashArray: '2,8', lineCap: 'round' }).addTo(map);
+    const courierIc = L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17],
+      html: `<div style="width:34px;height:34px;border-radius:50%;background:#1A5632;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff">${typeof ic === 'function' ? ic(o.kind === 'ride' ? 'bike' : 'package', 16) : ''}</div>` });
+    el._courier = L.marker(cur, { icon: courierIc, zIndexOffset: 900 }).addTo(map);
+    map.fitBounds([A, B], { padding: [40, 40] });
+    el._map = map;
+    setTimeout(() => map.invalidateSize(), 120);
+  } catch (e) { console.warn('[track map] failed', e); }
 }

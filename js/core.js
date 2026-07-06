@@ -297,7 +297,7 @@ function renderCheckout() {
       <button class="ck-pay ${canWallet ? '' : 'dis'}" onclick="${canWallet ? `paySelected(${final},${off},'wallet')` : `toast('Wallet balance is low — add money or pay by UPI')`}">
         <span>${ic('wallet', 20)}</span><div><b>Orignals Wallet</b><small>Balance ${money(S.wallet.bal)}</small></div><em>${canWallet ? 'Pay ' + money(final) : 'Low balance'}</em></button>
       <button class="ck-pay" onclick="paySelected(${final},${off},'upi')">
-        <span>${ic('card', 20)}</span><div><b>UPI / Card</b><small>Any bank app (demo)</small></div><em>Pay ${money(final)}</em></button>
+        <span>${ic('card', 20)}</span><div><b>UPI / Card</b><small>GPay · PhonePe · Paytm · any bank app</small></div><em>Pay ${money(final)}</em></button>
       <button class="ck-pay" onclick="paySelected(${final},${off},'cod')">
         <span>${ic('cash', 20)}</span><div><b>Cash on delivery</b><small>Pay when it arrives</small></div><em>Book</em></button>
     </div>`);

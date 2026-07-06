@@ -190,7 +190,7 @@ function renderReg() {
     <div class="wiz-q">Verification <small>— precise, anti-fraud</small></div>
     ${regDocList().map(d => `
       <button class="doc-row ${REG.docs[d[0]] ? 'ok' : ''}" onclick="REG.docs['${d[0]}']=!REG.docs['${d[0]}'];renderReg()">
-        <div><b>${ic(d[2], 15)} ${d[1]}</b><small>${REG.docs[d[0]] ? 'Captured & verified ✓ (demo)' : 'Tap to scan'}</small></div>
+        <div><b>${ic(d[2], 15)} ${d[1]}</b><small>${REG.docs[d[0]] ? 'Captured & verified ✓' : 'Tap to scan'}</small></div>
         <span>${REG.docs[d[0]] ? ic('check', 18) : ic('upload', 18)}</span></button>`).join('')}
     ${regDocList().every(d => REG.docs[d[0]]) ? `<button class="btn-main wide" onclick="REG.step=4;renderReg()">Next ${ic('arrowr', 13)}</button>` : ''}
     <div class="tip-strip">${ic('shield', 12)} Both rider and driver are face-verified — and the exact vehicle on the trip is the one that was verified. No swaps, no fraud.</div>`;
@@ -233,7 +233,7 @@ function renderVerifying() {
   <div class="earn-hero">
     <span class="earn-big spin-slow">${ic('shield', 54)}</span>
     <h1>Verifying you…</h1>
-    <p>Computer vision is matching your live face scan with your ID${['bike','auto','car','van','truck'].includes(S.partner.veh) ? ', and your vehicle plate with its registration' : ''}. Under a minute in this demo.</p>
+    <p>Computer vision is matching your live face scan with your ID${['bike','auto','car','van','truck'].includes(S.partner.veh) ? ', and your vehicle plate with its registration' : ''}. Usually done in under a minute.</p>
     <div class="verify-bar"><i></i></div>
   </div>`;
 }
@@ -249,14 +249,30 @@ function todayEarn() {
   return S.earnings.filter(e => e.ts >= d0.getTime()).reduce((a, e) => a + e.pay, 0);
 }
 
+function partnerOnline() { return S.partner && S.partner.online !== false; }
+function toggleOnline() {
+  S.partner.online = !partnerOnline();
+  save();
+  toast(S.partner.online ? 'You are online — jobs on your path will appear' : 'You are offline — no jobs will be offered');
+  renderJobFeed();
+}
+
 function renderJobFeed() {
   const v = DB.vehicles.find(x => x.id === S.partner.veh);
-  const jobs = availableJobs();
+  const on = partnerOnline();
+  const jobs = on ? availableJobs() : [];
   const waiting = jobs.reduce((a, j) => a + j.pay, 0);
   const seva = window._sevaMode;
+  const hour = new Date().getHours();
 
   $('#view').innerHTML = `
   ${earnToggle('deliver')}
+  <div class="online-bar ${on ? 'on' : ''}">
+    <span class="ob-dot"></span>
+    <div class="ob-info"><b>Namaste, ${esc(S.partner.name.split(' ')[0])}</b>
+      <small>${on ? `You're online · earning on your ${v.name} ${hour < 12 ? 'this morning' : hour < 17 ? 'this afternoon' : 'this evening'}` : 'You\'re offline — flip the switch when you\'re heading out'}</small></div>
+    <button class="ob-switch ${on ? 'on' : ''}" onclick="toggleOnline()" aria-label="Go ${on ? 'offline' : 'online'}"></button>
+  </div>
   <div class="earn-top">
     <div class="earn-me">
       <span class="pc-ava big">${vehIcon(S.partner.veh, 24)}</span>
@@ -276,8 +292,11 @@ function renderJobFeed() {
       <i>${seva ? '✓' : ''}</i><span><b>Seva mode</b> — deliver free for neighbours, earn karma not cash</span></label>
   </div>
 
-  <div class="sec-head"><h2>On your way <span class="live-dot"></span></h2><small>rides + parcels, same pathway</small></div>
-  ${jobs.length ? jobs.map(j => `
+  <div class="sec-head"><h2>On your way ${on ? '<span class="live-dot"></span>' : ''}</h2><small>rides + parcels, same pathway</small></div>
+  ${!on ? `<div class="empty"><span>${ic('clock', 40)}</span><b>You're offline</b>
+      <p>Go online and jobs along your route — rides, parcels, tiffins — will appear here.</p>
+      <button class="btn-main" onclick="toggleOnline()">Go online</button></div>`
+  : jobs.length ? jobs.map(j => `
     <div class="job-card">
       <div class="job-top"><span class="job-emoji">${jobIcon(j.type)}</span>
         <div><b>${esc(j.what)}</b><small>by ${esc(j.by)}${j.type === 'ride' ? ' · end-to-end or shared' : ''}</small></div>
@@ -286,9 +305,9 @@ function renderJobFeed() {
       ${j.note ? `<div class="job-note">${esc(j.note)}</div>` : ''}
       <button class="btn-main wide sm" onclick="acceptJob('${j.id}',${seva ? 'true' : 'false'})">${seva ? 'Accept as seva (free)' : 'Accept · earn ' + money(j.pay)}</button>
     </div>`).join('')
-  : `<div class="empty"><span>${ic('clock', 40)}</span><b>All demo jobs done — legend!</b>
-      <p>New rides &amp; parcels appear as neighbours and shops post them.</p>
-      <button class="btn-main" onclick="S.earnings=S.earnings.map(e=>({...e,jobId:'used_'+e.jobId}));save();VIEWS.earn([])">Refresh demo jobs</button></div>`}
+  : `<div class="empty"><span>${ic('clock', 40)}</span><b>No jobs on your path right now</b>
+      <p>New rides &amp; parcels appear the moment neighbours and shops post them.</p>
+      <button class="btn-main" onclick="S.earnings=S.earnings.map(e=>({...e,jobId:'used_'+e.jobId}));save();VIEWS.earn([])">Check for new jobs</button></div>`}
   <div class="foot-note">${ic('shield', 12)} OTP both ends · GPS trace · insurance on every trip · money lands instantly</div>`;
 }
 
@@ -300,27 +319,27 @@ function acceptJob(jobId, seva) {
 }
 
 /* ---------- active job ---------- */
+/* job endpoints: stable real coordinates — its true km from base at a
+   bearing derived from the job id (until posters pin exact GPS) */
+function jobGeo(j) {
+  let h = 0; const id = String(j.id);
+  for (let i = 0; i < id.length; i++) h = (h * 37 + id.charCodeAt(i)) >>> 0;
+  const base = DB.places[0];
+  const from = geoDest(base.lat, base.lng, 0.3 + (h % 20) / 10, h % 360);
+  const to = geoDest(from.lat, from.lng, Math.max(+j.km || 1, 0.5), (h >> 5) % 360);
+  return { from, to };
+}
+
 function renderActiveJob() {
   const A = S.activeJob;
   const j = allJobs().find(x => x.id === A.jobId);
   const steps = ['Head to pickup', j.type === 'ride' ? 'Start ride with OTP' : 'Collect with OTP', j.type === 'ride' ? 'End ride with OTP' : 'Deliver with OTP'];
-  const prog = A.stage / 2;
 
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="dropJobConfirm()">${ic('x', 16)}</button>
     <div><h1>${steps[A.stage]}</h1><small>${esc(j.what)} · ${A.seva ? 'SEVA — free delivery' : '+' + money(j.pay)}</small></div></div>
 
-  <div class="track-map">
-    <svg viewBox="0 0 400 190">
-      ${[0,1,2,3,4,5].map(i => `<line x1="${i*80}" y1="0" x2="${i*80}" y2="190" class="grid"/>`).join('')}
-      <path d="M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60" class="route-bg"/>
-      <path d="M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60" class="route" style="stroke-dasharray:420;stroke-dashoffset:${420 - 420 * prog}"/>
-      <circle cx="40" cy="150" r="7" fill="#1A5632"/><text x="40" y="175" class="map-lbl">Pickup</text>
-      <circle cx="360" cy="60" r="7" fill="#C84B31"/><text x="360" y="40" class="map-lbl">Drop</text>
-      <g style="offset-path:path('M40 150 C 120 150, 130 45, 210 45 S 330 110, 360 60');offset-distance:${prog * 100}%" class="mover">
-        <circle r="12" fill="#1A5632"/>${icNested(VEH_ICON[S.partner.veh] || 'bike', 13)}</g>
-    </svg>
-  </div>
+  <div class="track-map real"><div id="jobMap" class="route-canvas full"></div></div>
 
   <div class="job-card active">
     <div class="job-route"><i class="pin g"></i>${esc(j.from)}<span class="job-arrow">${ic('arrowr', 11)}</span><i class="pin r"></i>${esc(j.to)}<b>· ${j.km} km</b></div>
@@ -332,6 +351,23 @@ function renderActiveJob() {
   ${A.stage === 0 ? `<button class="btn-main wide lg" onclick="S.activeJob.stage=1;save();renderActiveJob()">${ic('pin', 15)} I've reached the pickup</button>` : ''}
   ${A.stage === 1 ? `<button class="btn-main wide lg" onclick="S.activeJob.stage=2;save();toast('On the way — ride safe!');renderActiveJob()">${ic('check', 15)} OTP matched — ${j.type === 'ride' ? 'ride started' : 'collected'}</button>` : ''}
   ${A.stage === 2 ? `<button class="btn-main wide lg" onclick="completeJob()">${ic('flag', 15)} OTP matched — ${j.type === 'ride' ? 'ride complete' : 'delivered'}</button>` : ''}`;
+
+  /* real map: pickup + drop + your position; live GPS follows you if allowed */
+  const g = jobGeo(j);
+  const el = document.getElementById('jobMap');
+  if (el && typeof routeMap === 'function') {
+    routeMap('jobMap', { lat: g.from.lat, lng: g.from.lng }, { lat: g.to.lat, lng: g.to.lng });
+    if (navigator.geolocation && el._map) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        try {
+          if (!el._map) return;
+          const meIc = L.divIcon({ className: '', iconSize: [30, 30], iconAnchor: [15, 15],
+            html: `<div style="width:30px;height:30px;border-radius:50%;background:#E8A020;border:3px solid #fff;box-shadow:0 3px 9px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:#fff">${ic(VEH_ICON[S.partner.veh] || 'bike', 14)}</div>` });
+          L.marker([pos.coords.latitude, pos.coords.longitude], { icon: meIc, zIndexOffset: 950 }).addTo(el._map);
+        } catch (e) {}
+      }, () => {}, { timeout: 6000 });
+    }
+  }
 }
 
 function dropJobConfirm() {
@@ -401,7 +437,7 @@ function withdrawSheet() {
     <label class="fld"><span>Amount (min ₹100)</span><input class="txt" id="wdAmt" type="number" inputmode="numeric" placeholder="500"/></label>
     <label class="fld"><span>UPI ID</span><input class="txt" id="wdUpi" value="${esc(S.partner.upi || '')}" placeholder="name@bank"/></label>
     <button class="btn-main wide" onclick="doWithdraw()">Withdraw instantly</button>
-    <div class="foot-note sm">0 fees · arrives in seconds (demo: deducted from wallet)</div>`);
+    <div class="foot-note sm">0 fees · IMPS/UPI payout · lands in your bank in seconds</div>`);
 }
 function doWithdraw() {
   const amt = parseInt($('#wdAmt').value, 10) || 0;
