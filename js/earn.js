@@ -23,17 +23,85 @@ function jobFits(j, v) {
 }
 
 view('earn', () => {
+  const et = S.earnMode || 'deliver';
+  if (et === 'sell' || et === 'services') { renderEarnSell(et); return; }
   if (!S.partner) { renderEarnPitch(); return; }
   if (S.partner.status === 'verifying') { renderVerifying(); return; }
   if (S.activeJob) { renderActiveJob(); return; }
   renderJobFeed();
 });
 
+/* ---------- earner-type toggle: three ways to earn on Orignals ---------- */
+function setEarnMode(m) { S.earnMode = m; save(); VIEWS.earn([]); }
+function earnToggle(active) {
+  const segs = [
+    ['deliver', 'truck', 'Deliver & Ride'],
+    ['sell', 'store', 'Sell Products'],
+    ['services', 'spark', 'Services']
+  ];
+  return `<div class="earn-seg">${segs.map(s =>
+    `<button class="${active === s[0] ? 'on' : ''}" onclick="setEarnMode('${s[0]}')">${ic(s[1], 15)}<span>${s[2]}</span></button>`).join('')}</div>`;
+}
+
+/* ---------- SELL / SERVICES pitch (shops & providers earn too) ---------- */
+function renderEarnSell(kind) {
+  if (S.myShop) {
+    S.earnMode = 'deliver'; renderShopDash(); return;   // already a seller → dashboard
+  }
+  const isSvc = kind === 'services';
+  const tiers = [
+    ['Individual', 'Service person, solo seller, one vehicle', '1 CHF/yr'],
+    ['Retail shop', 'Kirana, pharmacy, small store', '10 CHF/yr'],
+    ['Large retail', 'Restaurant, multi-staff shop', '25 CHF/yr'],
+    ['Wholesaler', 'Dealer, distributor, hotel', '50 CHF/yr'],
+    ['Manufacturer', 'Factory, enterprise brand', '100 CHF/yr']
+  ];
+  $('#view').innerHTML = `
+  <div class="page-head"><button class="back" onclick="setMode('buy')">${ic('chevl', 16)}</button>
+    <div><h1>Earn on Orignals</h1><small>Three ways to make money — pick yours</small></div></div>
+  ${earnToggle(kind)}
+
+  <div class="pitch-hero">
+    <div class="pitch-live"><i></i>Every shop &amp; service in India can sell here</div>
+    <h1>${isSvc ? 'Your skill,<br/><span>booked online.</span>' : 'Your shop,<br/><span>selling to the street.</span>'}</h1>
+    <p>${isSvc
+      ? 'Tailor, salon, tutor, electrician, plumber — list your service, take bookings from everyone nearby, get paid to your wallet instantly.'
+      : 'Kirana, restaurant, pharmacy, wholesaler — list your products and everyone near you can order. You keep 100% of the item price. Deliver yourself or let a nearby partner carry it.'}</p>
+    <div class="btn-pair hero-cta">
+      <button class="btn-cta" onclick="startShopReg()">${isSvc ? 'List my service' : 'Register my shop'} — 2 min</button>
+    </div>
+  </div>
+
+  <div class="earn-stats">
+    <div><span class="st-ic t1">${ic('cash', 16)}</span><b>100%</b><small>of item price is yours</small></div>
+    <div><span class="st-ic t2">${ic('truck', 16)}</span><b>You choose</b><small>self or partner delivery</small></div>
+    <div><span class="st-ic t3">${ic('shield', 16)}</span><b>First month free</b><small>then tiered by turnover</small></div>
+  </div>
+
+  <div class="sec-head"><h2>Seller tiers</h2><small class="dim">no signup fee</small></div>
+  <div class="card-block">
+    ${tiers.map((t, i) => `<div class="ck-line"><span><b>${i + 1} · ${t[0]}</b> — ${t[1]}</span><span>${t[2]}</span></div>`).join('')}
+  </div>
+
+  <div class="how-grid tinted">
+    <div class="how"><span>${ic('edit', 22)}</span><b>2-minute setup</b><p>Name, category, address, timings — big buttons, no confusing forms. Add GST/FSSAI if you have them.</p></div>
+    <div class="how"><span>${ic('cash', 22)}</span><b>Money instantly</b><p>Every sale lands in your wallet the moment it's delivered. Daily settlement to your bank.</p></div>
+    <div class="how"><span>${ic('leaf', 22)}</span><b>Purity badge</b><p>Sell natural &amp; unadulterated? Our field team verifies your batches — the Purity seal sells itself.</p></div>
+    <div class="how"><span>${ic('chart', 22)}</span><b>Grow with data</b><p>Live sales chart, stock control, offers and a shareable shop link — all built in.</p></div>
+  </div>
+
+  <button class="btn-main wide lg" onclick="startShopReg()">${isSvc ? 'List my service now' : 'Take my shop live'}</button>
+  <div class="foot-note">No signup fee · first month complimentary · then 1–100 CHF/yr by tier.</div>`;
+}
+
 /* ---------- pitch + registration ---------- */
 function renderEarnPitch() {
   const teaser = [...allJobs()].sort((a, b) => b.pay / b.km - a.pay / a.km).slice(0, 5);
   const total = teaser.reduce((a, j) => a + j.pay, 0);
   $('#view').innerHTML = `
+  <div class="page-head"><button class="back" onclick="setMode('buy')">${ic('chevl', 16)}</button>
+    <div><h1>Earn on Orignals</h1><small>Three ways to make money — pick yours</small></div></div>
+  ${earnToggle('deliver')}
   <div class="pitch-hero">
     <div class="pitch-live"><i></i>${allJobs().length} jobs live near ${esc(S.user.addr.name)} · ${money(total)}+ on the table</div>
     <h1>Passing by anyway?<br/><span>Get paid for it.</span></h1>
@@ -188,6 +256,7 @@ function renderJobFeed() {
   const seva = window._sevaMode;
 
   $('#view').innerHTML = `
+  ${earnToggle('deliver')}
   <div class="earn-top">
     <div class="earn-me">
       <span class="pc-ava big">${vehIcon(S.partner.veh, 24)}</span>

@@ -677,3 +677,16 @@
   .hero-cta{max-width:480px}
   .teaser-card{flex-basis:196px}
 }
+
+
+/* ---------- earner-type toggle (Earn section) ---------- */
+.earn-seg{display:flex;gap:6px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:16px;padding:5px;margin:6px 0 14px}
+.earn-seg button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:transparent;border:none;border-radius:12px;padding:10px 4px;cursor:pointer;
+  color:var(--mut);font-family:inherit;font-size:.7rem;font-weight:700;transition:all .18s}
+.earn-seg button .ic{color:var(--mut);transition:color .18s}
+.earn-seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.earn-seg button.on .ic{color:var(--primary)}
+[data-theme="dark"] .earn-seg button.on .ic{color:#67C48D}
+.earn-seg button:active{transform:scale(.96)}

@@ -43,7 +43,7 @@ view('home', () => {
     <button class="svc t-life" onclick="go('tickets')"><span class="svc-ic">${ic('star', 21)}</span><b>Movies & Events</b><small>Book seats live</small></button>
     <button class="svc t-com" onclick="go('tickets/dining')"><span class="svc-ic">${ic('bowl', 21)}</span><b>Dining</b><small>Reserve a table</small></button>
     <button class="svc t-life" onclick="go('estate')"><span class="svc-ic">${ic('home', 21)}</span><b>Property & Stays</b><small>Buy · rent · hotels</small></button>
-    <button class="svc t-move" onclick="setMode('earn')"><span class="svc-ic">${ic('users', 21)}</span><b>Earn</b><small>Deliver as you go</small></button>
+    <button class="svc t-move" onclick="setMode('earn')"><span class="svc-ic">${ic('users', 21)}</span><b>Earn</b><small>Deliver · Sell · Services</small></button>
     <button class="svc t-com" onclick="go('myshop')"><span class="svc-ic">${ic('chart', 21)}</span><b>Your Shop</b><small>Sell on Orignals</small></button>
   </div>
 
