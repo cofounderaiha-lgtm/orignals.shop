@@ -350,7 +350,12 @@ function dineBook(shopId) {
   const s = findShop(shopId);
   const d = window._dn;
   if (!S.bookings) S.bookings = [];
-  S.bookings.unshift({ id: uid(), shop: s.name, day: d.day, slot: d.slot, guests: d.guests, ts: Date.now() });
+  const rid = 'RZ' + rnd(10000, 99999);
+  S.bookings.unshift({ id: rid, shopId, shop: s.name, day: d.day, slot: d.slot, guests: d.guests, ts: Date.now() });
+  /* community restaurant: the reservation lands on the owner's device */
+  if (s.community && typeof cloudPostReservation === 'function') {
+    cloudPostReservation({ id: rid, shopId, day: d.day, slot: d.slot, guests: d.guests });
+  }
   save(); closeSheet(); confettiBurst();
   notify('Table reserved', `${s.name} — ${d.day} ${d.slot}, ${d.guests} guests. 20% off the bill.`);
   toast('Table reserved at ' + s.name);
@@ -362,6 +367,7 @@ function dineBook(shopId) {
 function cancelDining(i) {
   const b = (S.bookings || [])[i]; if (!b) return;
   if (!confirm('Cancel your table at ' + b.shop + '? Free cancellation.')) return;
+  if (b.id && typeof cloudReservationCancel === 'function') cloudReservationCancel(b.id);
   S.bookings.splice(i, 1); save();
   toast('Reservation cancelled — the table is freed for someone else');
   VIEWS.tickets(['mine']);

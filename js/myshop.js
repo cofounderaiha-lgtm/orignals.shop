@@ -168,6 +168,20 @@ async function shopCloudSync() {
       }
     });
 
+    /* real table reservations from buyers on other devices */
+    const rz = await cloudFetch('reservations?shop_id=eq.' + sid + '&status=eq.reserved&order=created_at.desc&limit=15');
+    M.reservations = M.reservations || [];
+    (rz || []).forEach(r => {
+      if (!M.reservations.find(x => x.id === r.id)) {
+        M.reservations.unshift({ id: r.id, name: r.buyer_name || 'Guest', day: r.day, slot: r.slot, guests: r.guests, ts: new Date(r.created_at).getTime() });
+        changed = true;
+        notify('New table reservation!', `${r.buyer_name || 'A guest'} · ${r.guests} guests · ${r.day} ${r.slot}`, '🍽');
+      }
+    });
+    /* drop reservations the buyer cancelled */
+    const liveIds = new Set((rz || []).map(r => r.id));
+    if (M.reservations.length) { const before = M.reservations.length; M.reservations = M.reservations.filter(x => liveIds.has(x.id)); if (M.reservations.length !== before) changed = true; }
+
     /* delivery leg posted to the partner feed: reflect real claim/finish */
     for (const o of M.orders.filter(x => x.real && x.jobId && !['done', 'rejected'].includes(x.status))) {
       const js = await cloudFetch('live_jobs?id=eq.' + o.jobId + '&select=status');
@@ -270,6 +284,11 @@ function renderShopDash() {
   </div>
 
   ${!M.items.length ? `<div class="tip-strip">Add your first items — orders start coming once your shelf isn't empty!</div>` : ''}
+
+  ${(M.reservations && M.reservations.length) ? `<div class="sec-head"><h2>Table reservations ${ic('bowl', 14)}</h2></div>
+    ${M.reservations.map(r => `<div class="job-card"><div class="job-top"><span class="job-emoji">${ic('bowl', 20)}</span>
+      <div><b>${esc(r.name)} · ${r.guests} guests</b><small><b class="ok">LIVE · real guest</b> · ${esc(r.day)} ${esc(r.slot)}</small></div>
+      <em class="job-pay">20% off</em></div></div>`).join('')}` : ''}
 
   ${pend.length ? `<div class="sec-head"><h2>Orders <span class="live-dot"></span></h2></div>${pend.map(orderCard).join('')}` :
     M.items.length ? `<div class="tip-strip"> You're online — orders from nearby customers pop up here the moment they're placed.</div>` : ''}

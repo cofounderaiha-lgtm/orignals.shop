@@ -88,6 +88,7 @@ view('account', () => {
   </div>
 
   ${(() => { if (!S.refCode) { S.refCode = 'ORIG-' + uid().slice(0, 5).toUpperCase(); save(); }
+    if (!S.refRegistered && typeof cloudRefRegister === 'function' && typeof CLOUD !== 'undefined' && CLOUD.on) { cloudRefRegister(S.refCode); S.refRegistered = true; save(); }
     return `<div class="card-block">
     <h3>${ic('gift', 15)} Refer &amp; earn — ₹50 each</h3>
     <p class="movie-about">Share your code. When a friend joins and places their first order, you both get ₹50 in wallet.</p>
@@ -163,10 +164,19 @@ function copyRef() {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(v).then(() => toast('Code copied — share away!'));
   else { $('#refCodeBox').select(); document.execCommand && document.execCommand('copy'); toast('Code copied'); }
 }
-function redeemRef() {
+async function redeemRef() {
   const v = ($('#refIn').value || '').trim().toUpperCase();
   if (!/^ORIG-[A-Z0-9]{4,6}$/.test(v)) { toast('Codes look like ORIG-XXXXX'); return; }
   if (v === S.refCode) { toast("That's your own code!"); return; }
+  if (S.refRedeemed) { toast('You have already used a referral code'); return; }
+  /* real cross-device: credits the friend who owns this code, too */
+  if (typeof cloudRedeemRef === 'function' && CLOUD.on) {
+    const r = await cloudRedeemRef(v);
+    if (!r.ok) {
+      const msg = r.reason === 'invalid' ? 'That code was not found' : r.reason === 'self' ? "That's your own code!" : r.reason === 'used' ? 'You have already used a referral code' : 'Could not apply the code — try again';
+      toast(msg); return;
+    }
+  }
   S.refRedeemed = v;
   walletAdd(50, 'Referral bonus · ' + v);
   confettiBurst(); toast('₹50 added — your friend gets ₹50 too!');

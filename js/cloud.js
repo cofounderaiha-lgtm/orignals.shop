@@ -290,6 +290,63 @@ async function cloudShopsRefresh(onDone) {
   } catch (e) { console.warn('[shops] community refresh skipped:', e.message); }
 }
 
+/* ---------- dining reservations (→ restaurant device) ---------- */
+function cloudPostReservation(r) {
+  if (!CLOUD.on) return;
+  cloudFetch('reservations?on_conflict=id', { method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates' },
+    body: JSON.stringify([{ id: r.id, shop_id: r.shopId, buyer_device: S.deviceKey || 'anon', buyer_name: (S.user.name || 'Guest').slice(0, 40), day: r.day, slot: r.slot, guests: r.guests }]) }).catch(() => {});
+}
+function cloudReservationCancel(id) {
+  if (!CLOUD.on) return Promise.resolve();
+  return cloudFetch('rpc/reservation_cancel', { method: 'POST', body: JSON.stringify({ p_id: id, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+}
+
+/* ---------- property listings + leads (cross-device) ---------- */
+function cloudPostListing(p) {
+  if (!CLOUD.on) return;
+  cloudFetch('listings?on_conflict=id', { method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify([{ id: p.id, owner_device: S.deviceKey || 'anon', kind: p.kind, title: p.title, loc: p.loc, price: p.price, area: p.area, bhk: p.bhk, lat: p.lat != null ? +p.lat : null, lng: p.lng != null ? +p.lng : null, status: 'live' }]) }).catch(() => {});
+}
+let _commListAt = 0;
+async function cloudListingsRefresh(onDone) {
+  if (!CLOUD.on || Date.now() - _commListAt < 60000) return;
+  _commListAt = Date.now();
+  try {
+    const rows = await cloudFetch('listings?status=eq.live&owner_device=neq.' + encodeURIComponent(S.deviceKey || 'anon') + '&select=*&order=created_at.desc&limit=30');
+    if (rows && rows.length && onDone) onDone(rows);
+  } catch (e) {}
+}
+function cloudPostLead(listing, kind, note) {
+  if (!CLOUD.on || !listing.owner_device) return;
+  cloudFetch('listing_leads', { method: 'POST', headers: { 'Prefer': 'return=minimal' },
+    body: JSON.stringify([{ listing_id: listing.id, owner_device: listing.owner_device, from_device: S.deviceKey || 'anon', kind, name: (S.user.name || 'A buyer').slice(0, 40), note: (note || '').slice(0, 160) }]) }).catch(() => {});
+}
+async function cloudMyLeads() {
+  if (!CLOUD.on) return [];
+  try { return await cloudFetch('listing_leads?owner_device=eq.' + encodeURIComponent(S.deviceKey || 'anon') + '&select=*&order=created_at.desc&limit=30') || []; }
+  catch (e) { return []; }
+}
+
+/* ---------- referrals (cross-device credit) ---------- */
+function cloudRefRegister(code) {
+  if (!CLOUD.on) return;
+  cloudFetch('rpc/ref_register', { method: 'POST', body: JSON.stringify({ p_code: code, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+}
+function cloudRedeemRef(code) {
+  if (!CLOUD.on) return Promise.resolve({ ok: false, reason: 'offline' });
+  return cloudFetch('rpc/redeem_ref', { method: 'POST', body: JSON.stringify({ p_code: code, p_device: S.deviceKey || 'anon' }) }).then(r => r || { ok: false }).catch(() => ({ ok: false, reason: 'offline' }));
+}
+async function cloudClaimRefCredits() {
+  if (!CLOUD.on) return;
+  try {
+    const n = await cloudFetch('rpc/claim_ref_credits', { method: 'POST', body: JSON.stringify({ p_device: S.deviceKey || 'anon' }) });
+    if (n && n > 0) {
+      walletAdd(n * 50, 'Referral bonus · ' + n + ' friend' + (n > 1 ? 's' : '') + ' joined');
+      notify('Referral reward!', '₹' + (n * 50) + ' added — ' + n + ' friend' + (n > 1 ? 's' : '') + ' joined with your code.');
+    }
+  } catch (e) {}
+}
+
 /* real rating: recomputes the shop's average for everyone */
 function cloudRateShop(shopId, stars, orderRef) {
   if (!CLOUD.on) return Promise.resolve(null);

@@ -9,13 +9,21 @@ function lakh(n) {
   return money(n);
 }
 
+let _commListings = [];
 view('estate', args => {
   const tab = args[0] || 'buy';
   const tabs = [['buy', 'Buy'], ['rent', 'Rent'], ['plot', 'Plots'], ['commercial', 'Commercial'], ['hotels', 'Hotels & Stays'], ['mine', 'My activity']];
   let body = '';
+  /* pull listings posted on other devices into the marketplace */
+  if (typeof cloudListingsRefresh === 'function') {
+    cloudListingsRefresh(rows => {
+      _commListings = rows.map(r => ({ id: r.id, kind: r.kind, title: r.title, loc: r.loc, price: +r.price, area: r.area, bhk: r.bhk, by: 'Owner', verified: true, community: true, owner_device: r.owner_device, lat: r.lat, lng: r.lng, tags: ['Listed on Orignals', 'GPS pinned'] }));
+      if (location.hash.replace('#/', '').split('/')[0] === 'estate') VIEWS.estate(args);
+    });
+  }
 
   if (['buy', 'rent', 'plot', 'commercial'].includes(tab)) {
-    const list = [...DB.properties, ...(S.myListings || [])].filter(p => p.kind === tab);
+    const list = [...DB.properties, ...(S.myListings || []), ..._commListings].filter(p => p.kind === tab);
     body = `
     <div class="tip-strip">${ic('shield', 13)} Every listing is GPS-pinned &amp; document-checked — precise location, zero fake listings.</div>
     ${list.length ? `<div class="prop-list">${list.map(p => `
@@ -66,10 +74,22 @@ view('estate', args => {
 
   if (tab === 'mine') {
     const ls = S.myListings || [], vs = S.visits || [], sts = S.stays || [];
+    /* real enquiries from other devices */
+    if (typeof cloudMyLeads === 'function') cloudMyLeads().then(leads => {
+      const box = document.getElementById('myLeads');
+      if (!box) return;
+      box.innerHTML = leads.length ? `<div class="sec-head"><h2>Enquiries on your listings <span class="live-dot"></span></h2></div>` + leads.map(l => {
+        const lp = (S.myListings || []).find(x => x.id === l.listing_id);
+        return `<div class="order-row static"><span class="or-emoji">${ic(l.kind === 'visit' ? 'pin' : 'phone', 18)}</span>
+          <div class="or-info"><b>${esc(l.name || 'A buyer')} — ${l.kind === 'visit' ? 'wants a site visit' : 'is interested'}</b><small>${lp ? esc(lp.title) : l.listing_id}${l.note ? ' · ' + esc(l.note) : ''} · ${new Date(l.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>
+          <span class="or-status live">New</span></div>`;
+      }).join('') : '';
+    });
     body = (ls.length || vs.length || sts.length) ? `
+      <div id="myLeads"></div>
       ${ls.length ? `<div class="sec-head"><h2>Your listings</h2></div>` + ls.map(p => `
         <div class="order-row static"><span class="or-emoji">${ic('home', 18)}</span>
-          <div class="or-info"><b>${esc(p.title)}</b><small>${esc(p.loc)} · ${p.leads || 0} leads · ${p.views || 0} views</small></div>
+          <div class="or-info"><b>${esc(p.title)}</b><small>${esc(p.loc)} · live on Orignals</small></div>
           <div class="or-right"><b>${p.kind === 'rent' ? money(p.price) + '/mo' : lakh(p.price)}</b><span class="or-status live">Live</span></div></div>`).join('') : ''}
       ${vs.length ? `<div class="sec-head"><h2>Site visits</h2></div>` + vs.map(v => `
         <div class="order-row static"><span class="or-emoji">${ic('pin', 18)}</span>
@@ -91,12 +111,15 @@ view('estate', args => {
   ${body}`;
 });
 
-function findProp(id) { return [...DB.properties, ...(S.myListings || [])].find(p => p.id === id); }
+function findProp(id) { return [...DB.properties, ...(S.myListings || []), ..._commListings].find(p => p.id === id); }
 
 function propContact(pid) {
   const p = findProp(pid);
+  /* real cross-device lead: the lister gets a genuine enquiry */
+  if (p.community && typeof cloudPostLead === 'function') cloudPostLead(p, 'contact');
   sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${esc(p.title)}</h3>
     <div class="trust-row">${ic('shield', 13)} Contact is masked-number protected — fraud-safe for both sides.</div>
+    ${p.community ? `<div class="offer-strip">${ic('check', 12)} The owner has been notified of your interest.</div>` : ''}
     <button class="place-row" onclick="toast('Connecting via masked number — your number stays private')">
       <span>${ic('phone', 17)}</span><div><b>Call ${esc(p.by)}</b><small>Masked number · recorded for safety</small></div><em>Call</em></button>
     <button class="place-row" onclick="closeSheet();toast('Chat opening — talk via Mitra');setTimeout(()=>go('mitra'),500)">
@@ -105,6 +128,7 @@ function propContact(pid) {
 function propVisit(pid) {
   const p = findProp(pid);
   const slot = pick(['Today 5:30 PM', 'Tomorrow 11 AM', 'Sat 10 AM', 'Sun 4 PM']);
+  if (p.community && typeof cloudPostLead === 'function') cloudPostLead(p, 'visit', 'Site visit requested · ' + slot);
   if (!S.visits) S.visits = [];
   S.visits.unshift({ id: uid(), title: p.title, slot, ts: Date.now() });
   save(); confettiBurst();
@@ -148,13 +172,11 @@ function propSubmit() {
   if (!S.myListings) S.myListings = [];
   const p = { id: 'my' + uid(), kind: PROP.kind, title: t, loc: l, price: pr, area: a || '—', bhk: PROP.bhk, by: 'Owner', verified: true, tags: ['Posted by you', 'GPS pinned'], views: 0, leads: 0, ts: Date.now() };
   S.myListings.unshift(p); save(); closeSheet(); confettiBurst();
-  notify('Listing is live', t + ' — buyers nearby can see it now.');
-  toast('Your property is live');
+  /* publish to every device's marketplace so real buyers can enquire */
+  if (typeof cloudPostListing === 'function') cloudPostListing(p);
+  notify('Listing is live', t + ' — buyers across Orignals can see it now.');
+  toast('Your property is live on Orignals');
   go('estate/' + PROP.kind);
-  setTimeout(() => {
-    const mp = (S.myListings || []).find(x => x.id === p.id);
-    if (mp) { mp.views = rnd(8, 30); mp.leads = rnd(1, 4); save(); notify('Property leads', `${mp.leads} buyers contacted about "${mp.title}" · ${mp.views} views`); }
-  }, 25000);
 }
 
 /* ---------- hotel stay booking — real calendar dates ---------- */
