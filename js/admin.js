@@ -179,6 +179,8 @@ view('admin', args => {
       <div class="etile"><b>${st.trained}</b><small>Training steps</small></div>
       <div class="etile"><b>${llmOn ? esc(llmCfg.model || '') : 'OFF'}</b><small>Claude escalation</small></div>
     </div>
+    <div class="trust-row">${ic('grid', 13)} Backend model: ${localStorage.getItem('mitra_global_ver') ? '<b>v' + localStorage.getItem('mitra_global_ver') + ' adopted</b> — trains itself in Supabase every 15 min (pg_cron)' : 'not yet adopted — installs with supabase/mitra_schema.sql'}
+    </div>
 
     ${needsLabel.length ? `<div class="sec-head"><h2>Teach the model</h2><small class="dim">pick the right intent</small></div>
     ${needsLabel.map(x => `

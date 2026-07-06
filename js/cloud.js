@@ -63,6 +63,7 @@ async function cloudBoot() {
         }
       }
     }
+    if (typeof brainAdoptGlobal === 'function') brainAdoptGlobal();
     cloudQueue();               // first push
     toast('Cloud connected — your data now syncs across devices');
     notify('Cloud sync active', 'Backed by your Supabase project. Orders & shop now mirror to the database.', 'check');

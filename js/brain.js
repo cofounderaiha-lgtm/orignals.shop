@@ -288,3 +288,26 @@ async function brainAskClaude(raw) {
     return null;
   }
 }
+
+
+/* ---------- backend model adoption: every device downloads the
+   global brain (trained in Supabase by pg_cron on ALL users' data) ---------- */
+async function brainAdoptGlobal() {
+  try {
+    if (typeof cloudFetch !== 'function' || !CLOUD.on) return;
+    const rows = await cloudFetch('mitra_global_model?id=eq.1&select=version,w,b,examples,trained');
+    if (!rows || !rows.length || !rows[0].w) return;
+    const g = rows[0];
+    const seen = parseInt(localStorage.getItem('mitra_global_ver') || '0', 10);
+    if (g.version <= seen) return;
+    if (g.w.length !== BRAIN.D * BRAIN.intents.length) return;
+    if (!BRAIN.W) brainLoad();
+    BRAIN.W = Float32Array.from(g.w);
+    BRAIN.b = Float32Array.from(g.b);
+    BRAIN.version = 100 + g.version;
+    localStorage.setItem('mitra_global_ver', String(g.version));
+    brainSave();
+    console.log('[brain] adopted global model v' + g.version + ' (' + g.examples + ' examples, ' + g.trained + ' steps)');
+    toast('Mitra Brain updated — backend model v' + g.version + ', trained on ' + g.examples + ' examples');
+  } catch (e) { console.warn('[brain] global adopt skipped:', e.message); }
+}
