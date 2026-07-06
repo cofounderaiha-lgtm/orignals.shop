@@ -202,15 +202,43 @@ function ppUseGPS() {
   }, () => toast('Could not get your location — pick manually'), { enableHighAccuracy: true, timeout: 8000 });
 }
 
+/* ---------- open-source tile engine with automatic failover ----------
+   No paid map vendor. We rotate across public open-source tile servers:
+   if one throttles or fails (6+ tile errors), the layer silently switches
+   to the next source and the working choice is remembered on-device. */
+function omTileSources() {
+  const cfg = (window.ORIGNALS_CONFIG || {}).map || {};
+  if (Array.isArray(cfg.tileUrls) && cfg.tileUrls.length) return cfg.tileUrls;
+  if (cfg.tileUrl) return [cfg.tileUrl];
+  return ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'];
+}
+function omTileLayer(map) {
+  const srcs = omTileSources();
+  let idx = Math.min(parseInt(localStorage.getItem('omny_tilesrc') || '0', 10) || 0, srcs.length - 1);
+  const layer = L.tileLayer(srcs[idx], { maxZoom: 19 });
+  let errs = 0;
+  layer.on('tileerror', () => {
+    errs++;
+    if (errs >= 6 && idx < srcs.length - 1) {
+      idx++; errs = 0;
+      layer.setUrl(srcs[idx]);
+      try { localStorage.setItem('omny_tilesrc', String(idx)); } catch (e) {}
+      console.warn('[map] tile source failed over to', srcs[idx]);
+    }
+  });
+  layer.on('load', () => { errs = 0; });
+  layer.addTo(map);
+  return layer;
+}
+
 /* real interactive route map: two markers + line, auto-fit */
 function routeMap(elId, from, to) {
   const el = document.getElementById(elId);
   if (!el || typeof L === 'undefined' || !from || from.lat == null) return;
   try {
     if (el._map) { el._map.remove(); el._map = null; }
-    const cfg = (window.ORIGNALS_CONFIG || {}).map || {};
     const map = L.map(el, { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false });
-    L.tileLayer(cfg.tileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    omTileLayer(map);
     const pin = (c) => L.divIcon({ className: '', html: `<div style="width:16px;height:16px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
     const A = [from.lat, from.lng];
     L.marker(A, { icon: pin('#1A5632') }).addTo(map);
@@ -278,9 +306,8 @@ function trackLiveMap(elId, o) {
   try {
     if (el._map && el._courier) { el._courier.setLatLng(cur); return; }
     if (el._map) { el._map.remove(); el._map = null; }
-    const cfg = (window.ORIGNALS_CONFIG || {}).map || {};
     const map = L.map(el, { zoomControl: false, attributionControl: false, scrollWheelZoom: false });
-    L.tileLayer(cfg.tileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    omTileLayer(map);
     const pin = (c) => L.divIcon({ className: '', html: `<div style="width:15px;height:15px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>`, iconSize: [15, 15], iconAnchor: [8, 8] });
     L.marker(A, { icon: pin('#1A5632') }).addTo(map);
     L.marker(B, { icon: pin('#C84B31') }).addTo(map);

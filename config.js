@@ -21,11 +21,17 @@ window.ORIGNALS_CONFIG = {
     apiKey: 'YOUR-ANTHROPIC-API-KEY',
     model: 'claude-haiku-4-5'
   },
-  /* Maps: open-source lane (OpenStreetMap) now; when our own tiles are
-     ready (Protomaps .pmtiles on a CDN — see docs/MAPS.md) this one line
-     switches the whole app to OUR basemap. */
+  /* Maps: 100% open-source, zero cost (founder decision 2026-07-06).
+     The app tries these tile sources in order and AUTO-FAILS-OVER if one
+     throttles or goes down — no single point of failure, no paid vendor.
+     When our own self-hosted tiles are ready (Protomaps/OpenFreeMap India
+     extract — see docs/MAPS.md) they go to the FRONT of this list. */
   map: {
-    tileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    tileUrls: [
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.de/{z}/{x}/{y}.png'
+    ]
   },
   supabaseUrl: 'https://wvprqdfhjcammghjwoqj.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2cHJxZGZoamNhbW1naGp3b3FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyOTU4MDksImV4cCI6MjA5ODg3MTgwOX0.kPSSYOde8j_G5pQ-8vOQvn5NnGjAOjXsTpsMXkqhMW4'

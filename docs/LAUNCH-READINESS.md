@@ -22,23 +22,26 @@
 
 ## What breaks first, and the fix — in order
 
-### 1. Map tiles — BREAKS AT ~THOUSANDS of users ⚠️ do before launch
-`tile.openstreetmap.org` is a volunteer-run server whose usage policy **forbids
-heavy production apps**. At lakh-scale we will be throttled or blocked in hours.
+### 1. Map tiles — mitigated, open-source only (founder decision 2026-07-06)
+**Decision: no paid map vendor.** Built instead:
+- **Automatic failover** across three open-source tile servers (OSM → Carto → OSM-DE),
+  per-device, remembered — no single point of failure (`config.js map.tileUrls`).
+- **On-device tile cache** in the service worker (capped ~900 tiles): maps load
+  instantly, work offline, and each user hits the tile servers a fraction as often.
 
-**Fix (one line — already centralized in `config.js → map.tileUrl`):**
-- Commercial: **MapTiler** (₹2–8K/mo tiers) or Stadia Maps — swap URL + key, done.
-- Self-host free: **OpenFreeMap / Protomaps** India extract on a ₹3–6K/mo VPS.
-- Do BOTH: commercial now, self-host in parallel (own-maps roadmap, docs/MAPS.md).
+**When scale actually arrives** (still open-source, one-time setup, no vendor):
+self-host an **India tile server** — OpenFreeMap or Protomaps `.pmtiles` extract
+on our own VPS/CDN, then put its URL first in `tileUrls`. That is the "own maps"
+lane of docs/MAPS.md — our destination anyway.
 
-### 2. Address search (Nominatim) — BREAKS AT ~HUNDREDS concurrent ⚠️ do before launch
-Public Nominatim allows **1 request/second total**. Our cache + own-DB-first +
-dedupe cuts traffic massively, but launch day still needs its own geocoder.
+### 2. Address search (Nominatim) — mitigated, open-source only
+Public Nominatim allows **1 request/second total**. Mitigations already built:
+24 h on-device geocode cache + in-flight dedupe + **our own `geo_places` DB is
+searched first** and gets stronger with every pick (flywheel).
 
-**Fix:**
-- **Self-hosted Nominatim, India extract**: ~64 GB disk, 8 GB RAM VPS (~₹4–8K/mo). Point `geoSearch` at it — one URL constant.
-- Or paid: LocationIQ / Geoapify (Indian coverage, ~₹2–10K/mo by volume).
-- Keep the flywheel: every pick still lands in `geo_places`, so our own search keeps getting stronger.
+**When scale actually arrives:** self-hosted **Nominatim India extract** on our
+own VPS (open source, ~64 GB disk / 8 GB RAM) — point `geoSearch` at it, one URL.
+No paid geocoder needed at any stage.
 
 ### 3. Supabase — free tier dies at ~tens of thousands ⚠️ do before launch
 Free tier: 500 MB DB, limited pooled connections, 5 GB egress.
@@ -104,14 +107,19 @@ through those phases without rewriting the app.
 
 ---
 
-## The 7 things only the founder can do (I cannot do these with code)
+## Founder items — DEFERRED by decision (2026-07-06) until scale actually demands
 
-1. Upgrade **Supabase → Pro** (dashboard billing).
-2. Upgrade **Vercel → Pro** (dashboard billing).
-3. Create **MapTiler** account → give me the key (I swap `config.js` in one commit).
-4. Start **business entity + Razorpay** application (longest lead time — start today).
-5. **MSG91** account for OTP SMS → give me the key.
-6. **Anthropic API key** for the Mitra Claude lane (optional but recommended) → `config.js llm.apiKey`.
-7. Name a **grievance officer** (legal requirement).
+Founder's call: stay open-source and free-tier now; upgrades are "minutes to pay"
+when real traffic arrives. Agreed — with one exception flagged below.
 
-Everything else — wiring, swapping, testing, deploying — I execute directly.
+| # | Item | When to trigger |
+|---|---|---|
+| 1 | Supabase → Pro | when DB nears 400 MB or sync errors appear in Admin → Database |
+| 2 | Vercel → Pro | when bandwidth dashboard passes ~70 GB in a month |
+| 3 | Self-host tiles + Nominatim (open source, own VPS) | when daily actives pass ~10–20K |
+| 4 | **Business entity + Razorpay** | ⚠️ the ONE item that is weeks, not minutes — start before any public date is fixed |
+| 5 | MSG91 OTP key | at public launch (fraud control for first-month-free) |
+| 6 | Anthropic API key (Mitra lane 2) | optional, any time — brain handles the rest |
+| 7 | Grievance officer named | required at public launch (legal) |
+
+Everything else — wiring, swapping, testing, deploying — is executed directly in code.
