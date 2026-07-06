@@ -34,7 +34,8 @@ view('wallet', () => {
 view('notifs', () => {
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="go('home')">${ic('chevl', 16)}</button>
-    <div><h1>Updates</h1><small>${notifUnread()} unread</small></div></div>
+    <div><h1>Updates</h1><small>${notifUnread()} unread</small></div>
+    ${S.notifs.length ? `<button class="lnk red" onclick="if(confirm('Clear all updates?')){S.notifs=[];save();VIEWS.notifs([])}">Clear all</button>` : ''}</div>
   ${S.notifs.length ? S.notifs.map(n => `
     <div class="order-row static ${n.read ? '' : 'unread'}">
       <span class="or-emoji">${ic('bell', 17)}</span>

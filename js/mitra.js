@@ -154,6 +154,26 @@ function mitraThink(raw) {
     return;
   }
 
+  /* — recommend — */
+  if (has('recommend', 'suggest', 'hungry', 'bhook', 'what should i eat', 'kya khau', 'kya khau', 'khane ko')) {
+    const picks = [];
+    [...DB.shops].filter(s => s.type === 'food' && s.open).sort((a, b) => a.km - b.km).slice(0, 4)
+      .forEach(s => { const it = s.items.find(x => x.bestseller) || s.items[0]; if (it) picks.push({ s, it }); });
+    picks.sort((a, b) => b.s.rating - a.s.rating);
+    const top = picks.slice(0, 2);
+    if (top.length) {
+      const btns = top.map(p => {
+        const a = regAction(() => { cartSet(p.s.id, p.it.id, 1); go('cart'); });
+        return `<button class="mbtn" onclick="runMitraAction(${a})">${esc(p.it.name)} · ${money(p.it.price)}</button>`;
+      }).join(' ');
+      mitraReply(`Nearby favourites right now:<br/>` + top.map(p => `<b>${esc(p.it.name)}</b> at ${esc(p.s.name)} — ★${p.s.rating}, ${p.s.km} km`).join('<br/>') + `<br/>${btns}`,
+        ['Veg only options', 'Show all food shops'], 'I suggest ' + top[0].it.name + ' from ' + top[0].s.name);
+    } else {
+      mitraReply('Food shops are closed right now — try the kirana for snacks?', ['Show all shops']);
+    }
+    return;
+  }
+
   /* — track orders — */
   if (has('order aa', 'where is my order', 'track', 'kahan', 'kaha hai', 'status', 'my order', 'mera order')) {
     const act = activeOrders();

@@ -84,12 +84,12 @@ view('tickets', args => {
         <span class="or-emoji">${ic('star', 18)}</span>
         <div class="or-info"><b>${esc(t.title)}</b><small>${esc(t.sub)}</small></div>
         <div class="or-right"><b>${money(t.total)}</b><span class="or-status done">Confirmed</span></div></div>`).join('')}
-      ${bks.map(b => `<div class="order-row static"><span class="or-emoji">${ic('bowl', 18)}</span>
+      ${bks.map((b, i) => `<div class="order-row static"><span class="or-emoji">${ic('bowl', 18)}</span>
         <div class="or-info"><b>Table at ${esc(b.shop)}</b><small>${esc(b.day)} · ${esc(b.slot)} · ${b.guests} guests · 20% off bill</small></div>
-        <div class="or-right"><span class="or-status done">Reserved</span></div></div>`).join('')}
-      ${sts.map(st => `<div class="order-row static"><span class="or-emoji">${ic('home', 18)}</span>
+        <div class="or-right"><span class="or-status done">Reserved</span><button class="lnk red" onclick="cancelDining(${i})">Cancel</button></div></div>`).join('')}
+      ${sts.map((st, i) => `<div class="order-row static"><span class="or-emoji">${ic('home', 18)}</span>
         <div class="or-info"><b>${esc(st.hotel)}</b><small>${esc(st.day)} · ${st.nights} night${st.nights > 1 ? 's' : ''} · ${st.guests} guests</small></div>
-        <div class="or-right"><b>${money(st.total)}</b><span class="or-status done">Booked</span></div></div>`).join('')}`
+        <div class="or-right"><b>${money(st.total)}</b><span class="or-status done">Booked</span><button class="lnk red" onclick="cancelStay(${i})">Cancel</button></div></div>`).join('')}`
       : `<div class="empty"><span>${ic('star', 40)}</span><b>No bookings yet</b><p>Movie tickets, tables and stays appear here.</p></div>`;
   }
 
@@ -310,4 +310,22 @@ function dineBook(shopId) {
   notify('Table reserved', `${s.name} — ${d.day} ${d.slot}, ${d.guests} guests. 20% off the bill.`);
   toast('Table reserved at ' + s.name);
   go('tickets/mine');
+}
+
+
+/* ---------- cancellations: dining (free) & stays (full refund) ---------- */
+function cancelDining(i) {
+  const b = (S.bookings || [])[i]; if (!b) return;
+  if (!confirm('Cancel your table at ' + b.shop + '? Free cancellation.')) return;
+  S.bookings.splice(i, 1); save();
+  toast('Reservation cancelled — the table is freed for someone else');
+  VIEWS.tickets(['mine']);
+}
+function cancelStay(i) {
+  const st = (S.stays || [])[i]; if (!st) return;
+  if (!confirm('Cancel your stay at ' + st.hotel + '? Full ' + money(st.total) + ' refunds to wallet.')) return;
+  S.stays.splice(i, 1);
+  walletAdd(st.total, 'Refund · stay · ' + st.hotel);
+  toast('Stay cancelled — ' + money(st.total) + ' refunded');
+  VIEWS.tickets(['mine']);
 }
