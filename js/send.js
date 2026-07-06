@@ -22,7 +22,7 @@ function sendFare(v, km) {
 
 function renderSend() {
   const st = SEND.step;
-  const km = SEND.to ? Math.max(Math.abs(SEND.to.km - SEND.from.km), 0.8) : 0;
+  const km = SEND.to ? tripKm(SEND.from, SEND.to, 0.8) : 0;
 
   let body = '';
   if (st === 1) body = `
@@ -42,6 +42,7 @@ function renderSend() {
       <div class="pin-row" onclick="sendPickPlace('to')">
         <i class="pin r"></i><div><small>DELIVER TO</small><b>${SEND.to ? esc(SEND.to.name) : 'Choose drop point'}</b><span>${SEND.to ? esc(SEND.to.sub) : 'Tap to select'}</span></div><em>${SEND.to ? 'Change' : 'Select'}</em></div>
     </div>
+    ${SEND.to ? `<div class="route-live"><div id="sendMap" class="route-canvas"></div><div class="route-fig">${km.toFixed(1)} km · ~${Math.round(km * 3 + 5)} min</div></div>` : ''}
     <input class="txt" id="sendNote" placeholder="Note for the partner — e.g. 'warm tiffin, deliver before 1 pm'" value="${esc(SEND.note)}" oninput="SEND.note=this.value"/>
     <div class="seg-row">
       <button class="seg ${SEND.when === 'now' ? 'on' : ''}" onclick="SEND.when='now';renderSend()">Pickup now</button>
@@ -70,13 +71,11 @@ function renderSend() {
   </div>
   <div class="wiz-dots">${[1, 2, 3].map(i => `<i class="${i <= st ? 'on' : ''}"></i>`).join('')}</div>
   ${body}`;
+  if (SEND.to && document.getElementById('sendMap')) routeMap('sendMap', SEND.from, SEND.to);
 }
 
 function sendPickPlace(which) {
-  window._sendWhich = which;
-  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${which === 'from' ? 'Pickup from' : 'Deliver to'}</h3>
-    ${DB.places.map((p, i) => `<button class="place-row" onclick="SEND[window._sendWhich]=DB.places[${i}];closeSheet();renderSend()">
-      <span>${ic('pin', 17)}</span><div><b>${esc(p.name)}</b><small>${esc(p.sub)}</small></div><em>${p.km} km</em></button>`).join('')}`);
+  placePickerSheet(which === 'from' ? 'Pickup from' : 'Deliver to', (p) => { SEND[which] = p; renderSend(); });
 }
 
 function sendCheckout(km) {

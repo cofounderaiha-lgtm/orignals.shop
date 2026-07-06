@@ -168,14 +168,14 @@ const DB = {
 
   /* ---------- SAVED / POPULAR PLACES ---------- */
   places: [
-    { id:'home', name:'Home',            sub:'42 Lakeview Residency, Sector 12', icon:'🏠', km:0 },
-    { id:'work', name:'Office',          sub:'Tower B, Cyber Park, Phase 3',     icon:'💼', km:8.4 },
-    { id:'p1',   name:'Central Mall',    sub:'MG Road, City Centre',             icon:'🛍️', km:5.2 },
-    { id:'p2',   name:'City Airport',    sub:'Terminal 2, Departures',           icon:'✈️', km:14.8 },
-    { id:'p3',   name:'Railway Station', sub:'Main Entrance, Platform Rd',       icon:'🚉', km:6.9 },
-    { id:'p4',   name:'Lakeside Park',   sub:'North Gate, Ring Road',            icon:'🌳', km:3.6 },
-    { id:'p5',   name:'Grandma’s House', sub:'Flat 302, Shanti Kunj, Sector 9', icon:'👵', km:2.1 },
-    { id:'p6',   name:'Uni Campus',      sub:'Main Block, Knowledge Ave',        icon:'🎓', km:7.1 }
+    { id:'home', name:'Home',            sub:'42 Lakeview Residency, Mukherjee Nagar', icon:'🏠', km:0,   lat:28.7157, lng:77.2085 },
+    { id:'work', name:'Office',          sub:'Tower B, Cyber Park, Gurugram',     icon:'💼', km:24.5, lat:28.4995, lng:77.0890 },
+    { id:'p1',   name:'Central Mall',    sub:'Select Citywalk, Saket',            icon:'🛍️', km:18.9, lat:28.5285, lng:77.2195 },
+    { id:'p2',   name:'City Airport',    sub:'Terminal 3, IGI Airport',           icon:'✈️', km:22.4, lat:28.5562, lng:77.1000 },
+    { id:'p3',   name:'Railway Station', sub:'New Delhi Railway Station',         icon:'🚉', km:9.8,  lat:28.6425, lng:77.2205 },
+    { id:'p4',   name:'Lakeside Park',   sub:'Naini Lake, Model Town',            icon:'🌳', km:3.4,  lat:28.7025, lng:77.1935 },
+    { id:'p5',   name:'Grandma’s House', sub:'Flat 302, Shanti Kunj, GTB Nagar', icon:'👵', km:2.1,  lat:28.6985, lng:77.2075 },
+    { id:'p6',   name:'Uni Campus',      sub:'North Campus, Delhi University',    icon:'🎓', km:2.8,  lat:28.6889, lng:77.2094 }
   ],
 
   /* ---------- VEHICLES (rides + partner network) ---------- */

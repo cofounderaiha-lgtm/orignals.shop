@@ -690,3 +690,13 @@
 .earn-seg button.on .ic{color:var(--primary)}
 [data-theme="dark"] .earn-seg button.on .ic{color:#67C48D}
 .earn-seg button:active{transform:scale(.96)}
+
+/* ---------- real route maps (Send / Rides) ---------- */
+.route-live{position:relative;margin:12px 0 4px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+.route-canvas{width:100%;height:180px;background:var(--surface-2)}
+.route-canvas.full{height:200px}
+.route-fig{position:absolute;left:10px;bottom:10px;background:var(--card);color:var(--ink);font-size:.74rem;
+  font-weight:800;padding:6px 12px;border-radius:50px;box-shadow:var(--shadow);z-index:500}
+.ride-map{position:relative;margin:6px 0 12px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+.ride-map .eta-pill{z-index:500}
+.leaflet-container{background:var(--surface-2)!important;font:inherit}
