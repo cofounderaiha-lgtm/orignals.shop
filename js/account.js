@@ -97,6 +97,9 @@ view('account', () => {
       : `<div class="ck-coupon" style="margin-top:8px"><input id="refIn" placeholder="Have a friend's code? ORIG-XXXXX"/><button onclick="redeemRef()">Apply</button></div>`}
   </div>`; })()}
 
+  <div class="sec-head"><h2>Account &amp; security</h2></div>
+  ${typeof authBadgeHTML === 'function' ? authBadgeHTML() : ''}
+
   <div class="sec-head"><h2>Your roles — one identity, every side</h2></div>
   <button class="role-row" onclick="setMode('buy')">
     <span>${ic('cart', 20)}</span><div><b>Buyer</b><small>Purity-verified food &amp; every shop nearby</small></div><em>Active</em></button>

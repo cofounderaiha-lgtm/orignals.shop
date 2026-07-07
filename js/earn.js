@@ -389,6 +389,14 @@ function renderActiveJob() {
     <div class="otp-strip">${A.stage === 1 ? `${j.type === 'ride' ? 'Rider' : 'Sender'}'s OTP → <b>${A.otpPick}</b> · faces already CV-matched` : A.stage === 2 ? `${j.type === 'ride' ? 'Drop' : 'Receiver'}'s OTP → <b>${A.otpDrop}</b>` : `Contact ${esc(j.by.split(' ·')[0])} if you can't find the pickup`}</div>
   </div>
 
+  ${(A.stage === 2 && j.type !== 'ride') ? `
+  <div class="card-block handover">
+    <h3>${ic('camera', 14)} Verify who collects</h3>
+    <p class="movie-about">Even if a friend or family member picks up on the receiver's behalf, capture their photo — a verified record of exactly who took the parcel.</p>
+    ${A.collectorPhoto ? `<div class="face-preview"><img src="${A.collectorPhoto}" alt="collector"/><span>${ic('check', 12)} Collector verified</span></div>`
+      : `<button class="btn-main sm" onclick="captureCollector()">${ic('camera', 14)} Capture collector's photo</button>`}
+  </div>` : ''}
+
   <div class="wiz-dots">${[0, 1, 2].map(i => `<i class="${i <= A.stage ? 'on' : ''}"></i>`).join('')}</div>
   ${A.stage === 0 ? `<button class="btn-main wide lg" onclick="S.activeJob.stage=1;save();renderActiveJob()">${ic('pin', 15)} I've reached the pickup</button>` : ''}
   ${A.stage === 1 ? `<button class="btn-main wide lg" onclick="S.activeJob.stage=2;save();toast('On the way — ride safe!');renderActiveJob()">${ic('check', 15)} OTP matched — ${j.type === 'ride' ? 'ride started' : 'collected'}</button>` : ''}
@@ -410,6 +418,15 @@ function renderActiveJob() {
       }, () => {}, { timeout: 6000 });
     }
   }
+}
+
+function captureCollector() {
+  if (typeof captureCameraPhoto !== 'function') { toast('Camera unavailable'); return; }
+  captureCameraPhoto('Verify who is collecting', 'Ask the person collecting to face the camera.', (data) => {
+    if (S.activeJob) { S.activeJob.collectorPhoto = data; S.activeJob.collectorAt = Date.now(); save(); }
+    toast('Collector verified — record saved with this delivery');
+    renderActiveJob();
+  });
 }
 
 function dropJobConfirm() {

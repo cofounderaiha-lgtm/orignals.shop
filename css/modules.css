@@ -947,3 +947,20 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-of
   .event-list{grid-template-columns:1fr 1fr 1fr}
 }
 @media(min-width:601px){ .shop-list .shop-card.featured{grid-column:1/-1} }
+
+/* ============================================================
+   AUTH + CAMERA (self-hosted login, face lock, handover proof)
+   ============================================================ */
+.auth-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 16px;margin-top:10px;box-shadow:var(--shadow)}
+.auth-card .when-seg{margin-bottom:14px}
+.role-row.highlight{border-color:color-mix(in srgb,var(--primary) 40%,transparent);background:color-mix(in srgb,var(--primary) 6%,transparent)}
+.cam-wrap{position:relative;width:100%;max-width:300px;margin:6px auto 10px;aspect-ratio:1;border-radius:20px;overflow:hidden;background:#0d0d0d}
+.cam-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.cam-ring{position:absolute;inset:14px;border:3px dashed rgba(255,255,255,.6);border-radius:50%;pointer-events:none}
+.cam-fallback{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:#fff;text-align:center;padding:20px}
+.cam-fallback p{font-size:.82rem;opacity:.85;line-height:1.4}
+.cam-fallback svg{color:rgba(255,255,255,.7)}
+.face-preview{display:flex;align-items:center;gap:12px;margin:10px 0}
+.face-preview img{width:64px;height:64px;border-radius:16px;object-fit:cover;border:2px solid var(--primary)}
+.face-preview span{font-size:.8rem;font-weight:700;color:var(--ok);display:inline-flex;align-items:center;gap:5px}
+.card-block.handover{border-color:color-mix(in srgb,var(--haldi,#E8A020) 35%,var(--line))}

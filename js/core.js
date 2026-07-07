@@ -388,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
   route();
   if (typeof cloudInit === 'function') cloudInit();
   if (typeof opsBoot === 'function') setTimeout(opsBoot, 400);        // remote kill switches
+  if (typeof authBoot === 'function') setTimeout(authBoot, 500);      // validate session (fail-open)
   if (typeof cloudClaimRefCredits === 'function') setTimeout(cloudClaimRefCredits, 3000);  // referral rewards
   if (typeof maybeShowConsent === 'function') setTimeout(maybeShowConsent, 700);  // first-run consent (DPDP)
   if (!S.notifs.length) notify('Welcome to Orignals', 'Purity-verified food, every shop nearby, earn as you go. ₹500 free in your wallet.');
