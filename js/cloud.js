@@ -404,12 +404,27 @@ function cloudSeatsFreeTicket(ticketId) {
 }
 
 /* ============================================================
+   WEB PUSH — fire an alert to another device (self-hosted VAPID).
+   Degrades silently if push isn't configured yet (503 → ignored).
+   ============================================================ */
+function cloudPushTo(target) {
+  if (!CLOUD.on) return;
+  try {
+    fetch(CLOUD.url + '/functions/v1/push-send', {
+      method: 'POST', headers: cloudHeaders(), body: JSON.stringify(target)
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+/* ============================================================
    CROSS-DEVICE COMMERCE — buyer's order ⇄ shopkeeper's dashboard
    ============================================================ */
 
 /* buyer → cloud: order on a community shop lands on the owner's phone */
 function cloudPostShopOrder(o, shop) {
   if (!CLOUD.on || !shop || !shop.community) return;
+  /* notify the shop owner even if their app is closed */
+  cloudPushTo({ shop_id: shop.id, title: 'New order at ' + (shop.name || 'your shop'), body: (o.items || []).map(i => i.name).join(', ') + ' · ' + money(o.total), url: '#/myshop' });
   const a = S.user.addr || DB.places[0];
   cloudFetch('shop_orders?on_conflict=id', {
     method: 'POST',

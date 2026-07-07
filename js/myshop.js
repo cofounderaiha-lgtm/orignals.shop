@@ -156,7 +156,7 @@ async function shopCloudSync() {
           customer: (r.buyer_name || 'Customer'),
           items: (r.items || []).map(i => ({ name: i.name, price: i.price, q: i.q, emoji: '' })),
           total: +r.total, status: r.status,
-          buyer: { addr: r.buyer_addr, lat: r.buyer_lat, lng: r.buyer_lng }
+          buyer: { device: r.buyer_device, addr: r.buyer_addr, lat: r.buyer_lat, lng: r.buyer_lng }
         };
         if (r.buyer_lat != null && M.addr && M.addr.lat != null && typeof geoKm === 'function') {
           o.km = +geoKm({ lat: +M.addr.lat, lng: +M.addr.lng }, { lat: +r.buyer_lat, lng: +r.buyer_lng }).toFixed(1);
@@ -322,8 +322,10 @@ function shopOrderAct(oid, act) {
   const M = S.myShop;
   const o = M.orders.find(x => x.id === oid); if (!o) return;
   const pushCloud = (st) => { if (o.real && typeof cloudShopOrderStatus === 'function') cloudShopOrderStatus(oid, st); };
-  if (act === 'accept') { o.status = 'prep'; pushCloud('prep'); toast('Order accepted — pack it up!', '📦'); }
-  if (act === 'reject') { o.status = 'rejected'; pushCloud('rejected'); toast('Order rejected & refunded', ''); }
+  /* alert the buyer's phone even if their app is closed */
+  const alertBuyer = (title, bodyTxt) => { if (o.real && o.buyer && o.buyer.device && typeof cloudPushTo === 'function') cloudPushTo({ device_key: o.buyer.device, title, body: bodyTxt, url: '#/orders' }); };
+  if (act === 'accept') { o.status = 'prep'; pushCloud('prep'); alertBuyer('Order accepted', M.name + ' is preparing your order'); toast('Order accepted — pack it up!', '📦'); }
+  if (act === 'reject') { o.status = 'rejected'; pushCloud('rejected'); alertBuyer('Order refunded', M.name + ' could not take the order — money is back in your wallet'); toast('Order rejected & refunded', ''); }
   if (act === 'selfout') { o.status = 'selfout'; o.deliv = 'self'; pushCloud('selfout'); toast('Marked out for delivery', '🛵'); }
   if (act === 'find') {
     o.status = 'finding'; o.deliv = 'partner'; pushCloud('finding');

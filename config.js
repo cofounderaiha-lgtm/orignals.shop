@@ -32,7 +32,7 @@ window.ORIGNALS_CONFIG = {
      keep the PRIVATE key as a Supabase secret for the send function.
      Left blank = push simply stays off, app works normally. */
   push: {
-    vapidPublic: ''
+    vapidPublic: 'BM698iNEFD0p7oiluvuAce-LW1xeu4CNBRVrKR16YB-rn-TLkR4oKxWhKhr4XLWg6o_l_rXd2cm4wbNCHVmmRqQ'
   },
   /* Face 2FA (ported from edurankai). @vladmandic/face-api + models.
      Loaded lazily only when a face feature is used. To go fully
