@@ -1,7 +1,7 @@
 /* Orignals service worker — offline shell + on-device map tile cache.
    Tiles are cached cache-first (capped), which makes maps load instantly,
    work offline, and massively cuts traffic to the open-source tile servers. */
-const CACHE = 'orignals-v5';
+const CACHE = 'orignals-v6';
 const TILES = 'orignals-tiles-v1';
 const TILE_CAP = 900;
 const SHELL = [
@@ -9,9 +9,30 @@ const SHELL = [
   './js/data.js', './js/icons.js', './js/core.js', './js/home.js', './js/shops.js',
   './js/send.js', './js/rides.js', './js/tickets.js', './js/estate.js',
   './js/earn.js', './js/myshop.js', './js/mitra.js', './js/account.js', './js/admin.js',
-  './js/cloud.js', './js/brain.js', './js/geo.js',
+  './js/cloud.js', './js/brain.js', './js/geo.js', './js/ops.js', './js/auth.js', './js/legal.js',
   './manifest.json', './config.js'
 ];
+
+/* ---------- WEB PUSH (self-hosted VAPID) ----------
+   Receive side is 100% browser-native — no third party. Sending needs
+   your own VAPID keypair (self-generated) from your server/edge fn.
+   This shows the notification even when the app is closed. */
+self.addEventListener('push', e => {
+  let d = { title: 'Orignals', body: 'You have an update' };
+  try { if (e.data) d = Object.assign(d, e.data.json()); } catch (x) { try { d.body = e.data.text(); } catch (y) {} }
+  e.waitUntil(self.registration.showNotification(d.title, {
+    body: d.body, badge: './manifest.json', tag: d.tag || 'orignals',
+    data: { url: d.url || './' }, requireInteraction: !!d.important
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
+    for (const w of ws) { if ('focus' in w) { w.navigate && w.navigate(url); return w.focus(); } }
+    if (clients.openWindow) return clients.openWindow(url);
+  }));
+});
 const TILE_HOSTS = ['tile.openstreetmap.org', 'basemaps.cartocdn.com', 'tile.openstreetmap.de'];
 
 self.addEventListener('install', e => {

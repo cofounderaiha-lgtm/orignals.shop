@@ -93,6 +93,41 @@ function authBadgeHTML() {
 }
 
 /* ============================================================
+   WEB PUSH (self-hosted) — receive alerts even when app is closed.
+   Fully off until you set your own VAPID public key in config.push.
+   Sending is done by your own server/edge fn with the private key —
+   no third-party push service subscription.
+   ============================================================ */
+function pushAvailable() {
+  const k = ((window.ORIGNALS_CONFIG || {}).push || {}).vapidPublic;
+  return !!(k && 'serviceWorker' in navigator && 'PushManager' in window && k.length > 20);
+}
+function _urlB64ToU8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(s); return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+async function pushEnable() {
+  if (!pushAvailable()) { toast('Alerts will switch on once push is configured'); return; }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Allow notifications to get delivery alerts'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const key = ((window.ORIGNALS_CONFIG || {}).push || {}).vapidPublic;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _urlB64ToU8(key) });
+    if (typeof CLOUD !== 'undefined' && CLOUD.on) {
+      const a = authState();
+      await cloudFetch('push_subscriptions?on_conflict=device_key', {
+        method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify([{ device_key: S.deviceKey, sub, ident: (a && a.ident) || null }])
+      }).catch(() => {});
+    }
+    S.pushOn = true; save();
+    toast('Alerts on — you\'ll be notified even when the app is closed');
+  } catch (e) { toast('Could not enable alerts on this device'); }
+}
+
+/* ============================================================
    CAMERA — face-lock enrol + delivery-handover proof capture.
    Pure browser (getUserMedia). Photos stay on device unless you
    attach them to an order as delivery proof. Fails gracefully if
@@ -154,6 +189,12 @@ view('facelock', () => {
       <button class="btn-main sm ghost" onclick="enrolFace()">Re-capture</button>
       <button class="btn-main sm ghost red" onclick="removeFace()">Remove</button>`
     : `<button class="btn-main sm" onclick="enrolFace()">${ic('camera', 14)} Enrol my face</button>`}
+  </div>
+  <div class="card-block">
+    <h3>${ic('bell', 15)} Delivery &amp; order alerts</h3>
+    <p class="movie-about">Get notified the moment your order moves — even when the app is closed. Runs on our own push keys, no third-party alert service.</p>
+    <button class="btn-main sm ${S.pushOn ? 'ghost' : ''}" onclick="pushEnable()">${S.pushOn ? ic('check', 14) + ' Alerts on — re-check' : ic('bell', 14) + ' Enable alerts'}</button>
+    ${!pushAvailable() ? `<div class="foot-note sm" style="text-align:left">Push activates automatically once your VAPID key is set in config — nothing to change in the app.</div>` : ''}
   </div>
   <div class="foot-note">${ic('shield', 12)} Delivery hand-overs can also capture the collector's photo, so even if a friend picks up your parcel, there's a verified record of who took it.</div>`;
 });

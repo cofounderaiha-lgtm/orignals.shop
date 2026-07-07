@@ -27,6 +27,13 @@ window.ORIGNALS_CONFIG = {
   pay: {
     keyId: 'rzp_live_StUJDjsi0hfYyx'
   },
+  /* Web push (self-hosted). Generate your OWN VAPID keypair (no third
+     party): `npx web-push generate-vapid-keys`. Put the PUBLIC key here;
+     keep the PRIVATE key as a Supabase secret for the send function.
+     Left blank = push simply stays off, app works normally. */
+  push: {
+    vapidPublic: ''
+  },
   /* Maps: 100% open-source, zero cost (founder decision 2026-07-06).
      The app tries these tile sources in order and AUTO-FAILS-OVER if one
      throttles or goes down — no single point of failure, no paid vendor.
