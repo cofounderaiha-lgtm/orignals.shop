@@ -145,7 +145,7 @@ async function shopCloudSync() {
   let changed = false;
   try {
     const sid = 'my_' + (S.deviceKey || '').slice(0, 12);
-    const rows = await cloudFetch('shop_orders?shop_id=eq.' + sid + '&order=created_at.desc&limit=25');
+    const rows = await cloudFetch('rpc/my_shop_orders', { method: 'POST', body: JSON.stringify({ p_shop: sid }) });
     (rows || []).forEach(r => {
       let o = M.orders.find(x => x.id === r.id);
       if (!o) {
@@ -169,7 +169,7 @@ async function shopCloudSync() {
     });
 
     /* real table reservations from buyers on other devices */
-    const rz = await cloudFetch('reservations?shop_id=eq.' + sid + '&status=eq.reserved&order=created_at.desc&limit=15');
+    const rz = await cloudFetch('rpc/shop_reservations', { method: 'POST', body: JSON.stringify({ p_shop: sid }) });
     M.reservations = M.reservations || [];
     (rz || []).forEach(r => {
       if (!M.reservations.find(x => x.id === r.id)) {

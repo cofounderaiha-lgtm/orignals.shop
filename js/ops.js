@@ -102,7 +102,7 @@ async function opsAdminHTML() {
 async function opsLoadErrors() {
   const box = document.getElementById('opsErrs'); if (!box) return;
   try {
-    const rows = await cloudFetch('error_log?select=created_at,message,url&order=created_at.desc&limit=12');
+    const rows = await cloudFetch('rpc/recent_errors', { method: 'POST', body: JSON.stringify({}) });
     box.innerHTML = (rows && rows.length)
       ? rows.map(r => `<div class="ck-line"><span>${esc(String(r.message).slice(0, 60))}<small class="dim"> · ${esc(r.url || '')}</small></span><span class="dim">${new Date(r.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span></div>`).join('')
       : `<div class="ck-line"><span class="ok">No errors logged 🎉</span><span></span></div>`;

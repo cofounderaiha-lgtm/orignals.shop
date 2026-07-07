@@ -47,10 +47,11 @@ function cloudInit() {
 /* ---------- boot: pull snapshot, offer restore if newer ---------- */
 async function cloudBoot() {
   try {
-    const rows = await cloudFetch('state_snapshots?device_key=eq.' + S.deviceKey + '&select=state,updated_at');
+    /* hardened: read our own snapshot via device-keyed RPC (table is no
+       longer bulk-readable by the public anon key) */
+    const remote = await cloudFetch('rpc/snapshot_restore', { method: 'POST', body: JSON.stringify({ p_device: S.deviceKey }) });
     CLOUD.status = 'synced';
-    if (rows && rows.length) {
-      const remote = rows[0];
+    if (remote && remote.state) {
       const remoteTs = new Date(remote.updated_at).getTime();
       const localTs = S.lastSaved || 0;
       if (remoteTs > localTs + 60000 && remote.state && (remote.state.orders || []).length > (S.orders || []).length) {
@@ -323,7 +324,7 @@ function cloudPostLead(listing, kind, note) {
 }
 async function cloudMyLeads() {
   if (!CLOUD.on) return [];
-  try { return await cloudFetch('listing_leads?owner_device=eq.' + encodeURIComponent(S.deviceKey || 'anon') + '&select=*&order=created_at.desc&limit=30') || []; }
+  try { return await cloudFetch('rpc/my_leads', { method: 'POST', body: JSON.stringify({ p_device: S.deviceKey || 'anon' }) }) || []; }
   catch (e) { return []; }
 }
 
@@ -424,8 +425,7 @@ async function pollCloudOrders() {
   if (!live.length) return;
   _ordPollAt = Date.now();
   try {
-    const ids = live.map(o => '"' + o.id + '"').join(',');
-    const rows = await cloudFetch('shop_orders?id=in.(' + ids + ')&select=id,status');
+    const rows = await cloudFetch('rpc/order_statuses', { method: 'POST', body: JSON.stringify({ p_ids: live.map(o => o.id) }) });
     let changed = false;
     (rows || []).forEach(r => {
       const o = S.orders.find(x => x.id === r.id);
@@ -556,10 +556,10 @@ function _rzpOpenDirect(keyId, amountRs, meta, onSuccess) {
         for (let i = 0; i < 6; i++) {
           await new Promise(res => setTimeout(res, 2500));
           try {
-            const rows = await cloudFetch('payments?rzp_payment_id=eq.' + encodeURIComponent(resp.razorpay_payment_id) + '&select=status');
-            if (rows && rows[0]) {
-              if (rows[0].status === 'verified') { state = 'verified'; break; }
-              if (rows[0].status === 'failed') { state = 'failed'; break; }
+            const st = await cloudFetch('rpc/payment_status', { method: 'POST', body: JSON.stringify({ p_payment: resp.razorpay_payment_id }) });
+            if (st) {
+              if (st === 'verified') { state = 'verified'; break; }
+              if (st === 'failed') { state = 'failed'; break; }
             }
           } catch (e) { /* keep polling */ }
         }
