@@ -80,9 +80,11 @@ function renderShopReg() {
     ${SREG.delivery ? `<button class="btn-main wide" onclick="SREG.step=4;renderShopReg()">Next →</button>` : ''}`;
 
   if (st === 4) body = `
-    <div class="wiz-q">Licences <small>(optional, boosts trust)</small></div>
+    <div class="wiz-q">Licences <small>(optional — you can list without any)</small></div>
+    <div class="paperless-note">${ic('shield', 15)}<div><b>No papers? No problem.</b><small>List under your own verified identity now. Add licences anytime — or let us make them for you at market rates.</small></div></div>
     <label class="fld"><span>GST number (optional)</span><input class="txt" placeholder="22AAAAA0000A1Z5" value="${esc(SREG.gst)}" oninput="SREG.gst=this.value"/></label>
     <label class="fld"><span>FSSAI licence (optional, for food)</span><input class="txt" placeholder="14-digit FSSAI no." value="${esc(SREG.fssai)}" oninput="SREG.fssai=this.value"/></label>
+    <button class="btn-main ghost wide" onclick="go('papers')">${ic('shield', 14)} I need help getting papers made</button>
     <button class="btn-main wide lg" onclick="submitShopReg()">Take my shop live — first month free</button>
     <div class="foot-note">No signup fee · first month complimentary · then tiered 1–100 CHF/yr.</div>`;
 
@@ -442,4 +444,109 @@ function shareShop() {
   const done = () => toast('Link copied — share it on WhatsApp, status, anywhere');
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, () => prompt('Copy your shop link:', link));
   else prompt('Copy your shop link:', link);
+}
+
+/* ============================================================
+   PAPERS & VERIFICATION — list without papers, or get them made
+   ============================================================ */
+view('papers', () => {
+  const kyc = S.partner && S.partner.status === 'verified';
+  const shopV = !!S.myShop;
+  const localReqs = S.docRequests || [];
+  /* pull latest status from the cloud (admin advances requested→issued) */
+  if (typeof cloudMyDocRequests === 'function') cloudMyDocRequests().then(rows => {
+    if (!rows || !rows.length) return;
+    let changed = false;
+    rows.forEach(cr => {
+      const lr = (S.docRequests || []).find(x => x.id === cr.id);
+      if (lr && lr.status !== cr.status) { lr.status = cr.status; lr.ref = cr.ref_no || lr.ref; changed = true; }
+    });
+    if (changed) { save(); if (location.hash.includes('papers')) VIEWS.papers([]); }
+  });
+
+  $('#view').innerHTML = `
+  <div class="page-head"><button class="back" onclick="go('account')">${ic('chevl', 16)}</button>
+    <div><h1>Papers &amp; verification</h1><small>No documents? List anyway — and we'll get them made for you</small></div></div>
+
+  <div class="card-block accent-block">
+    <h3>${ic('shield', 15)} You can start today — no papers needed</h3>
+    <p class="movie-about">Don't have GST, FSSAI or a trade licence yet? List your shop or services under <b>your own verified identity</b> (Aadhaar/PAN). Buyers still see you as a <b>Verified Individual</b>. Add licences later to unlock higher seller tiers and B2B billing.</p>
+    <div class="verify-rows">
+      <div class="verify-row ${kyc ? 'ok' : ''}"><span>${ic(kyc ? 'check' : 'user', 16)}</span><div><b>Personal identity (KYC)</b><small>${kyc ? 'Verified — you can list as an individual' : 'Face + ID verification · takes a minute'}</small></div>
+        <button class="lnk" onclick="${kyc ? "toast('Already verified')" : "go('earn')"}">${kyc ? 'Done' : 'Verify'}</button></div>
+      <div class="verify-row ${shopV ? 'ok' : ''}"><span>${ic(shopV ? 'check' : 'store', 16)}</span><div><b>Shop listed</b><small>${shopV ? esc(S.myShop.name) + ' is live' : 'Register your shop free — 2 minutes'}</small></div>
+        <button class="lnk" onclick="go('myshop')">${shopV ? 'Open' : 'List'}</button></div>
+    </div>
+  </div>
+
+  ${localReqs.length ? `<div class="sec-head"><h2>Your document requests</h2></div>
+    ${localReqs.map(r => {
+      const steps = ['requested', 'docs_collected', 'filed', 'issued'];
+      const si = Math.max(0, steps.indexOf(r.status));
+      const pct = r.status === 'cancelled' ? 0 : Math.round(si / (steps.length - 1) * 100);
+      return `<div class="card-block">
+        <div class="doc-req-head"><b>${esc(r.name)}</b><em>${money(r.price)} · paid</em></div>
+        <div class="lvl-bar"><i style="width:${pct}%"></i></div>
+        <small class="dim">${DB.docStatus[r.status] || r.status}${r.ref ? ' · Ref ' + esc(r.ref) : ''}</small>
+        ${(r.status === 'requested' || r.status === 'docs_collected') ? `<button class="lnk red" style="float:right" onclick="cancelDocRequest('${r.id}')">Cancel</button>` : ''}
+      </div>`;
+    }).join('')}` : ''}
+
+  <div class="sec-head"><h2>Get your papers made</h2><small class="dim">market rates · all-inclusive</small></div>
+  <div class="tip-strip">${ic('check', 13)} One transparent fee — government charges, filing &amp; expert handling included. Track every step here.</div>
+  <div class="doc-grid">
+    ${DB.docServices.map(d => `
+      <div class="doc-card">
+        <div class="doc-top"><b>${esc(d.name)}</b><em>${money(d.price)}</em></div>
+        <p>${esc(d.desc)}</p>
+        <div class="doc-meta"><span>${ic('clock', 11)} ${esc(d.days)}</span><span>${esc(d.gov)}</span></div>
+        <div class="doc-need">Needs: ${d.need.map(esc).join(' · ')}</div>
+        <button class="btn-main sm wide" onclick="requestDoc('${d.id}')">Get this — ${money(d.price)}</button>
+      </div>`).join('')}
+  </div>
+  <div class="foot-note">Assisted by verified professionals. Government fees are included and shown transparently. You can cancel before filing for a full refund.</div>`;
+});
+
+function requestDoc(sid) {
+  const d = DB.docServices.find(x => x.id === sid); if (!d) return;
+  const applicant = (S.myShop && S.myShop.name) || S.user.name || '';
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${esc(d.name)}</h3>
+    <p class="movie-about">${esc(d.desc)}</p>
+    <div class="card-block bill">
+      <div class="ck-line"><span>Service (all-inclusive)</span><span>${money(d.price)}</span></div>
+      <div class="ck-line"><span>Government fee</span><span class="ok">${esc(d.gov)}</span></div>
+      <div class="ck-line"><span>Expected</span><span>${esc(d.days)}</span></div>
+    </div>
+    <label class="fld"><span>Applicant / business name</span><input class="txt" id="docApplicant" value="${esc(applicant)}" placeholder="Name on the certificate"/></label>
+    <div class="foot-note sm" style="text-align:left">You'll be asked to upload ${d.need.map(esc).join(', ')} after payment. Cancel before filing = full refund.</div>
+    <button class="btn-main wide" onclick="payDoc('${sid}')">Pay ${money(d.price)} &amp; start</button>`);
+}
+function payDoc(sid) {
+  const d = DB.docServices.find(x => x.id === sid); if (!d) return;
+  const applicant = ($('#docApplicant') && $('#docApplicant').value.trim()) || S.user.name || 'Applicant';
+  closeSheet();
+  checkoutSheet({
+    title: d.name, icon: 'shield', meta: 'Document assistance · ' + d.days,
+    lines: [[d.name + ' (all-inclusive)', d.price]], total: d.price,
+    onPay: (final) => {
+      const id = 'DOC' + rnd(10000, 99999);
+      if (!S.docRequests) S.docRequests = [];
+      const req = { id, serviceId: sid, name: d.name, price: final, applicant, status: 'requested', ts: Date.now() };
+      S.docRequests.unshift(req); save();
+      if (typeof cloudDocRequest === 'function') cloudDocRequest(req);
+      confettiBurst();
+      notify('Application started', d.name + ' — our team will contact you to collect documents.');
+      toast('Started! We\'ll collect your documents next.');
+      go('papers');
+    }
+  });
+}
+function cancelDocRequest(id) {
+  const r = (S.docRequests || []).find(x => x.id === id); if (!r) return;
+  if (!confirm('Cancel this application? Full ' + money(r.price) + ' refunds to your wallet.')) return;
+  if (typeof cloudDocCancel === 'function') cloudDocCancel(id);
+  r.status = 'cancelled';
+  walletAdd(r.price, 'Refund · ' + r.name);
+  save(); toast('Cancelled — ' + money(r.price) + ' refunded');
+  go('papers');
 }

@@ -19,6 +19,21 @@ const DB = {
   ],
 
   /* ---------- NEARBY SHOPS (every shop in India can be here) ---------- */
+  /* document-assistance services — for sellers/individuals with no papers.
+     Prices are market-standard all-inclusive service fees (govt fee +
+     professional handling); competitive with IndiaFilings/Vakilsearch/local CAs. */
+  docServices: [
+    { id: 'udyam',   name: 'Udyam / MSME Registration', price: 499,  days: '1–2 days', gov: 'Free govt fee', desc: 'Official MSME certificate — unlocks bank loans, subsidies & tenders.', need: ['Aadhaar', 'PAN', 'Mobile'] },
+    { id: 'gst',     name: 'GST Registration',           price: 999,  days: '3–7 days', gov: 'Govt fee nil', desc: 'GSTIN so you can sell inter-state, claim input credit & bill B2B.', need: ['PAN', 'Aadhaar', 'Photo', 'Address proof'] },
+    { id: 'gumasta', name: 'Shop & Establishment (Gumasta)', price: 1499, days: '5–10 days', gov: 'State fee incl.', desc: 'The basic legal licence to run a shop — required by most municipalities.', need: ['ID proof', 'Address proof', 'Shop photo'] },
+    { id: 'fssai_b', name: 'FSSAI Basic Registration',   price: 1499, days: '7–10 days', gov: '₹100 govt/yr incl.', desc: 'Mandatory food licence for turnover under ₹12L — the blue FSSAI number.', need: ['ID proof', 'Photo', 'Address proof'] },
+    { id: 'fssai_s', name: 'FSSAI State Licence',        price: 4999, days: '15–30 days', gov: 'Govt fee incl.', desc: 'For restaurants & mid-size food businesses (₹12L–20Cr turnover).', need: ['ID', 'Address', 'Layout', 'Water test'] },
+    { id: 'trade',   name: 'Trade Licence',              price: 2999, days: '10–20 days', gov: 'Municipal fee incl.', desc: 'Local body permission to carry out your trade at the premises.', need: ['ID', 'Address proof', 'NOC'] },
+    { id: 'fmark',   name: 'Trademark / Brand Registration', price: 6999, days: 'Filed in 2 days', gov: '₹4,500 govt incl.', desc: 'Protect your shop name & logo across India (™ then ®).', need: ['Logo', 'ID', 'Business proof'] },
+    { id: 'iec',     name: 'Import-Export Code (IEC)',   price: 1999, days: '2–4 days', gov: 'Govt fee incl.', desc: 'Mandatory code to import or export — one-time, lifetime valid.', need: ['PAN', 'Bank cert', 'Address'] }
+  ],
+  docStatus: { requested: 'Requested', docs_collected: 'Documents collected', filed: 'Filed with authority', issued: 'Issued ✓', cancelled: 'Cancelled' },
+
   /* named purity inspectors — every food/organic shop is checked by a real,
      named person; their name is shown on the shop (video-spec trust design) */
   inspectors: [

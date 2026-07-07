@@ -328,6 +328,24 @@ async function cloudMyLeads() {
   catch (e) { return []; }
 }
 
+/* ---------- document-assistance requests ---------- */
+function cloudDocRequest(r) {
+  if (!CLOUD.on) return Promise.resolve();
+  return cloudFetch('rpc/doc_request_add', { method: 'POST', body: JSON.stringify({
+    p_id: r.id, p_device: S.deviceKey || 'anon', p_applicant: (r.applicant || '').slice(0, 60),
+    p_service: r.serviceId, p_name: r.name, p_price: r.price, p_note: (r.note || '').slice(0, 200)
+  }) }).catch(() => {});
+}
+async function cloudMyDocRequests() {
+  if (!CLOUD.on) return [];
+  try { return await cloudFetch('rpc/my_doc_requests', { method: 'POST', body: JSON.stringify({ p_device: S.deviceKey || 'anon' }) }) || []; }
+  catch (e) { return []; }
+}
+function cloudDocCancel(id) {
+  if (!CLOUD.on) return Promise.resolve();
+  return cloudFetch('rpc/doc_request_cancel', { method: 'POST', body: JSON.stringify({ p_id: id, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+}
+
 /* ---------- referrals (cross-device credit) ---------- */
 function cloudRefRegister(code) {
   if (!CLOUD.on) return;

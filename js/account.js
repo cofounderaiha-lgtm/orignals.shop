@@ -122,6 +122,8 @@ view('account', () => {
     <span>${ic('pin', 20)}</span><div><b>Location</b><small>${esc(S.user.addr.name)} — use GPS for instant delivery</small></div><em>Change</em></button>
   <button class="role-row" onclick="go('mitra')">
     <span>${ic('spark', 20)}</span><div><b>Talk to Mitra</b><small>The platform's own intelligence — voice or text</small></div><em>Chat</em></button>
+  <button class="role-row" onclick="go('papers')">
+    <span>${ic('shield', 20)}</span><div><b>Papers &amp; verification</b><small>List without papers · get GST, FSSAI, licences made${(S.docRequests || []).some(r => r.status !== 'cancelled' && r.status !== 'issued') ? ' · <b class="ok">in progress</b>' : ''}</small></div><em>Open</em></button>
   <button class="role-row" onclick="go('legal')">
     <span>${ic('shield', 20)}</span><div><b>Legal &amp; policies</b><small>Privacy, terms, refunds, grievance officer</small></div><em>View</em></button>
   <button class="role-row" onclick="go('legal/data')">
