@@ -400,8 +400,28 @@ b,strong{font-weight:700}
   justify-content:center;color:var(--brand);flex-shrink:0}
 [data-theme="dark"] .ck-pay>span{background:var(--bg2)}
 
-@media(min-width:640px){
-  .frame{border-left:1px solid var(--line);border-right:1px solid var(--line)}
+/* ============================================================
+   TABLET & MID (601–1023px) — no more narrow floating strip.
+   The frame fills the screen fluidly; browse grids gain columns;
+   reading/forms stay comfortable inside a wider frame.
+   ============================================================ */
+@media(min-width:601px){
+  .frame{max-width:min(94vw,760px);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  #view{padding:0 22px 130px}
+  .svc-grid{grid-template-columns:repeat(4,1fr)}
+  .shop-list{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .mega-grid{grid-template-columns:repeat(3,1fr)}
+  .movie-grid{grid-template-columns:repeat(3,1fr)}
+  .prop-list{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .event-list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .doc-grid{grid-template-columns:1fr 1fr}
+  .how-grid{grid-template-columns:repeat(4,1fr)}
+  .dir-grid{grid-template-columns:repeat(2,1fr)}
+  .usual-strip .usual{min-width:0}
+}
+/* small tablets keep 2-col service grid tidy */
+@media(min-width:601px) and (max-width:800px){
+  .svc-grid{grid-template-columns:repeat(3,1fr)}
 }
 
 /* ============================================================
