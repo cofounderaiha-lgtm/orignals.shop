@@ -449,13 +449,9 @@ async function cloudMarketStats() {
   const el = document.getElementById('mktStats');
   if (!el || !CLOUD.on) return;
   try {
-    const [jobs, sords, pays, shops] = await Promise.all([
-      cloudFetch('live_jobs?status=eq.open&select=id&limit=200'),
-      cloudFetch('shop_orders?status=not.in.(done,rejected)&select=id&limit=200'),
-      cloudFetch('payments?status=eq.verified&select=id&limit=200'),
-      cloudFetch('shops?id=like.my_*&deleted_at=is.null&select=id&limit=200')
-    ]);
-    el.innerHTML = `${ic('spark', 12)} <b>Marketplace live:</b> ${(jobs || []).length} open jobs · ${(sords || []).length} active shop orders · ${(pays || []).length} verified payments · ${(shops || []).length} community shops`;
+    /* counts via security-definer RPC (sensitive rows are not anon-readable) */
+    const m = await cloudFetch('rpc/market_stats', { method: 'POST', body: JSON.stringify({}) }) || {};
+    el.innerHTML = `${ic('spark', 12)} <b>Marketplace live:</b> ${m.open_jobs || 0} open jobs · ${m.active_orders || 0} active shop orders · ${m.verified_payments || 0} verified payments · ${m.community_shops || 0} community shops`;
   } catch (e) { el.textContent = 'Marketplace stats unavailable — ' + e.message; }
 }
 

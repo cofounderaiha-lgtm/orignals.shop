@@ -1,5 +1,5 @@
 /* ============================================================
-   OMNY — The Everything Platform (seed data)
+   ORIGNALS — The Everything Platform (seed data)
    Buy from any shop nearby · Deliver & earn as you pass by
    ============================================================ */
 

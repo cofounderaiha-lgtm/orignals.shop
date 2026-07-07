@@ -1,5 +1,5 @@
 /* ============================================================
-   OMNY icon system — crisp stroke icons (24×24), no emoji.
+   ORIGNALS icon system — crisp stroke icons (24×24), no emoji.
    ic(name, size, cls) → inline SVG string
    ============================================================ */
 

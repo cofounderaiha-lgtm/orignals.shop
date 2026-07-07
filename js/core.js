@@ -1,5 +1,7 @@
 /* ============================================================
-   OMNY core — state · router · UI kit · wallet · order engine
+   ORIGNALS core — state · router · UI kit · wallet · order engine
+   (localStorage namespace is 'omny_*' — internal, invisible to users;
+    kept stable so existing installs don't lose their data)
    ============================================================ */
 
 /* ---------- tiny helpers ---------- */
