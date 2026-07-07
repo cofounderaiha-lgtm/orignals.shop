@@ -25,7 +25,7 @@ window.ORIGNALS_CONFIG = {
      merchant in Checkout). The key SECRET is never here — server-side flows
      use Supabase secrets (RZP_KEY_SECRET / RZP_WEBHOOK_SECRET) only. */
   pay: {
-    keyId: 'rzp_live_StUJDjsi0hfYyx'
+    keyId: 'rzp_live_TAZw82EBSPiSJL'
   },
   /* Web push (self-hosted). Generate your OWN VAPID keypair (no third
      party): `npx web-push generate-vapid-keys`. Put the PUBLIC key here;
