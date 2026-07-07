@@ -34,6 +34,14 @@ window.ORIGNALS_CONFIG = {
   push: {
     vapidPublic: ''
   },
+  /* Face 2FA (ported from edurankai). @vladmandic/face-api + models.
+     Loaded lazily only when a face feature is used. To go fully
+     self-hosted, mirror these to your own /public and change the URLs —
+     the app never calls out otherwise. */
+  face: {
+    lib: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.min.js',
+    models: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model'
+  },
   /* Maps: 100% open-source, zero cost (founder decision 2026-07-06).
      The app tries these tile sources in order and AUTO-FAILS-OVER if one
      throttles or goes down — no single point of failure, no paid vendor.

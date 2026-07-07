@@ -64,12 +64,21 @@ async function authSubmit() {
     const msg = { exists: 'That account already exists — sign in instead', no_user: 'No account found — register first', wrong_pass: 'Incorrect password', weak_pass: 'Password too short', bad_ident: 'Enter a valid email or mobile', offline: 'No connection' }[r.reason] || 'Could not sign in — try again';
     toast(msg); return;
   }
-  authSave({ token: r.token, ident: r.ident, name: r.name || name, face: !!r.face });
-  if (name && (!S.user.name || S.user.name === 'Friend')) { S.user.name = name; save(); }
-  confettiBurst();
-  toast(_authMode === 'login' ? 'Welcome back!' : 'Account created — you\'re secured');
-  refreshChrome && refreshChrome();
-  go('account');
+  const finalize = () => {
+    authSave({ token: r.token, ident: r.ident, name: r.name || name, face: !!r.face });
+    if (name && (!S.user.name || S.user.name === 'Friend')) { S.user.name = name; save(); }
+    confettiBurst();
+    toast(_authMode === 'login' ? 'Welcome back!' : 'Account created — you\'re secured');
+    refreshChrome && refreshChrome();
+    go('account');
+  };
+  /* password OK — if face 2FA is enrolled, require the second factor */
+  if (_authMode === 'login' && r.face && typeof faceVerifyStep === 'function') {
+    toast('Password OK — now confirm your face');
+    faceVerifyStep(r.ident, finalize);
+    return;
+  }
+  finalize();
 }
 
 function authLogout() {
@@ -183,12 +192,12 @@ view('facelock', () => {
   <div class="card-block"><h3>Sign in first</h3><p class="movie-about">Create a password account to enable face lock.</p>
     <button class="btn-main sm" onclick="go('login')">Sign in / Register</button></div>`}
   <div class="card-block">
-    <h3>${ic('camera', 15)} Face lock (2FA)</h3>
-    <p class="movie-about">Add your face as a second factor. Your photo is captured on-device; enabling this asks for a face check on sensitive actions. No third-party face service — it stays yours.</p>
-    ${S.faceRef ? `<div class="face-preview"><img src="${S.faceRef}" alt="your enrolled face"/><span>${ic('check', 12)} Face enrolled</span></div>
-      <button class="btn-main sm ghost" onclick="enrolFace()">Re-capture</button>
-      <button class="btn-main sm ghost red" onclick="removeFace()">Remove</button>`
-    : `<button class="btn-main sm" onclick="enrolFace()">${ic('camera', 14)} Enrol my face</button>`}
+    <h3>${ic('camera', 15)} Face lock (real 2FA)</h3>
+    <p class="movie-about">Add your face as a genuine second factor. Detection runs in your browser; the match is verified <b>on our own server</b> (distance &lt; 0.55) so it can't be faked. After this, signing in asks for your face too. No third-party face service.</p>
+    ${(S.faceRef || (a && a.face)) ? `${S.faceRef ? `<div class="face-preview"><img src="${S.faceRef}" alt="your enrolled face"/><span>${ic('check', 12)} Face enrolled</span></div>` : `<div class="trust-row">${ic('check', 12)} Face enrolled on this account</div>`}
+      <button class="btn-main sm ghost" onclick="faceEnrol()">Re-enrol</button>
+      <button class="btn-main sm ghost red" onclick="faceRemoveServer()">Remove</button>`
+    : `<button class="btn-main sm" ${a && a.token ? `onclick="faceEnrol()"` : `onclick="toast('Sign in first to enable face lock');go('login')"`}>${ic('camera', 14)} Enrol my face</button>`}
   </div>
   <div class="card-block">
     <h3>${ic('bell', 15)} Delivery &amp; order alerts</h3>
