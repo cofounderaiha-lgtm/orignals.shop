@@ -51,6 +51,8 @@ function adminApi(fn, body) {
 function adminRank(l) { return { l5: 5, l4: 4, l3: 3, l2: 2, l1: 1 }[l] || 0; }
 
 /* gated entry: verify the admin level on the server before rendering */
+/* /superadmin is an alias for /admin — same server-gated console */
+view('superadmin', a => (VIEWS.admin || VIEWS.home)(a));
 view('admin', async args => {
   const a = (typeof authState === 'function') ? authState() : null;
   const cloudOn = typeof CLOUD !== 'undefined' && CLOUD.on;
