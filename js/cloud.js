@@ -242,10 +242,37 @@ async function cloudJobs() {
   }));
 }
 function cloudJobClaim(id) {
-  return cloudFetch('rpc/job_claim', { method: 'POST', body: JSON.stringify({ p_job: id, p_device: S.deviceKey || 'anon' }) });
+  /* claim WITH the real partner's public profile so the buyer sees who's coming */
+  const p = S.partner || {};
+  const veh = (DB.vehicles.find(v => v.id === p.veh) || {}).name || p.veh || '';
+  return cloudFetch('rpc/job_claim', { method: 'POST', body: JSON.stringify({
+    p_job: id, p_device: S.deviceKey || 'anon',
+    p_name: p.name || (S.user && S.user.name) || 'Partner',
+    p_veh: veh, p_rating: p.rating || 4.8
+  }) });
 }
 function cloudJobDone(id) {
   return cloudFetch('rpc/job_done', { method: 'POST', body: JSON.stringify({ p_job: id, p_device: S.deviceKey || 'anon' }) });
+}
+function cloudJobPing(id, lat, lng) {
+  if (!CLOUD.on) return Promise.resolve();
+  return cloudFetch('rpc/job_ping', { method: 'POST', body: JSON.stringify({ p_job: id, p_device: S.deviceKey || 'anon', p_lat: lat, p_lng: lng }) }).catch(() => {});
+}
+function cloudJobPicked(id) {
+  if (!CLOUD.on) return Promise.resolve();
+  return cloudFetch('rpc/job_picked', { method: 'POST', body: JSON.stringify({ p_job: id, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+}
+function cloudJobDeliver(id, otp) {
+  if (!CLOUD.on) return Promise.resolve({ ok: true });
+  return cloudFetch('rpc/job_deliver', { method: 'POST', body: JSON.stringify({ p_job: id, p_device: S.deviceKey || 'anon', p_otp: String(otp || '') }) }).then(r => r || { ok: false }).catch(() => ({ ok: false }));
+}
+/* buyer: read the REAL partner (name/vehicle/rating) + live GPS for an order */
+async function cloudJobForOrder(orderId) {
+  if (!CLOUD.on) return null;
+  try {
+    const rows = await cloudFetch('live_jobs?order_ref=eq.' + encodeURIComponent(orderId) + '&select=taken_name,taken_veh,taken_rating,partner_lat,partner_lng,status,picked_at&limit=1');
+    return (rows && rows[0]) || null;
+  } catch (e) { return null; }
 }
 
 /* community shops: every shop registered on any device joins DB.shops */
@@ -456,7 +483,8 @@ function cloudPostShopOrder(o, shop) {
       buyer_name: (S.user.name || 'Customer').slice(0, 40),
       buyer_addr: (a.name + (a.sub ? ', ' + a.sub : '')).slice(0, 120),
       buyer_lat: a.lat != null ? +a.lat : null, buyer_lng: a.lng != null ? +a.lng : null,
-      items: o.items || [], total: o.total
+      items: o.items || [], total: o.total,
+      drop_otp: (o.partner && o.partner.otp) ? String(o.partner.otp) : null   // buyer's handover OTP (server-verified)
     }])
   }).catch(e => console.warn('[shop order] post skipped:', e.message));
 }

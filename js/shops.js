@@ -320,6 +320,29 @@ function useGPS() {
   }, () => toast('Location permission denied — pick a saved address'), { enableHighAccuracy: true, timeout: 8000 });
 }
 
+/* ---------- real scannable QR (lazy-loaded generator) ---------- */
+let _qrLoad;
+function ensureQR() {
+  if (window.qrcode) return Promise.resolve();
+  if (_qrLoad) return _qrLoad;
+  _qrLoad = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
+    s.onload = res; s.onerror = () => { _qrLoad = null; rej(); }; document.head.appendChild(s);
+  });
+  return _qrLoad;
+}
+function qrRender(elId, text) {
+  ensureQR().then(() => {
+    const el = document.getElementById(elId); if (!el || !window.qrcode) return;
+    try {
+      const qr = window.qrcode(0, 'M'); qr.addData(String(text)); qr.make();
+      el.innerHTML = qr.createImgTag(4, 0);
+      const img = el.querySelector('img'); if (img) { img.style.width = '100%'; img.style.height = 'auto'; img.style.imageRendering = 'pixelated'; img.style.display = 'block'; }
+    } catch (e) {}
+  }).catch(() => {});
+}
+
 /* ---------- LIVE TRACKING ---------- */
 view('track', args => {
   $('#view').innerHTML = `<div data-live-order="${esc(args[0])}" id="trackWrap"></div>`;
@@ -361,16 +384,26 @@ function renderTrack(oid) {
     ${done || o.cancelled ? '' : `<div class="eta-pill" id="trkEta">${trackEtaText(o)}</div>`}
   </div>
 
-  ${o.partner && st >= 1 ? `
+  ${(() => {
+    /* prefer the REAL partner who actually claimed this order (cloud) */
+    const rp = o.realPartner;
+    const p = rp ? { name: rp.taken_name, veh: rp.taken_veh, rating: rp.taken_rating || 4.8, trips: null } : o.partner;
+    if (!p || (st < 1 && !rp)) return '';
+    return `
   <div class="partner-card">
     <span class="pc-ava">${ic('user', 22)}</span>
-    <div class="pc-info"><b>${esc(o.partner.name)} <small class="dim">★ ${o.partner.rating}</small></b>
-      <small>${o.partner.car ? esc(o.partner.car) + ' · ' : ''}${esc(o.partner.veh)} · ${o.partner.trips.toLocaleString('en-IN')} trips</small>
-      ${!done && !o.cancelled ? `<small class="ok">${o.cloudShop ? 'Live — the shop updates this order' : orderStage(o) < FLOWS[o.flow].length - 2 ? 'Arriving in ~' + Math.max(1, Math.round((orderTimes(o)[orderTimes(o).length - 1] - (Date.now() - o.placedAt) / 1000) / 60)) + ' min' : 'Almost there'}</small>` : ''}</div>
-    ${done ? '' : `<div class="pc-otp">OTP<b>${o.partner.otp}</b></div>`}
-    <button class="pc-call" onclick="toast('Connecting to ${esc(o.partner.name)} via masked number — your number stays private')">${ic('phone', 16)}</button>
+    <div class="pc-info"><b>${esc(p.name)} <small class="dim">★ ${(+p.rating || 4.8).toFixed(1)}</small></b>
+      <small>${esc(p.veh || p.car || 'Verified partner')}${p.trips ? ' · ' + p.trips.toLocaleString('en-IN') + ' trips' : ''}</small>
+      ${!done && !o.cancelled ? `<small class="ok">${rp ? (rp.picked_at ? 'On the way to you — live' : 'Heading to the shop') : 'Arriving soon'}</small>` : ''}</div>
+    ${!done ? `<button class="pc-call" onclick="callOrder('${o.id}')" title="Call in-app — no numbers shared">${ic('phone', 16)}</button>` : ''}
   </div>
-  <div class="foot-note sm">${ic('shield', 12)} Your partner is registered &amp; verified — ID, vehicle and background checked.</div>` : ''}
+  ${!done && !o.cancelled ? `
+  <div class="handover-card">
+    <div class="ho-otp"><small>SHOW THIS TO YOUR DELIVERY PARTNER</small><b>${o.partner ? o.partner.otp : '—'}</b><span>delivery OTP</span></div>
+    <div class="ho-qr" id="hoQR">${ic('grid', 20)}</div>
+  </div>
+  <div class="foot-note sm">${ic('shield', 12)} The partner enters this OTP (or scans the QR) to complete delivery. Your name &amp; number are never shared — calls happen inside the app.</div>` : ''}`;
+  })()}
 
   ${timelineHTML(o)}
 
@@ -392,6 +425,34 @@ function renderTrack(oid) {
   ${done && o.kind === 'shop' && !o.cancelled ? `<button class="btn-main wide ghost" onclick="reorder('${o.id}')">Reorder the same</button>` : ''}
   <button class="btn-main wide ghost" onclick="toast('Tell Mitra your issue — opening chat');setTimeout(()=>go('mitra'),600)">Need help with this order?</button>`;
   trackLiveMap('trkMap', o);
+  /* render the real, scannable handover QR (encodes the OTP) */
+  if (o.partner && !done && !o.cancelled) qrRender('hoQR', 'ORIGNALS:' + o.id + ':' + o.partner.otp);
+  /* fetch the REAL partner who claimed this order (live, cross-device) */
+  if (o.cloudShop && !done && !o.cancelled && typeof cloudJobForOrder === 'function') {
+    if (Date.now() - (o._rpAt || 0) > 6000) {
+      o._rpAt = Date.now();
+      cloudJobForOrder(o.id).then(job => {
+        if (!job || !job.taken_name) return;
+        const changed = !o.realPartner || o.realPartner.partner_lat !== job.partner_lat || o.realPartner.taken_name !== job.taken_name;
+        o.realPartner = job;
+        if (job.partner_lat != null) o.partnerLive = { lat: +job.partner_lat, lng: +job.partner_lng };
+        if (changed && location.hash.includes('track')) { wrap.dataset.sig = ''; renderTrack(oid); }
+      });
+    }
+  }
+}
+
+/* ---------- in-app contact: NO number exchange, all in our backend ---------- */
+function callOrder(oid) {
+  const o = S.orders.find(x => x.id === oid);
+  const who = (o && o.realPartner && o.realPartner.taken_name) || (o && o.partner && o.partner.name) || 'your partner';
+  if (typeof callStart === 'function') { callStart(oid, who); return; }
+  /* honest interim until in-app voice is live: connect via Mitra, numbers never shared */
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Contact ${esc(who)}</h3>
+    <div class="trust-row">${ic('shield', 13)} Your name &amp; number are never shared — everything stays inside Orignals.</div>
+    <button class="place-row" onclick="closeSheet();toast('Opening chat');setTimeout(()=>go('mitra'),400)">
+      <span>${ic('spark', 17)}</span><div><b>Message via Mitra</b><small>Send a note about this order — no numbers exchanged</small></div><em>Chat</em></button>
+    <div class="foot-note sm">In-app voice calling (private, number-free) is rolling out soon. Until then, the OTP/QR completes your handover safely.</div>`);
 }
 
 function cancelScheduled(i) {

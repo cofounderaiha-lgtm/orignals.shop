@@ -394,7 +394,7 @@ function renderActiveJob() {
   <div class="job-card active">
     <div class="job-route"><i class="pin g"></i>${esc(j.from)}<span class="job-arrow">${ic('arrowr', 11)}</span><i class="pin r"></i>${esc(j.to)}<b>· ${j.km} km</b></div>
     ${j.note ? `<div class="job-note">${esc(j.note)}</div>` : ''}
-    <div class="otp-strip">${A.stage === 1 ? `${j.type === 'ride' ? 'Rider' : 'Sender'}'s OTP → <b>${A.otpPick}</b> · faces already CV-matched` : A.stage === 2 ? `${j.type === 'ride' ? 'Drop' : 'Receiver'}'s OTP → <b>${A.otpDrop}</b>` : `Contact ${esc(j.by.split(' ·')[0])} if you can't find the pickup`}</div>
+    <div class="otp-strip">${A.stage === 1 ? `Ask the ${j.type === 'ride' ? 'rider' : 'sender'} for their OTP to ${j.type === 'ride' ? 'start' : 'collect'}` : A.stage === 2 ? `Ask the ${j.type === 'ride' ? 'rider' : 'customer'} to show their OTP or QR — enter it below` : `Head to the pickup — tap Navigate for directions`}</div>
   </div>
 
   ${(A.stage === 2 && j.type !== 'ride') ? `
@@ -406,9 +406,9 @@ function renderActiveJob() {
   </div>` : ''}
 
   <div class="wiz-dots">${[0, 1, 2].map(i => `<i class="${i <= A.stage ? 'on' : ''}"></i>`).join('')}</div>
-  ${A.stage === 0 ? `<button class="btn-main wide lg" onclick="S.activeJob.stage=1;save();renderActiveJob()">${ic('pin', 15)} I've reached the pickup</button>` : ''}
-  ${A.stage === 1 ? `<button class="btn-main wide lg" onclick="S.activeJob.stage=2;save();toast('On the way — ride safe!');renderActiveJob()">${ic('check', 15)} OTP matched — ${j.type === 'ride' ? 'ride started' : 'collected'}</button>` : ''}
-  ${A.stage === 2 ? `<button class="btn-main wide lg" onclick="completeJob()">${ic('flag', 15)} OTP matched — ${j.type === 'ride' ? 'ride complete' : 'delivered'}</button>` : ''}`;
+  ${A.stage === 0 ? `<button class="btn-main wide lg" onclick="jobReachedPickup()">${ic('pin', 15)} I've reached the pickup</button>` : ''}
+  ${A.stage === 1 ? `<button class="btn-main wide lg" onclick="S.activeJob.stage=2;save();toast('On the way — ride safe!');renderActiveJob()">${ic('check', 15)} Collected — start delivery</button>` : ''}
+  ${A.stage === 2 ? `<button class="btn-main wide lg" onclick="deliverWithOTP()">${ic('flag', 15)} ${j.type === 'ride' ? 'End ride' : 'Confirm delivery'} — OTP / QR</button>` : ''}`;
 
   /* real map: pickup + drop + your position; live GPS follows you if allowed */
   const g = jobGeo(j);
@@ -426,6 +426,7 @@ function renderActiveJob() {
       }, () => {}, { timeout: 6000 });
     }
   }
+  startJobPing();   // share live location to the buyer (real jobs)
 }
 
 function jobNavigate() {
@@ -434,6 +435,66 @@ function jobNavigate() {
   const g = jobGeo(j);
   const target = A.stage >= 2 ? g.to : g.from;   // pickup first, then drop
   if (typeof navTo === 'function') navTo(target.lat, target.lng, A.stage >= 2 ? j.to : j.from);
+}
+function jobReachedPickup() {
+  const A = S.activeJob; if (!A) return;
+  if (A.cloud && typeof cloudJobPicked === 'function') cloudJobPicked(A.jobId);
+  A.stage = 1; save(); renderActiveJob();
+}
+/* live GPS sharing to the buyer while carrying a real order */
+function startJobPing() {
+  clearInterval(window._jobPing);
+  const A = S.activeJob;
+  if (!A || !A.cloud || !navigator.geolocation || typeof cloudJobPing !== 'function') return;
+  const ping = () => {
+    if (!S.activeJob || !S.activeJob.cloud) { clearInterval(window._jobPing); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => cloudJobPing(S.activeJob.jobId, +pos.coords.latitude.toFixed(6), +pos.coords.longitude.toFixed(6)),
+      () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 });
+  };
+  ping();
+  window._jobPing = setInterval(ping, 15000);   // share location every 15s
+}
+/* handover: enter the OTP the buyer shows, or scan their QR — verified server-side */
+function deliverWithOTP() {
+  const A = S.activeJob; if (!A) return;
+  const j = A.cloudJob || allJobs().find(x => x.id === A.jobId);
+  if (!A.cloud) { completeJob(); return; }   // local/demo job → no server OTP
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Confirm handover</h3>
+    <p class="movie-about">Ask the customer to show their 4-digit OTP (or QR) from their order. No numbers or personal details are ever shared.</p>
+    <label class="fld"><span>Enter customer's OTP</span><input class="txt" id="dlvOtp" inputmode="numeric" maxlength="4" placeholder="4-digit OTP" style="text-align:center;font-size:1.4rem;letter-spacing:6px"/></label>
+    <button class="btn-main wide" onclick="submitDeliverOTP()">${ic('check', 14)} Confirm delivery</button>
+    <button class="btn-main wide ghost" onclick="scanDeliverQR()">${ic('camera', 14)} Scan customer's QR instead</button>`);
+  setTimeout(() => { const el = document.getElementById('dlvOtp'); if (el) el.focus(); }, 60);
+}
+async function submitDeliverOTP(otpOverride) {
+  const A = S.activeJob; if (!A) return;
+  const otp = otpOverride || ($('#dlvOtp') && $('#dlvOtp').value.trim()) || '';
+  if (!otpOverride && !/^\d{4}$/.test(otp)) { toast('Enter the 4-digit OTP'); return; }
+  toast('Verifying…');
+  const r = await cloudJobDeliver(A.jobId, otp);
+  if (r && r.ok) { closeSheet(); completeJob(); }
+  else toast(r && r.reason === 'wrong_otp' ? 'Wrong OTP — ask the customer again' : 'Could not verify — try the QR');
+}
+async function scanDeliverQR() {
+  if (!('BarcodeDetector' in window)) { toast('QR scan not supported here — use the OTP'); return; }
+  if (typeof captureCameraPhoto !== 'function') { toast('Camera unavailable'); return; }
+  try {
+    const det = new window.BarcodeDetector({ formats: ['qr_code'] });
+    captureCameraPhoto('Scan customer QR', 'Point at the QR on the customer\'s order.', async (dataUrl) => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const codes = await det.detect(img);
+          const raw = codes && codes[0] && codes[0].rawValue;
+          const m = raw && String(raw).match(/(\d{4})/);
+          if (m) submitDeliverOTP(m[1]);
+          else toast('Could not read the QR — use the OTP');
+        } catch (e) { toast('Could not read the QR — use the OTP'); }
+      };
+      img.src = dataUrl;
+    });
+  } catch (e) { toast('QR scan unavailable — use the OTP'); }
 }
 function captureCollector() {
   if (typeof captureCameraPhoto !== 'function') { toast('Camera unavailable'); return; }

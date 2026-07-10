@@ -1016,3 +1016,15 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-of
 .job-hud .hud-cell b{display:block;font-size:1.15rem;color:var(--ink);font-family:var(--disp)}
 .job-hud .hud-cell:first-child b{color:var(--primary)}
 .job-hud .hud-cell small{font-size:.66rem;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+
+/* ---------- delivery handover (OTP + real QR) ---------- */
+.handover-card{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);padding:14px 16px;margin:8px 0;box-shadow:var(--shadow)}
+.ho-otp{flex:1;text-align:center}
+.ho-otp small{display:block;font-size:.6rem;font-weight:800;letter-spacing:.6px;color:var(--mut)}
+.ho-otp b{display:block;font-size:2.2rem;font-family:var(--disp);letter-spacing:6px;color:var(--primary);line-height:1.1}
+.ho-otp span{font-size:.68rem;color:var(--mut)}
+.ho-qr{width:92px;height:92px;flex:none;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--mut);overflow:hidden;padding:6px}
+.ho-qr img{width:100%;height:100%}
+.pc-call{width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.pc-call svg{color:#fff}

@@ -339,7 +339,11 @@ function trackLiveMap(elId, o) {
   if (!g) return;
   const prog = o.cancelled ? 0 : orderProg(o);
   const A = [g.from.lat, g.from.lng], B = [g.to.lat, g.to.lng];
-  const cur = [A[0] + (B[0] - A[0]) * prog, A[1] + (B[1] - A[1]) * prog];
+  /* if the REAL partner is sharing live GPS, put the courier THERE;
+     otherwise fall back to time-based interpolation */
+  const cur = (o.partnerLive && o.partnerLive.lat != null)
+    ? [o.partnerLive.lat, o.partnerLive.lng]
+    : [A[0] + (B[0] - A[0]) * prog, A[1] + (B[1] - A[1]) * prog];
   try {
     if (el._map && el._courier) { el._courier.setLatLng(cur); return; }
     if (el._map) { el._map.remove(); el._map = null; }
