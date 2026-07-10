@@ -28,8 +28,10 @@ module.exports = async function handler(req, res) {
       p_country: String(h['x-vercel-ip-country'] || '').slice(0, 4),
       p_region: String(h['x-vercel-ip-country-region'] || '').slice(0, 64),
       p_city: dec(h['x-vercel-ip-city']).slice(0, 80),
-      p_lat: num(h['x-vercel-ip-latitude']) != null ? num(h['x-vercel-ip-latitude']) : (b.lat != null ? Number(b.lat) : null),
-      p_lng: num(h['x-vercel-ip-longitude']) != null ? num(h['x-vercel-ip-longitude']) : (b.lng != null ? Number(b.lng) : null),
+      // PRECISE FIRST: if the browser sent exact GPS/address coords, use them;
+      // only fall back to the coarse city-level edge coords when it didn't.
+      p_lat: b.lat != null ? Number(b.lat) : num(h['x-vercel-ip-latitude']),
+      p_lng: b.lng != null ? Number(b.lng) : num(h['x-vercel-ip-longitude']),
       p_val: (b.val == null ? null : Number(b.val))
     };
     await fetch(SUPA + '/rest/v1/rpc/track_hit', {

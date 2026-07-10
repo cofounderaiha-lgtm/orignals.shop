@@ -411,8 +411,9 @@ async function adminAnalyticsLoad() {
 }
 
 function anaMax(rows, i) { return Math.max(1, ...rows.map(r => +r[i] || 0)); }
+function anaEmptyCard(title) { return `<div class="card-block"><h3>${title}</h3><div class="foot-note sm" style="text-align:left">Nothing in this range yet — this fills as people arrive.</div></div>`; }
 function anaBarCard(title, rows) {
-  if (!rows.length) return '';
+  if (!rows.length) return anaEmptyCard(esc(title));
   const mx = anaMax(rows, 1);
   return `<div class="card-block"><h3>${esc(title)}</h3>${rows.map(r => `
     <div class="ana-bar"><span class="ana-bl">${esc(String(r[0]))}</span>
@@ -420,7 +421,7 @@ function anaBarCard(title, rows) {
       <b>${(+r[1] || 0).toLocaleString('en-IN')}${r[2] ? ` <small class="dim">${esc(String(r[2]))}</small>` : ''}</b></div>`).join('')}</div>`;
 }
 function anaTrendCard(series) {
-  if (!series.length) return '';
+  if (!series.length) return anaEmptyCard('Visitors per day');
   const mx = Math.max(1, ...series.map(s => +s.visits || 0));
   const bars = series.map(s => `<div class="ana-col" title="${esc(s.d)} · ${s.visits} visitors">
     <i style="height:${Math.round((+s.visits || 0) / mx * 100)}%"></i></div>`).join('');
@@ -428,7 +429,7 @@ function anaTrendCard(series) {
     <div class="ana-trend-x"><small>${esc(series[0].d)}</small><small>${esc(series[series.length - 1].d)}</small></div></div>`;
 }
 function anaGeoCard(geo) {
-  if (!geo.length) return '';
+  if (!geo.length) return anaEmptyCard(ic('pin', 14) + ' Where in the world');
   const mx = anaMax(geo, 2);
   return `<div class="card-block"><h3>${ic('pin', 14)} Where in the world</h3>${geo.map(g => `
     <div class="ana-bar"><span class="ana-bl">${esc(anaFlag(g.country))} ${esc(g.city || '—')}<small class="dim"> · ${esc(g.country)}</small></span>
@@ -436,7 +437,7 @@ function anaGeoCard(geo) {
       <b>${(+g.visitors || 0).toLocaleString('en-IN')}</b></div>`).join('')}</div>`;
 }
 function anaEventCard(ev) {
-  if (!ev.length) return '';
+  if (!ev.length) return anaEmptyCard('Key events');
   return `<div class="card-block"><h3>Key events</h3>${ev.map(e => `
     <div class="ck-line"><span>${esc(e.name)}</span><span><b>${(+e.n || 0).toLocaleString('en-IN')}</b>${+e.value ? ' · ' + money(e.value) : ''}</span></div>`).join('')}</div>`;
 }
@@ -468,8 +469,8 @@ async function adminAnalyticsLive() {
         m.bindPopup(`<b>${esc(p.city || '—')}${p.country ? ', ' + esc(p.country) : ''}</b><br/>on <b>${esc(p.page || 'home')}</b> · ${esc(p.role || 'guest')} · ${esc(p.uad || '')}<br/>${p.ago}s ago`);
         m.addTo(_anaLayer); latlngs.push([p.lat, p.lng]);
       });
-      if (latlngs.length === 1) _anaMap.setView(latlngs[0], 9);
-      else if (latlngs.length > 1) { try { _anaMap.fitBounds(latlngs, { padding: [30, 30], maxZoom: 11 }); } catch (e) {} }
+      if (latlngs.length === 1) _anaMap.setView(latlngs[0], 15);   // street-level for a precise dot
+      else if (latlngs.length > 1) { try { _anaMap.fitBounds(latlngs, { padding: [30, 30], maxZoom: 15 }); } catch (e) {} }
     }
   } catch (e) {}
 }

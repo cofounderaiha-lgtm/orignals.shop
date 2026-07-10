@@ -6,7 +6,7 @@
    back to a direct RPC with a coarse timezone country. Anonymous
    device key only — no third-party tracker, no cookies, no PII.
    ============================================================ */
-const ANA = { session: null, started: false, hb: null, lastPage: null };
+const ANA = { session: null, started: false, hb: null, lastPage: null, coords: null, located: false };
 
 function anaOn() { return typeof CLOUD !== 'undefined' && CLOUD.on; }
 function anaSession() {
@@ -39,8 +39,22 @@ function anaCoarseCountry() {
   } catch (e) { return ''; }
 }
 function anaCoords() {
+  if (ANA.coords) return ANA.coords;   // exact GPS captured this session
   try { const a = S.user && S.user.addr; if (a && a.lat != null && a.lng != null) return { lat: +a.lat, lng: +a.lng }; } catch (e) {}
   return { lat: null, lng: null };
+}
+/* exact location — ONLY if the visitor already granted geolocation (e.g. for
+   delivery). We never fire a fresh prompt just to track; that would be rude. */
+function anaLocate() {
+  if (!navigator.geolocation) return;
+  const grab = () => navigator.geolocation.getCurrentPosition(
+    p => { ANA.coords = { lat: +p.coords.latitude.toFixed(5), lng: +p.coords.longitude.toFixed(5) }; },
+    () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 });
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then(st => { if (st.state === 'granted') grab(); }).catch(() => {});
+    }
+  } catch (e) {}
 }
 function anaRefHost() {
   try { return document.referrer ? new URL(document.referrer).host : ''; } catch (e) { return ''; }
@@ -70,6 +84,7 @@ function anaDirect(p) {
   cloudFetch('rpc/track_hit', { method: 'POST', body: JSON.stringify(b) }).catch(() => {});
 }
 function trackPage(name) {
+  if (!ANA.located) { ANA.located = true; anaLocate(); }   // grab exact coords once, if already permitted
   ANA.lastPage = name || 'home';
   anaSend('page', ANA.lastPage);
   anaHeartbeat();
