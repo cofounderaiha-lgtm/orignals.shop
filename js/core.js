@@ -174,12 +174,35 @@ function cartSet(shopId, itemId, qty) {
 }
 function cartQty(itemId) { return S.cart.items[itemId] || 0; }
 function cartCount() { return Object.values(S.cart.items).reduce((a, b) => a + b, 0); }
+/* ============================================================
+   FEE MODEL (no buyer subscription — pay-per-use like the rivals):
+   · Item total → 100% to the shop
+   · GST → as applicable (5% on food/restaurant), remitted to govt
+   · Platform fee → 5% of items (this ALSO absorbs the ~3% payment-
+     gateway charge internally; buyers see one clean fee)
+   · Delivery fee → distance-based (fuel/inflation aware), CAPPED so it
+     never exceeds Zomato-class rivals. Shop's free-delivery offer wins.
+   ============================================================ */
 function cartTotal() {
   const shop = findShop(S.cart.shopId);
   let sub = 0;
   if (shop) for (const [iid, q] of Object.entries(S.cart.items)) { const it = findItem(shop, iid); if (it) sub += it.price * q; }
-  const fee = !shop ? 0 : (sub >= 199 ? 0 : (shop.delivery === 'self' ? 15 : 25));
-  return { sub, fee, total: sub + fee, shop };
+  if (!shop || !sub) return { sub: 0, gst: 0, platformFee: 0, deliveryFee: 0, fee: 0, total: 0, shop };
+
+  const isFood = ['food', 'restaurant', 'organic', 'grocery', 'dairy', 'bakery'].includes(shop.type);
+  const gst = isFood ? Math.round(sub * 0.05) : 0;                 // GST on prepared food
+  const platformFee = Math.max(3, Math.round(sub * 0.05));         // 5% — absorbs ~3% gateway MDR
+
+  const km = +shop.km || 2;
+  const self = S.cart.deliv === 'self';
+  const FUEL = 1.0;                                                // inflation/fuel multiplier (tunable centrally)
+  let deliveryFee = Math.round(((self ? 12 : 22) + Math.max(0, km - 1) * (self ? 5 : 8)) * FUEL);
+  if (sub < 149) deliveryFee += 12;                               // small-order fee (rival-standard)
+  deliveryFee = Math.min(deliveryFee, self ? 45 : 65);            // hard cap ≤ rivals
+  if (shop.offer && /free/i.test(shop.offer) && sub >= 199) deliveryFee = 0;  // shop's own free-delivery offer
+
+  const total = sub + gst + platformFee + deliveryFee;
+  return { sub, gst, platformFee, deliveryFee, fee: deliveryFee, total, shop };
 }
 
 /* stepper — ADD / − qty + control */

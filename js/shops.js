@@ -219,7 +219,7 @@ function rfqSubmit(shopId) {
 
 /* ---------- CART ---------- */
 view('cart', () => {
-  const { sub, fee, total, shop } = cartTotal();
+  const { sub, gst, platformFee, deliveryFee, total, shop } = cartTotal();
   if (!shop || !sub) {
     $('#view').innerHTML = `<div class="page-head"><button class="back" onclick="go('home')">${ic('chevl', 16)}</button><div><h1>Basket</h1></div></div>
       <div class="empty"><span>${ic('cart', 40)}</span><b>Your basket is empty</b><p>Everything from every nearby shop fits here.</p>
@@ -262,21 +262,23 @@ view('cart', () => {
   <div class="card-block bill">
     <h3>Bill details</h3>
     <div class="ck-line"><span>Items total</span><span>${money(sub)}</span></div>
-    <div class="ck-line"><span>Delivery fee ${fee === 0 ? '(free above ₹199)' : ''}</span><span>${fee === 0 ? '<b class="ok">FREE</b>' : money(fee)}</span></div>
-    <div class="ck-line grand"><span>Grand total</span><span>${money(total)}</span></div>
+    ${gst ? `<div class="ck-line"><span>GST</span><span>${money(gst)}</span></div>` : ''}
+    <div class="ck-line"><span>Platform fee <small class="dim">(5%)</small></span><span>${money(platformFee)}</span></div>
+    <div class="ck-line"><span>Delivery fee ${deliveryFee === 0 ? '' : `· ${shop.km} km`}</span><span>${deliveryFee === 0 ? '<b class="ok">FREE</b>' : money(deliveryFee)}</span></div>
+    <div class="ck-line grand"><span>To pay</span><span>${money(total)}</span></div>
   </div>
 
   <button class="btn-main wide ${moqIssue ? 'dis' : ''}" onclick="${moqIssue ? `toast('Meet the MOQ first')` : 'cartCheckout()'}">
     Proceed to pay · ${money(total)}</button>
-  <div class="foot-note">100% of item price goes to the shop. Partner delivery fee goes to the person who carries it.</div>`;
+  <div class="foot-note">No subscription — you only pay per order. <b>100% of the item price goes to the shop</b>; the delivery fee goes to whoever carries it. Our platform fee is a flat 5% (it covers payment charges too).</div>`;
 });
 
 function cartCheckout() {
-  const { sub, fee, total, shop } = cartTotal();
+  const { sub, gst, platformFee, deliveryFee, total, shop } = cartTotal();
   checkoutSheet({
     title: 'Order from ' + shop.name, icon: 'store',
     meta: (S.cart.deliv === 'self' ? 'Shop delivers itself' : 'Nearby partner delivery') + ' · to ' + S.user.addr.name,
-    lines: [['Items total', sub], ['Delivery fee', fee]], total,
+    lines: [['Items total', sub], ...(gst ? [['GST', gst]] : []), ['Platform fee (5%)', platformFee], ['Delivery fee', deliveryFee]], total,
     onPay: (final) => {
       const items = Object.entries(S.cart.items).map(([iid, q]) => { const it = findItem(shop, iid); return { name: it.name, q, price: it.price }; });
       const o = createOrder({
