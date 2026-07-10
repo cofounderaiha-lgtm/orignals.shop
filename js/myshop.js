@@ -681,53 +681,73 @@ view('papers', () => {
       </div>`;
     }).join('')}` : ''}
 
-  <div class="sec-head"><h2>Get your papers made</h2><small class="dim">market rates · all-inclusive</small></div>
-  <div class="tip-strip">${ic('check', 13)} One transparent fee — government charges, filing &amp; expert handling included. Track every step here.</div>
-  <div class="doc-grid">
-    ${DB.docServices.map(d => `
-      <div class="doc-card">
-        <div class="doc-top"><b>${esc(d.name)}</b><em>${money(d.price)}</em></div>
-        <p>${esc(d.desc)}</p>
-        <div class="doc-meta"><span>${ic('clock', 11)} ${esc(d.days)}</span><span>${esc(d.gov)}</span></div>
-        <div class="doc-need">Needs: ${d.need.map(esc).join(' · ')}</div>
-        <button class="btn-main sm wide" onclick="requestDoc('${d.id}')">Get this — ${money(d.price)}</button>
-      </div>`).join('')}
+  <div class="sec-head"><h2>Any document, made for you</h2><small class="dim">market rates · all-inclusive</small></div>
+  <div class="tip-strip">${ic('check', 13)} In India a document proves everything — birth, death, marriage, property, licences. One transparent fee: government charges, filing &amp; an expert handling it. Track every step here.</div>
+  <div class="search-row"><input id="docSearch" placeholder="Search — 'death certificate', 'GST', 'driving licence'…" oninput="window._docQ=this.value;VIEWS.papers([])" value="${esc(window._docQ || '')}"/></div>
+  <div class="chip-row">
+    <button class="chip ${!window._docCat ? 'on' : ''}" onclick="window._docCat='';VIEWS.papers([])">All</button>
+    ${DB.docCats.map(c => `<button class="chip ${window._docCat === c.id ? 'on' : ''}" onclick="window._docCat='${c.id}';VIEWS.papers([])">${ic(c.icon, 13)}${c.name}</button>`).join('')}
   </div>
-  <div class="foot-note">Assisted by verified professionals. Government fees are included and shown transparently. You can cancel before filing for a full refund.</div>`;
+  ${(() => {
+    const q = (window._docQ || '').toLowerCase();
+    let list = DB.docServices;
+    if (window._docCat) list = list.filter(d => d.cat === window._docCat);
+    if (q) list = list.filter(d => (d.name + ' ' + d.desc).toLowerCase().includes(q));
+    if (!list.length) return `<div class="empty"><span>${ic('search', 40)}</span><b>No document matches "${esc(window._docQ || '')}"</b><p>We handle almost every Indian document — try another word, or ask Mitra.</p></div>`;
+    /* group by category for a clean directory */
+    const cats = window._docCat ? [DB.docCats.find(c => c.id === window._docCat)] : DB.docCats;
+    return cats.map(c => {
+      const items = list.filter(d => d.cat === c.id);
+      if (!items.length) return '';
+      return `<div class="sec-head slim"><h2>${ic(c.icon, 14)} ${c.name}</h2></div>
+      <div class="doc-grid">${items.map(d => `
+        <div class="doc-card">
+          <div class="doc-top"><b>${esc(d.name)}</b><em>${d.price ? money(d.price) : 'Free'}</em></div>
+          <p>${esc(d.desc)}</p>
+          <div class="doc-meta"><span>${ic('clock', 11)} ${esc(d.days)}</span><span>${esc(d.gov)}</span></div>
+          <div class="doc-need">Needs: ${d.need.map(esc).join(' · ')}</div>
+          <button class="btn-main sm wide" onclick="requestDoc('${d.id}')">${d.price ? 'Get this — ' + money(d.price) : 'Get help — free'}</button>
+        </div>`).join('')}</div>`;
+    }).join('');
+  })()}
+  <div class="foot-note">Assisted by verified professionals &amp; empanelled agents. Government fees are shown transparently. Cancel before filing for a full refund.</div>`;
 });
 
 function requestDoc(sid) {
   const d = DB.docServices.find(x => x.id === sid); if (!d) return;
   const applicant = (S.myShop && S.myShop.name) || S.user.name || '';
+  const free = !d.price;
   sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${esc(d.name)}</h3>
     <p class="movie-about">${esc(d.desc)}</p>
     <div class="card-block bill">
-      <div class="ck-line"><span>Service (all-inclusive)</span><span>${money(d.price)}</span></div>
+      <div class="ck-line"><span>Service (all-inclusive)</span><span>${free ? '<b class="ok">Free</b>' : money(d.price)}</span></div>
       <div class="ck-line"><span>Government fee</span><span class="ok">${esc(d.gov)}</span></div>
       <div class="ck-line"><span>Expected</span><span>${esc(d.days)}</span></div>
     </div>
     <label class="fld"><span>Applicant / business name</span><input class="txt" id="docApplicant" value="${esc(applicant)}" placeholder="Name on the certificate"/></label>
-    <div class="foot-note sm" style="text-align:left">You'll be asked to upload ${d.need.map(esc).join(', ')} after payment. Cancel before filing = full refund.</div>
-    <button class="btn-main wide" onclick="payDoc('${sid}')">Pay ${money(d.price)} &amp; start</button>`);
+    <div class="foot-note sm" style="text-align:left">You'll be asked to upload ${d.need.map(esc).join(', ')} ${free ? 'so our expert can assist you' : 'after payment'}. ${free ? '' : 'Cancel before filing = full refund.'}</div>
+    <button class="btn-main wide" onclick="payDoc('${sid}')">${free ? 'Request a free callback' : 'Pay ' + money(d.price) + ' &amp; start'}</button>`);
 }
 function payDoc(sid) {
   const d = DB.docServices.find(x => x.id === sid); if (!d) return;
   const applicant = ($('#docApplicant') && $('#docApplicant').value.trim()) || S.user.name || 'Applicant';
   closeSheet();
+  const startDoc = (final) => {
+    const id = 'DOC' + rnd(10000, 99999);
+    if (!S.docRequests) S.docRequests = [];
+    const req = { id, serviceId: sid, name: d.name, price: final, applicant, status: 'requested', ts: Date.now() };
+    S.docRequests.unshift(req); save();
+    if (typeof cloudDocRequest === 'function') cloudDocRequest(req);
+    confettiBurst();
+    notify('Application started', d.name + ' — our team will contact you to collect documents.');
+    toast(final ? 'Started! We\'ll collect your documents next.' : 'Request received — our expert will call you.');
+    go('papers');
+  };
+  if (!d.price) { startDoc(0); return; }   // free services → no payment
   checkoutSheet({
     title: d.name, icon: 'shield', meta: 'Document assistance · ' + d.days,
     lines: [[d.name + ' (all-inclusive)', d.price]], total: d.price,
-    onPay: (final) => {
-      const id = 'DOC' + rnd(10000, 99999);
-      if (!S.docRequests) S.docRequests = [];
-      const req = { id, serviceId: sid, name: d.name, price: final, applicant, status: 'requested', ts: Date.now() };
-      S.docRequests.unshift(req); save();
-      if (typeof cloudDocRequest === 'function') cloudDocRequest(req);
-      confettiBurst();
-      notify('Application started', d.name + ' — our team will contact you to collect documents.');
-      toast('Started! We\'ll collect your documents next.');
-      go('papers');
-    }
+    onPay: (final) => startDoc(final)
   });
 }
 function cancelDocRequest(id) {

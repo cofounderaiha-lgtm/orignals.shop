@@ -22,15 +22,71 @@ const DB = {
   /* document-assistance services — for sellers/individuals with no papers.
      Prices are market-standard all-inclusive service fees (govt fee +
      professional handling); competitive with IndiaFilings/Vakilsearch/local CAs. */
+  docCats: [
+    { id: 'civil',    name: 'Civil & Family', icon: 'users' },
+    { id: 'id',       name: 'Identity & Travel', icon: 'user' },
+    { id: 'business', name: 'Business & Licences', icon: 'store' },
+    { id: 'property', name: 'Property & Legal', icon: 'home' },
+    { id: 'vehicle',  name: 'Vehicle', icon: 'car' },
+    { id: 'tax',      name: 'Tax & Finance', icon: 'cash' }
+  ],
   docServices: [
-    { id: 'udyam',   name: 'Udyam / MSME Registration', price: 499,  days: '1–2 days', gov: 'Free govt fee', desc: 'Official MSME certificate — unlocks bank loans, subsidies & tenders.', need: ['Aadhaar', 'PAN', 'Mobile'] },
-    { id: 'gst',     name: 'GST Registration',           price: 999,  days: '3–7 days', gov: 'Govt fee nil', desc: 'GSTIN so you can sell inter-state, claim input credit & bill B2B.', need: ['PAN', 'Aadhaar', 'Photo', 'Address proof'] },
-    { id: 'gumasta', name: 'Shop & Establishment (Gumasta)', price: 1499, days: '5–10 days', gov: 'State fee incl.', desc: 'The basic legal licence to run a shop — required by most municipalities.', need: ['ID proof', 'Address proof', 'Shop photo'] },
-    { id: 'fssai_b', name: 'FSSAI Basic Registration',   price: 1499, days: '7–10 days', gov: '₹100 govt/yr incl.', desc: 'Mandatory food licence for turnover under ₹12L — the blue FSSAI number.', need: ['ID proof', 'Photo', 'Address proof'] },
-    { id: 'fssai_s', name: 'FSSAI State Licence',        price: 4999, days: '15–30 days', gov: 'Govt fee incl.', desc: 'For restaurants & mid-size food businesses (₹12L–20Cr turnover).', need: ['ID', 'Address', 'Layout', 'Water test'] },
-    { id: 'trade',   name: 'Trade Licence',              price: 2999, days: '10–20 days', gov: 'Municipal fee incl.', desc: 'Local body permission to carry out your trade at the premises.', need: ['ID', 'Address proof', 'NOC'] },
-    { id: 'fmark',   name: 'Trademark / Brand Registration', price: 6999, days: 'Filed in 2 days', gov: '₹4,500 govt incl.', desc: 'Protect your shop name & logo across India (™ then ®).', need: ['Logo', 'ID', 'Business proof'] },
-    { id: 'iec',     name: 'Import-Export Code (IEC)',   price: 1999, days: '2–4 days', gov: 'Govt fee incl.', desc: 'Mandatory code to import or export — one-time, lifetime valid.', need: ['PAN', 'Bank cert', 'Address'] }
+    /* ---- Civil & Family (in India, a document proves everything) ---- */
+    { id: 'birth',    cat: 'civil', name: 'Birth Certificate',        price: 799,  days: '7–15 days', gov: 'Govt fee incl.', desc: 'Register a birth or get a certified copy from the municipality.', need: ['Hospital slip / proof', 'Parents ID', 'Address proof'] },
+    { id: 'death',    cat: 'civil', name: 'Death Certificate',        price: 799,  days: '7–15 days', gov: 'Govt fee incl.', desc: 'Register a death and obtain the certificate — needed for succession, insurance, pension, bank claims.', need: ['Cremation/hospital proof', 'Deceased ID', 'Applicant ID'] },
+    { id: 'marriage', cat: 'civil', name: 'Marriage Registration',    price: 2499, days: '15–30 days', gov: 'Govt fee incl.', desc: 'Legal marriage certificate (Hindu Marriage Act / Special Marriage Act).', need: ['Both IDs', 'Photos', 'Witnesses', 'Address proof'] },
+    { id: 'income',   cat: 'civil', name: 'Income Certificate',       price: 799,  days: '10–15 days', gov: 'Govt fee incl.', desc: 'For scholarships, reservations, EWS and subsidies.', need: ['ID', 'Salary/self-declaration', 'Ration card'] },
+    { id: 'caste',    cat: 'civil', name: 'Caste Certificate (SC/ST/OBC)', price: 999, days: '15–30 days', gov: 'Govt fee incl.', desc: 'For reservations in education, jobs and welfare schemes.', need: ['ID', 'Address proof', 'Parent caste proof'] },
+    { id: 'domicile', cat: 'civil', name: 'Domicile / Residence Certificate', price: 999, days: '10–20 days', gov: 'Govt fee incl.', desc: 'Proof of permanent residence for admissions, jobs and quotas.', need: ['ID', 'Address proof', 'Ration card'] },
+    { id: 'heir',     cat: 'civil', name: 'Legal Heir / Succession Certificate', price: 3999, days: '30–60 days', gov: 'Court/tehsil fee incl.', desc: 'Establishes rightful heirs — needed to claim property, bank balances and pension after a death.', need: ['Death certificate', 'Family IDs', 'Relationship proof'] },
+    { id: 'affidavit',cat: 'civil', name: 'Affidavit (any purpose)',  price: 499,  days: '1–2 days', gov: 'Stamp incl.', desc: 'Notarised affidavit — name/address change, gap, self-declaration, etc.', need: ['ID', 'Details for the affidavit'] },
+    { id: 'namechg',  cat: 'civil', name: 'Name Change (Gazette)',     price: 2999, days: '20–40 days', gov: 'Gazette fee incl.', desc: 'Officially change your name via newspaper + Gazette notification.', need: ['ID', 'Affidavit', 'Reason'] },
+
+    /* ---- Identity & Travel ---- */
+    { id: 'pan',      cat: 'id', name: 'PAN Card (new / correction)',  price: 499,  days: '3–7 days', gov: 'Govt fee incl.', desc: 'Apply for a fresh PAN or fix name/DOB errors.', need: ['Aadhaar', 'Photo', 'DOB proof'] },
+    { id: 'aadhaar',  cat: 'id', name: 'Aadhaar Update Assistance',    price: 299,  days: '3–10 days', gov: 'UIDAI fee incl.', desc: 'Update address, mobile, name or DOB on Aadhaar.', need: ['Aadhaar', 'Proof for the change'] },
+    { id: 'passport', cat: 'id', name: 'Passport (new)',               price: 1999, days: 'Appt + police check', gov: 'Govt fee extra', desc: 'End-to-end passport application, form-filling and appointment.', need: ['Aadhaar', 'PAN', 'Address proof', 'Photos'] },
+    { id: 'passren',  cat: 'id', name: 'Passport Renewal',             price: 1499, days: 'Appt-based', gov: 'Govt fee extra', desc: 'Renew or re-issue an expiring passport.', need: ['Old passport', 'Address proof'] },
+    { id: 'voter',    cat: 'id', name: 'Voter ID (new / correction)',  price: 499,  days: '15–30 days', gov: 'Free govt', desc: 'Enrol as a voter or correct your EPIC details.', need: ['Aadhaar', 'Photo', 'Address proof'] },
+    { id: 'ration',   cat: 'id', name: 'Ration Card',                  price: 799,  days: '15–30 days', gov: 'Govt fee incl.', desc: 'New ration card, member add/remove, or correction.', need: ['Family IDs', 'Address proof', 'Income proof'] },
+
+    /* ---- Business & Licences ---- */
+    { id: 'udyam',   cat: 'business', name: 'Udyam / MSME Registration', price: 499,  days: '1–2 days', gov: 'Free govt fee', desc: 'Official MSME certificate — unlocks bank loans, subsidies & tenders.', need: ['Aadhaar', 'PAN', 'Mobile'] },
+    { id: 'gst',     cat: 'business', name: 'GST Registration',           price: 999,  days: '3–7 days', gov: 'Govt fee nil', desc: 'GSTIN so you can sell inter-state, claim input credit & bill B2B.', need: ['PAN', 'Aadhaar', 'Photo', 'Address proof'] },
+    { id: 'gstfile', cat: 'business', name: 'GST Return Filing (monthly)', price: 499, days: 'Per month', gov: '—', desc: 'We file your GSTR-1 & 3B on time, every month.', need: ['GSTIN', 'Sales/purchase data'] },
+    { id: 'gumasta', cat: 'business', name: 'Shop & Establishment (Gumasta)', price: 1499, days: '5–10 days', gov: 'State fee incl.', desc: 'The basic legal licence to run a shop — required by most municipalities.', need: ['ID proof', 'Address proof', 'Shop photo'] },
+    { id: 'fssai_b', cat: 'business', name: 'FSSAI Basic Registration',   price: 1499, days: '7–10 days', gov: '₹100 govt/yr incl.', desc: 'Mandatory food licence for turnover under ₹12L — the blue FSSAI number.', need: ['ID proof', 'Photo', 'Address proof'] },
+    { id: 'fssai_s', cat: 'business', name: 'FSSAI State Licence',        price: 4999, days: '15–30 days', gov: 'Govt fee incl.', desc: 'For restaurants & mid-size food businesses (₹12L–20Cr turnover).', need: ['ID', 'Address', 'Layout', 'Water test'] },
+    { id: 'trade',   cat: 'business', name: 'Trade Licence',              price: 2999, days: '10–20 days', gov: 'Municipal fee incl.', desc: 'Local body permission to carry out your trade at the premises.', need: ['ID', 'Address proof', 'NOC'] },
+    { id: 'fmark',   cat: 'business', name: 'Trademark / Brand Registration', price: 6999, days: 'Filed in 2 days', gov: '₹4,500 govt incl.', desc: 'Protect your shop name & logo across India (™ then ®).', need: ['Logo', 'ID', 'Business proof'] },
+    { id: 'iec',     cat: 'business', name: 'Import-Export Code (IEC)',   price: 1999, days: '2–4 days', gov: 'Govt fee incl.', desc: 'Mandatory code to import or export — one-time, lifetime valid.', need: ['PAN', 'Bank cert', 'Address'] },
+    { id: 'pvtltd',  cat: 'business', name: 'Company (Pvt Ltd) Registration', price: 6999, days: '7–12 days', gov: 'Govt fee incl.', desc: 'Incorporate a Private Limited company — MCA, DIN, PAN, TAN.', need: ['Directors ID', 'Address proof', 'DSC'] },
+    { id: 'llp',     cat: 'business', name: 'LLP Registration',           price: 5999, days: '7–12 days', gov: 'Govt fee incl.', desc: 'Limited Liability Partnership — for professional firms.', need: ['Partners ID', 'Address proof'] },
+    { id: 'dsc',     cat: 'business', name: 'Digital Signature (DSC)',    price: 999,  days: '1–2 days', gov: 'Token incl.', desc: 'Class-3 DSC for tenders, MCA, GST and e-filing.', need: ['PAN', 'Aadhaar', 'Photo'] },
+    { id: 'drug',    cat: 'business', name: 'Drug Licence (Pharmacy)',    price: 7999, days: '30–45 days', gov: 'Govt fee incl.', desc: 'Retail/wholesale drug licence for a chemist shop.', need: ['Pharmacist cert', 'Premises proof', 'Cold storage'] },
+
+    /* ---- Property & Legal ---- */
+    { id: 'propreg', cat: 'property', name: 'Property Registration',      price: 4999, days: 'Appt-based', gov: 'Stamp duty extra', desc: 'Sale-deed registration assistance at the sub-registrar office.', need: ['Sale deed', 'Both party IDs', 'Property papers'] },
+    { id: 'saledeed',cat: 'property', name: 'Sale Deed Drafting',         price: 3999, days: '2–4 days', gov: '—', desc: 'Legally-vetted sale/gift/partition deed drafted by experts.', need: ['Property details', 'Party details'] },
+    { id: 'mutation',cat: 'property', name: 'Mutation (Dakhil Kharij)',   price: 2499, days: '20–45 days', gov: 'Govt fee incl.', desc: 'Update land/property records in your name after purchase or inheritance.', need: ['Sale deed / heir cert', 'Old records', 'ID'] },
+    { id: 'ec',      cat: 'property', name: 'Encumbrance Certificate',    price: 999,  days: '3–7 days', gov: 'Govt fee incl.', desc: 'Proof a property is free of legal/financial dues — banks require it.', need: ['Property details', 'Survey no.'] },
+    { id: 'rent',    cat: 'property', name: 'Rent / Lease Agreement',     price: 799,  days: '1–2 days', gov: 'Stamp incl.', desc: 'Registered rent agreement, police-verification ready.', need: ['Owner & tenant IDs', 'Property address'] },
+    { id: 'poa',     cat: 'property', name: 'Power of Attorney',          price: 1499, days: '2–3 days', gov: 'Stamp incl.', desc: 'General or special POA, drafted and notarised.', need: ['Principal ID', 'Agent ID', 'Purpose'] },
+    { id: 'will',    cat: 'property', name: 'Will Drafting',              price: 2499, days: '2–4 days', gov: '—', desc: 'A clear, legally-sound will to protect your family.', need: ['Asset list', 'Beneficiary details'] },
+    { id: 'landrec', cat: 'property', name: 'Land Records (Khata/RTC)',   price: 999,  days: '5–10 days', gov: 'Govt fee incl.', desc: 'Certified land record extracts (7/12, Khata, RTC, Jamabandi).', need: ['Survey no.', 'Owner details'] },
+
+    /* ---- Vehicle ---- */
+    { id: 'dl',      cat: 'vehicle', name: 'Driving Licence (new)',      price: 1499, days: 'Test-based', gov: 'RTO fee incl.', desc: 'Learner → permanent DL, forms, slots and RTO assistance.', need: ['Aadhaar', 'Address proof', 'Photos'] },
+    { id: 'dlren',   cat: 'vehicle', name: 'DL Renewal',                 price: 999,  days: '3–7 days', gov: 'RTO fee incl.', desc: 'Renew an expiring or expired driving licence.', need: ['Old DL', 'Address proof'] },
+    { id: 'rctrans', cat: 'vehicle', name: 'Vehicle RC Transfer',        price: 1999, days: '15–30 days', gov: 'RTO fee incl.', desc: 'Transfer ownership of a car/bike after buying it used.', need: ['RC', 'Insurance', 'Both IDs', 'Sale letter'] },
+    { id: 'puc',     cat: 'vehicle', name: 'PUC / Pollution Certificate', price: 299, days: 'Same day', gov: 'Incl.', desc: 'Pollution-under-control certificate for your vehicle.', need: ['RC'] },
+    { id: 'vinsure', cat: 'vehicle', name: 'Vehicle Insurance',         price: 0,    days: 'Instant quote', gov: 'Premium as per plan', desc: 'Compare and buy car/bike insurance at the best premium.', need: ['RC', 'Previous policy'] },
+
+    /* ---- Tax & Finance ---- */
+    { id: 'itr',     cat: 'tax', name: 'Income Tax Return (ITR) Filing',  price: 999,  days: '1–2 days', gov: '—', desc: 'Accurate ITR filing with maximum eligible refund.', need: ['PAN', 'Form-16 / income details', 'Bank'] },
+    { id: 'tds',     cat: 'tax', name: 'TDS Return Filing',              price: 1499, days: 'Per quarter', gov: '—', desc: 'Quarterly TDS returns for businesses and deductors.', need: ['TAN', 'Deduction data'] },
+    { id: 'account', cat: 'tax', name: 'Accounting & Bookkeeping',       price: 2999, days: 'Per month', gov: '—', desc: 'Monthly books, P&L and balance sheet by qualified accountants.', need: ['Bank statements', 'Bills'] },
+    { id: 'loan',    cat: 'tax', name: 'Loan Assistance',               price: 0,    days: 'Free — we earn from lender', gov: '—', desc: 'Business, home, personal & gold loans — best rate, paperwork done.', need: ['ID', 'Income proof', 'Bank statements'] }
   ],
   docStatus: { requested: 'Requested', docs_collected: 'Documents collected', filed: 'Filed with authority', issued: 'Issued ✓', cancelled: 'Cancelled' },
 

@@ -59,15 +59,13 @@ async function cloudBoot() {
           const keep = S.deviceKey;
           S = Object.assign(defaultState(), remote.state);
           S.deviceKey = keep; save(); applyTheme(); route();
-          toast('Cloud data restored');
+          toast('Welcome back — your account is ready');
           return;
         }
       }
     }
     if (typeof brainAdoptGlobal === 'function') brainAdoptGlobal();
-    cloudQueue();               // first push
-    toast('Cloud connected — your data now syncs across devices');
-    notify('Cloud sync active', 'Backed by your Supabase project. Orders & shop now mirror to the database.', 'check');
+    cloudQueue();               // first push — silent (no infra details ever shown to users)
   } catch (e) {
     CLOUD.status = 'error'; CLOUD.lastError = e.message;
     console.warn('[cloud] boot failed:', e.message);
