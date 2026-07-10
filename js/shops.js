@@ -286,7 +286,8 @@ function cartCheckout() {
         km: +shop.km || undefined,
         cloudShop: !!shop.community,
         title: shop.name + ' · ' + items.length + ' item' + (items.length > 1 ? 's' : ''),
-        shopId: shop.id, items, total: final, addr: S.user.addr
+        shopId: shop.id, items, total: final, addr: S.user.addr,
+        bill: { sub, gst, platformFee, deliveryFee, total: final }, shopName: shop.name, shopGst: shop.gst || null
       });
       /* community shop: the order lands LIVE on the shopkeeper's device */
       if (o.cloudShop && typeof cloudPostShopOrder === 'function') cloudPostShopOrder(o, shop);
@@ -319,6 +320,46 @@ function useGPS() {
     window._addrDone && window._addrDone();
   }, () => toast('Location permission denied — pick a saved address'), { enableHighAccuracy: true, timeout: 8000 });
 }
+
+/* ---------- INVOICE / BILL (GST-style, printable) ---------- */
+view('invoice', args => {
+  const o = S.orders.find(x => x.id === args[0]);
+  if (!o) { go('orders'); return; }
+  const b = o.bill || { sub: o.total, gst: 0, platformFee: 0, deliveryFee: 0, total: o.total };
+  const gstHalf = b.gst ? Math.round(b.gst / 2) : 0;
+  const d = new Date(o.placedAt);
+  $('#view').innerHTML = `
+  <div class="page-head noprint"><button class="back" onclick="go('track/${o.id}')">${ic('chevl', 16)}</button>
+    <div><h1>Bill / Invoice</h1><small>${o.id}</small></div>
+    <button class="lnk" onclick="window.print()">${ic('upload', 13)} Print / Save PDF</button></div>
+  <div class="invoice" id="invoiceDoc">
+    <div class="inv-head">
+      <div><div class="inv-logo"><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1A5632"/><path d="M12 5.2l1.6 5.2 5.2 1.6-5.2 1.6L12 18.8l-1.6-5.2L5.2 12l5.2-1.6z" fill="#E8A020"/></svg> Orig<b>nals</b></div>
+        <small>Tax Invoice / Bill of Supply</small></div>
+      <div class="inv-meta"><b>${o.id}</b><small>${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</small></div>
+    </div>
+    <div class="inv-parties">
+      <div><small>Sold by</small><b>${esc(o.shopName || (findShop(o.shopId) || {}).name || 'Shop')}</b>${o.shopGst ? `<small>GSTIN: ${esc(o.shopGst)}</small>` : '<small>Unregistered supplier</small>'}</div>
+      <div><small>Billed to</small><b>${esc(S.user.name || 'Customer')}</b><small>${esc((o.addr && o.addr.name) || S.user.addr.name)}</small></div>
+    </div>
+    <table class="inv-table"><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+      <tbody>${(o.items || []).map(i => `<tr><td>${esc(i.name)}</td><td>${i.q}</td><td>${moneyINR(i.price)}</td><td>${moneyINR(i.price * i.q)}</td></tr>`).join('')}</tbody></table>
+    <div class="inv-totals">
+      <div class="ck-line"><span>Items total</span><span>${moneyINR(b.sub)}</span></div>
+      ${b.gst ? `<div class="ck-line"><span>CGST (2.5%)</span><span>${moneyINR(gstHalf)}</span></div>
+      <div class="ck-line"><span>SGST (2.5%)</span><span>${moneyINR(b.gst - gstHalf)}</span></div>` : ''}
+      <div class="ck-line"><span>Platform fee</span><span>${moneyINR(b.platformFee)}</span></div>
+      <div class="ck-line"><span>Delivery fee</span><span>${b.deliveryFee ? moneyINR(b.deliveryFee) : 'FREE'}</span></div>
+      <div class="ck-line grand"><span>Total paid</span><span>${moneyINR(b.total)}</span></div>
+    </div>
+    <div class="inv-foot">
+      <div>Payment: ${o.cancelled ? 'Refunded' : 'Paid'} · Order ${o.id}</div>
+      ${CUR.code !== 'INR' ? `<div>Displayed elsewhere as ${money(b.total)} — charged in INR.</div>` : ''}
+      <div>100% of the item price is paid to the shop. This is a computer-generated invoice.</div>
+      <div>Orignals — every shop, every street, everyone earns.</div>
+    </div>
+  </div>`;
+});
 
 /* ---------- real scannable QR (lazy-loaded generator) ---------- */
 let _qrLoad;
@@ -423,6 +464,7 @@ function renderTrack(oid) {
   </div>` : ''}
   ${done && o.rated ? `<div class="card-block"><h3>Thanks for rating ${'★'.repeat(o.rated)}</h3></div>` : ''}
   ${done && o.kind === 'shop' && !o.cancelled ? `<button class="btn-main wide ghost" onclick="reorder('${o.id}')">Reorder the same</button>` : ''}
+  ${o.kind === 'shop' ? `<button class="btn-main wide ghost" onclick="go('invoice/${o.id}')">${ic('receipt', 14)} View bill / invoice</button>` : ''}
   <button class="btn-main wide ghost" onclick="toast('Tell Mitra your issue — opening chat');setTimeout(()=>go('mitra'),600)">Need help with this order?</button>`;
   trackLiveMap('trkMap', o);
   /* render the real, scannable handover QR (encodes the OTP) */

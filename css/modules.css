@@ -1028,3 +1028,29 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-of
 .ho-qr img{width:100%;height:100%}
 .pc-call{width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
 .pc-call svg{color:#fff}
+
+/* ---------- invoice / bill ---------- */
+.invoice{background:#fff;color:#1a1a1a;border:1px solid var(--line);border-radius:var(--r);padding:22px;margin:6px 0;max-width:640px}
+.inv-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1A5632;padding-bottom:12px;margin-bottom:14px}
+.inv-logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.2rem;color:#1A5632;display:flex;align-items:center;gap:5px}
+.inv-logo b{color:#1A5632}
+.inv-head small{color:#666;font-size:.72rem}
+.inv-meta{text-align:right}.inv-meta b{font-size:.9rem;color:#1a1a1a}.inv-meta small{display:block;color:#666;font-size:.72rem}
+.inv-parties{display:flex;justify-content:space-between;gap:16px;margin-bottom:14px}
+.inv-parties>div{flex:1}.inv-parties small{display:block;color:#888;font-size:.68rem;text-transform:uppercase;letter-spacing:.4px}
+.inv-parties b{display:block;color:#1a1a1a;font-size:.9rem;margin:2px 0}
+.inv-table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:.82rem}
+.inv-table th{text-align:left;border-bottom:1px solid #ddd;padding:6px 4px;color:#666;font-size:.7rem;text-transform:uppercase}
+.inv-table th:last-child,.inv-table td:last-child{text-align:right}
+.inv-table th:nth-child(2),.inv-table td:nth-child(2),.inv-table th:nth-child(3),.inv-table td:nth-child(3){text-align:center}
+.inv-table td{padding:7px 4px;border-bottom:1px solid #f0f0f0;color:#1a1a1a}
+.inv-totals{border-top:1px solid #ddd;padding-top:8px}
+.invoice .ck-line{color:#333}
+.invoice .ck-line.grand{border-top:1px solid #1A5632;margin-top:6px;padding-top:8px;font-weight:800;color:#1A5632}
+.inv-foot{margin-top:16px;padding-top:12px;border-top:1px dashed #ccc;color:#888;font-size:.7rem;line-height:1.7}
+@media print{
+  body *{visibility:hidden}
+  #invoiceDoc,#invoiceDoc *{visibility:visible}
+  #invoiceDoc{position:absolute;left:0;top:0;width:100%;border:none;margin:0}
+  .noprint,.app-header,.bnav,.cart-bubble,.install-bar{display:none!important}
+}

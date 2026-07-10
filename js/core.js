@@ -8,7 +8,46 @@
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money = n => '₹' + Number(Math.round(n)).toLocaleString('en-IN');
+/* ---------- multi-currency (prices are stored in INR; display in the
+   user's currency; the platform still settles in INR) ---------- */
+const CURRENCIES = {
+  INR: { sym: '₹', rate: 1, loc: 'en-IN', name: 'Indian Rupee' },
+  USD: { sym: '$', rate: 83, loc: 'en-US', name: 'US Dollar' },
+  EUR: { sym: '€', rate: 90, loc: 'de-DE', name: 'Euro' },
+  GBP: { sym: '£', rate: 105, loc: 'en-GB', name: 'British Pound' },
+  AED: { sym: 'AED ', rate: 22.6, loc: 'en-AE', name: 'UAE Dirham' },
+  SGD: { sym: 'S$', rate: 61, loc: 'en-SG', name: 'Singapore Dollar' },
+  AUD: { sym: 'A$', rate: 54, loc: 'en-AU', name: 'Australian Dollar' },
+  CAD: { sym: 'C$', rate: 60, loc: 'en-CA', name: 'Canadian Dollar' },
+  NPR: { sym: 'रू ', rate: 0.625, loc: 'ne-NP', name: 'Nepali Rupee' },
+  BDT: { sym: '৳ ', rate: 0.755, loc: 'bn-BD', name: 'Bangladeshi Taka' },
+  SAR: { sym: 'SAR ', rate: 22.1, loc: 'ar-SA', name: 'Saudi Riyal' }
+};
+let CUR = { code: 'INR', sym: '₹', rate: 1, loc: 'en-IN' };
+function setCurrency(code) {
+  const c = CURRENCIES[code]; if (!c) return;
+  CUR = Object.assign({ code }, c);
+  if (typeof S !== 'undefined' && S) { S.currency = code; save(); }
+}
+function detectCurrency() {
+  let code = (typeof S !== 'undefined' && S && S.currency) || null;
+  if (!code) {
+    const reg = ((navigator.language || 'en-IN').split('-')[1] || 'IN').toUpperCase();
+    code = { US: 'USD', GB: 'GBP', AE: 'AED', SG: 'SGD', AU: 'AUD', CA: 'CAD', NP: 'NPR', BD: 'BDT', SA: 'SAR',
+      DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', IE: 'EUR' }[reg] || 'INR';
+  }
+  setCurrency(code);
+}
+function isIndia() { return (CUR.code || 'INR') === 'INR'; }
+const money = n => {
+  const v = Number(n || 0) / CUR.rate;
+  if (CUR.code === 'INR') return '₹' + Math.round(v).toLocaleString('en-IN');
+  const dp = v >= 100 ? 0 : 2;
+  try { return CUR.sym + (Math.round(v * (dp ? 100 : 1)) / (dp ? 100 : 1)).toLocaleString(CUR.loc, { minimumFractionDigits: dp, maximumFractionDigits: dp }); }
+  catch (e) { return CUR.sym + (Math.round(v * 100) / 100); }
+};
+/* always-INR formatter for the actual charge / invoices */
+const moneyINR = n => '₹' + Number(Math.round(n)).toLocaleString('en-IN');
 const uid  = () => Math.random().toString(36).slice(2, 9);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const rnd  = (a, b) => Math.round(a + Math.random() * (b - a));
@@ -432,6 +471,7 @@ function showInstallBanner() {
 /* ---------- boot ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
+  if (typeof detectCurrency === 'function') detectCurrency();
   buildChrome();
   window.addEventListener('hashchange', route);
   route();

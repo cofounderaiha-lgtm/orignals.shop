@@ -585,7 +585,8 @@ async function payViaRazorpay(amountRs, meta, onSuccess, onUnconfigured) {
 }
 
 function _rzpBase(amountPaise, meta) {
-  return {
+  const india = (typeof isIndia === 'function') ? isIndia() : true;
+  const base = {
     amount: amountPaise, currency: 'INR',
     name: 'Orignals', description: String(meta.desc || 'Orignals').slice(0, 80),
     prefill: { name: S.user.name && S.user.name !== 'Friend' ? S.user.name : '' },
@@ -597,6 +598,10 @@ function _rzpBase(amountPaise, meta) {
     theme: { color: '#1A5632' },
     modal: { ondismiss: () => { _payBusy = false; toast('Payment cancelled'); } }
   };
+  /* UPI, netbanking & Indian wallets only work with an Indian bank —
+     for international users show cards (+ international wallets) instead */
+  if (!india) base.method = { upi: false, netbanking: false, wallet: false, card: true, emi: false, paylater: false };
+  return base;
 }
 
 function _rzpOpenOrder(d, amountRs, meta, onSuccess) {

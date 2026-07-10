@@ -123,6 +123,8 @@ view('account', () => {
     <span>${ic(S.theme === 'light' ? 'moon' : 'sun', 20)}</span><div><b>${S.theme === 'light' ? 'Dark' : 'Light'} mode</b><small>Easy on the eyes</small></div><em>Switch</em></button>
   <button class="role-row" onclick="pickAddress(()=>VIEWS.account([]))">
     <span>${ic('pin', 20)}</span><div><b>Location</b><small>${esc(S.user.addr.name)} — use GPS for instant delivery</small></div><em>Change</em></button>
+  <button class="role-row" onclick="currencySheet()">
+    <span>${ic('cash', 20)}</span><div><b>Currency</b><small>Show prices in ${CURRENCIES[CUR.code] ? CURRENCIES[CUR.code].name : 'your currency'} (${CUR.code})</small></div><em>${CUR.code}</em></button>
   <button class="role-row" onclick="go('mitra')">
     <span>${ic('spark', 20)}</span><div><b>Talk to Mitra</b><small>The platform's own intelligence — voice or text</small></div><em>Chat</em></button>
   <button class="role-row" onclick="go('papers')">
@@ -139,6 +141,12 @@ view('account', () => {
   <span class="dim"><a onclick="go('legal/privacy')">Privacy</a> · <a onclick="go('legal/terms')">Terms</a> · <a onclick="go('legal/refund')">Refunds</a> · <a onclick="go('legal/grievance')">Grievance</a></span></div>`;
 });
 
+function currencySheet() {
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Choose your currency</h3>
+    <div class="foot-note sm" style="text-align:left;margin:0 0 8px">Prices show in your currency. Shops are in India, so the platform settles in ₹ (INR) — foreign amounts are indicative.</div>
+    ${Object.entries(CURRENCIES).map(([code, c]) => `<button class="place-row" onclick="setCurrency('${code}');closeSheet();toast('Prices now in ${code}');VIEWS.account([])">
+      <span style="font-weight:800">${c.sym.trim() || code}</span><div><b>${esc(c.name)}</b><small>${code} · e.g. ${(() => { const p = CUR; CUR = Object.assign({ code }, c); const s = money(500); CUR = p; return s; })()} for ₹500</small></div>${CUR.code === code ? '<em class="ok">✓</em>' : '<em>Select</em>'}</button>`).join('')}`);
+}
 function buyMembership() {
   if (!walletPay(99, 'Orignals membership · 1 year')) { toast('Wallet low — add money first'); return; }
   S.memberTill = Date.now() + 365 * 86400000; save();
