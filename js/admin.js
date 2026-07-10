@@ -128,12 +128,12 @@ function renderAdminPanel(args) {
         `<div class="ck-line"><span><b>${i + 1}.</b> ${s}</span><span></span></div>`).join('')}</div>`;
 
   if (tab === 'analytics') body = `
-    <div class="tip-strip">${ic('shield', 13)} First-party & private — your own data, no Google Analytics. Precise to city level from the network edge; anonymous device keys, no personal info.</div>
+    <div class="tip-strip">${ic('shield', 13)} First-party & private — your own data, no Google Analytics. Exact locality &amp; coordinates when a visitor shares location, city-level from the network edge otherwise. Anonymous device keys, no personal info.</div>
     <div class="ana-live-bar"><span class="ana-dot"></span> <b id="anaLiveNow">…</b> online right now</div>
     <div class="chip-row" id="anaRange" style="margin:2px 0 10px">
       ${[[1, 'Today'], [7, '7 days'], [30, '30 days'], [90, '90 days']].map(r => `<button class="chip ${(_ANA_DAYS || 30) === r[0] ? 'on' : ''}" onclick="adminAnaSetRange(${r[0]})">${r[1]}</button>`).join('')}
     </div>
-    <div class="ana-map-wrap"><div id="anaMap" class="ana-map"></div><div class="ana-map-cap">${ic('pin', 11)} Live visitors — city-precise, last 5 min</div></div>
+    <div class="ana-map-wrap"><div id="anaMap" class="ana-map"></div><div class="ana-map-cap">${ic('pin', 11)} Live visitors — exact where shared, last 5 min</div></div>
     <div id="anaCards" class="earn-tiles wide3"><div class="etile"><b>…</b><small>loading</small></div></div>
     <div id="anaBody"><div class="empty sm"><span>${ic('search', 26)}</span><b>Crunching your traffic…</b></div></div>`;
 
@@ -538,15 +538,21 @@ async function adminAnalyticsLoad() {
       <div class="etile"><b>${(c.orders_window || 0).toLocaleString('en-IN')}</b><small>Orders (${_ANA_DAYS}d)</small></div>
       <div class="etile"><b>${money(c.gmv_window || 0)}</b><small>GMV (${_ANA_DAYS}d)</small></div>
     </div>`;
+  const vpv = c.visits_30d ? (Math.round((c.views_window / Math.max(c.visits_30d, 1)) * 10) / 10) : 0;
   const body = document.getElementById('anaBody');
   if (body) body.innerHTML =
     anaTrendCard(r.series || []) +
-    anaBarCard('Top pages', (r.pages || []).map(p => [p.name || '—', p.visitors, p.views + ' views'])) +
+    anaNewRetCard(r.newret) +
     anaGeoCard(r.geo || []) +
+    anaHoursCard(r.hours || []) +
+    anaBarCard('Top pages', (r.pages || []).map(p => [p.name || '—', p.visitors, p.views + ' views'])) +
     anaBarCard('Where they come from', (r.refs || []).map(x => [x.ref, x.visitors])) +
     anaBarCard('Device', (r.devices || []).map(x => [x.uad, x.visitors])) +
+    anaBarCard('Browser', (r.browsers || []).map(x => [x.browser, x.visitors])) +
+    anaBarCard('Language', (r.langs || []).map(x => [x.lang, x.visitors])) +
+    anaBarCard('Visitor type', (r.roles || []).map(x => [x.role, x.visitors])) +
     anaEventCard(r.events || []) +
-    `<div class="foot-note sm">Conversion (30d): <b>${conv}%</b> of visitors ordered. Data is first-party & anonymous.</div>`;
+    `<div class="foot-note sm">Conversion (${_ANA_DAYS}d): <b>${conv}%</b> of visitors ordered · <b>${vpv}</b> pages per visit. First-party &amp; anonymous — no Google Analytics.</div>`;
 }
 
 function anaMax(rows, i) { return Math.max(1, ...rows.map(r => +r[i] || 0)); }
@@ -568,12 +574,30 @@ function anaTrendCard(series) {
     <div class="ana-trend-x"><small>${esc(series[0].d)}</small><small>${esc(series[series.length - 1].d)}</small></div></div>`;
 }
 function anaGeoCard(geo) {
-  if (!geo.length) return anaEmptyCard(ic('pin', 14) + ' Where in the world');
-  const mx = anaMax(geo, 2);
-  return `<div class="card-block"><h3>${ic('pin', 14)} Where in the world</h3>${geo.map(g => `
-    <div class="ana-bar"><span class="ana-bl">${esc(anaFlag(g.country))} ${esc(g.city || '—')}<small class="dim"> · ${esc(g.country)}</small></span>
+  if (!geo.length) return anaEmptyCard(ic('pin', 14) + ' Where visitors are');
+  const mx = Math.max(1, ...geo.map(g => +g.visitors || 0));
+  return `<div class="card-block"><h3>${ic('pin', 14)} Where visitors are — precise</h3>${geo.map(g => {
+    const meta = [g.region, g.country].filter(Boolean).map(esc).join(', ') + (g.lat != null ? ' · ' + (+g.lat).toFixed(3) + ', ' + (+g.lng).toFixed(3) : '');
+    return `<div class="ana-bar"><span class="ana-bl">${esc(anaFlag(g.country))} ${esc(g.place || '—')}<small class="dim"> · ${meta}</small></span>
       <span class="ana-bt"><i style="width:${Math.round((+g.visitors || 0) / mx * 100)}%"></i></span>
-      <b>${(+g.visitors || 0).toLocaleString('en-IN')}</b></div>`).join('')}</div>`;
+      <b>${(+g.visitors || 0).toLocaleString('en-IN')}<small class="dim"> · ${(+g.views || 0)} views</small></b></div>`;
+  }).join('')}</div>`;
+}
+function anaHoursCard(hours) {
+  if (!hours || !hours.length) return '';
+  const map = {}; hours.forEach(h => map[h.hr] = +h.views || 0);
+  const mx = Math.max(1, ...Object.values(map));
+  let bars = '';
+  for (let i = 0; i < 24; i++) { const v = map[i] || 0; bars += `<div class="ana-col" title="${i}:00 · ${v} views"><i style="height:${Math.round(v / mx * 100)}%"></i></div>`; }
+  return `<div class="card-block"><h3>${ic('clock', 14)} Busiest hours (IST)</h3><div class="ana-trend">${bars}</div>
+    <div class="ana-trend-x"><small>00:00</small><small>12:00</small><small>23:00</small></div></div>`;
+}
+function anaNewRetCard(nr) {
+  if (!nr) return '';
+  const n = +nr.new || 0, rt = +nr.returning || 0, tot = Math.max(1, n + rt);
+  return `<div class="card-block"><h3>${ic('users', 14)} New vs returning</h3>
+    <div class="ana-bar"><span class="ana-bl">New visitors</span><span class="ana-bt"><i style="width:${Math.round(n / tot * 100)}%"></i></span><b>${n} <small class="dim">${Math.round(n / tot * 100)}%</small></b></div>
+    <div class="ana-bar"><span class="ana-bl">Returning</span><span class="ana-bt"><i style="width:${Math.round(rt / tot * 100)}%"></i></span><b>${rt} <small class="dim">${Math.round(rt / tot * 100)}%</small></b></div></div>`;
 }
 function anaEventCard(ev) {
   if (!ev.length) return anaEmptyCard('Key events');
@@ -605,7 +629,7 @@ async function adminAnalyticsLive() {
         const fresh = (p.ago || 999) < 75;
         const m = L.circleMarker([p.lat, p.lng], { radius: fresh ? 7 : 5, color: '#fff', weight: 1.5,
           fillColor: fresh ? '#1fb268' : '#E8A020', fillOpacity: fresh ? .95 : .6 });
-        m.bindPopup(`<b>${esc(p.city || '—')}${p.country ? ', ' + esc(p.country) : ''}</b><br/>on <b>${esc(p.page || 'home')}</b> · ${esc(p.role || 'guest')} · ${esc(p.uad || '')}<br/>${p.ago}s ago`);
+        m.bindPopup(`<b>${esc(p.place || p.city || '—')}${p.country ? ', ' + esc(p.country) : ''}</b><br/>on <b>${esc(p.page || 'home')}</b> · ${esc(p.role || 'guest')} · ${esc(p.uad || '')}${p.browser ? ' · ' + esc(p.browser) : ''}<br/>${p.ago}s ago`);
         m.addTo(_anaLayer); latlngs.push([p.lat, p.lng]);
       });
       if (latlngs.length === 1) _anaMap.setView(latlngs[0], 15);   // street-level for a precise dot

@@ -56,6 +56,37 @@ function anaLocate() {
     }
   } catch (e) {}
 }
+function anaBrowser() {
+  const ua = navigator.userAgent || '';
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/OPR\/|Opera/.test(ua)) return 'Opera';
+  if (/SamsungBrowser/.test(ua)) return 'Samsung';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/CriOS|Chrome\//.test(ua)) return 'Chrome';
+  if (/Safari\//.test(ua)) return 'Safari';
+  return 'Other';
+}
+/* reverse-geocode the exact coords to a human locality (e.g. "IIT Guwahati,
+   Kamrup") ONCE per session, cached. Only runs when we already have precise
+   coords (GPS granted or a saved address) — never triggers a location prompt. */
+function anaLocality() {
+  if (ANA.place) return ANA.place;
+  try { const s = sessionStorage.getItem('ana_place'); if (s) { ANA.place = s; return s; } } catch (e) {}
+  const c = anaCoords();
+  if (c.lat == null || ANA._revTried) return '';
+  ANA._revTried = true;
+  try {
+    fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&lat=' + c.lat + '&lon=' + c.lng, { headers: { Accept: 'application/json' } })
+      .then(r => r.json()).then(d => {
+        const a = d.address || {};
+        const local = a.neighbourhood || a.suburb || a.village || a.hamlet || a.town || a.city_district || a.road || '';
+        const city = a.city || a.town || a.county || a.state_district || '';
+        const place = [local, city].filter(Boolean).join(', ') || d.name || '';
+        if (place) { ANA.place = place.slice(0, 120); try { sessionStorage.setItem('ana_place', ANA.place); } catch (e) {} }
+      }).catch(() => {});
+  } catch (e) {}
+  return '';
+}
 function anaRefHost() {
   try { return document.referrer ? new URL(document.referrer).host : ''; } catch (e) { return ''; }
 }
@@ -66,7 +97,8 @@ function anaSend(kind, name, val) {
     device: S.deviceKey || 'anon', session: anaSession(), kind: kind, name: name || '',
     ref: (!ANA.started && kind === 'page') ? anaRefHost() : '',
     role: anaRole(), uad: anaDeviceType(), lang: navigator.language || '',
-    lat: c.lat, lng: c.lng, val: (val == null ? null : +val)
+    lat: c.lat, lng: c.lng, val: (val == null ? null : +val),
+    place: anaLocality(), browser: anaBrowser()
   };
   if (kind === 'page') ANA.started = true;
   try {
@@ -78,8 +110,8 @@ function anaDirect(p) {
   if (typeof cloudFetch !== 'function') return;
   const b = {
     p_device: p.device, p_session: p.session, p_kind: p.kind, p_name: p.name, p_ref: p.ref,
-    p_role: p.role, p_uad: p.uad, p_lang: p.lang, p_country: anaCoarseCountry(), p_region: '', p_city: '',
-    p_lat: p.lat, p_lng: p.lng, p_val: p.val
+    p_role: p.role, p_uad: p.uad, p_lang: p.lang, p_country: anaCoarseCountry(), p_region: '', p_city: p.place || '',
+    p_lat: p.lat, p_lng: p.lng, p_val: p.val, p_place: p.place || '', p_browser: p.browser || ''
   };
   cloudFetch('rpc/track_hit', { method: 'POST', body: JSON.stringify(b) }).catch(() => {});
 }

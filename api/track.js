@@ -32,7 +32,10 @@ module.exports = async function handler(req, res) {
       // only fall back to the coarse city-level edge coords when it didn't.
       p_lat: b.lat != null ? Number(b.lat) : num(h['x-vercel-ip-latitude']),
       p_lng: b.lng != null ? Number(b.lng) : num(h['x-vercel-ip-longitude']),
-      p_val: (b.val == null ? null : Number(b.val))
+      p_val: (b.val == null ? null : Number(b.val)),
+      // exact locality reverse-geocoded on the client (falls back to edge city)
+      p_place: String(b.place || '').slice(0, 120) || dec(h['x-vercel-ip-city']).slice(0, 120),
+      p_browser: String(b.browser || '').slice(0, 24)
     };
     await fetch(SUPA + '/rest/v1/rpc/track_hit', {
       method: 'POST',
