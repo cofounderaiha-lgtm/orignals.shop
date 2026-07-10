@@ -383,12 +383,27 @@ function realMap(elId, lat, lng, label) {
 
 /* ---------- installable app (Add to Home Screen) ---------- */
 let _installEvt = null;
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _installEvt = e; refreshChrome(); });
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _installEvt = e; refreshChrome(); showInstallBanner(); });
+window.addEventListener('appinstalled', () => { _installEvt = null; const b = document.getElementById('instBar'); if (b) b.remove(); toast('Installed — open Orignals from your home screen'); });
 function installApp() {
-  if (_installEvt) { _installEvt.prompt(); _installEvt = null; return; }
+  if (_installEvt) { _installEvt.prompt(); _installEvt.userChoice && _installEvt.userChoice.finally(() => { _installEvt = null; }); return; }
+  const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   toast(location.protocol === 'file:'
-    ? 'Host it (orignals.shop) or run a local server — then Install appears'
-    : 'Use browser menu → Install app / Add to Home Screen');
+    ? 'Open it on orignals.shop — then Install appears'
+    : iOS ? 'On iPhone: tap Share ⬆ → Add to Home Screen'
+    : 'Use the browser menu → Install app / Add to Home Screen');
+}
+function showInstallBanner() {
+  try {
+    if (!_installEvt || sessionStorage.getItem('inst_hide') || document.getElementById('instBar')) return;
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return;
+    const b = document.createElement('div');
+    b.id = 'instBar'; b.className = 'install-bar';
+    b.innerHTML = `<span>${ic('upload', 15)} <b>Install Orignals</b> — instant, works offline</span>
+      <span class="ib-act"><button class="btn-main sm" onclick="installApp()">Install</button>
+      <button class="inst-x" aria-label="Dismiss" onclick="sessionStorage.setItem('inst_hide','1');var e=document.getElementById('instBar');if(e)e.remove()">✕</button></span>`;
+    document.body.appendChild(b);
+  } catch (e) {}
 }
 
 /* ---------- boot ---------- */

@@ -7,6 +7,12 @@
 <title>Orignals — Real. Verified. Nearby.</title>
 <meta name="description" content="Purity-verified food, every nearby shop, neighbour-powered delivery, rides, tickets, stays & property — one people-first platform."/>
 <link rel="manifest" href="manifest.json"/>
+<!-- installable on iOS (Apple ignores the manifest) + Windows tiles -->
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Orignals"/>
+<link rel="apple-touch-icon" href="icons/apple-touch-180.png"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>

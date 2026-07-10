@@ -995,3 +995,11 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-of
 .golive-steps span.done{color:var(--ink)}
 .golive-steps span.done svg{color:var(--primary)}
 .golive-steps .lnk{margin-left:auto}
+
+/* ---------- install app banner ---------- */
+.install-bar{position:fixed;left:12px;right:12px;bottom:78px;z-index:600;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-lg);border-radius:14px;padding:10px 12px;font-size:.82rem;color:var(--ink);max-width:600px;margin:0 auto}
+.install-bar b{color:var(--ink)} .install-bar svg{color:var(--primary);vertical-align:-2px}
+.install-bar .ib-act{display:flex;align-items:center;gap:8px;flex:none}
+.install-bar .inst-x{background:transparent;border:none;color:var(--mut);font-size:1rem;cursor:pointer;padding:0 2px}
+@media(min-width:1024px){ .install-bar{bottom:24px;left:auto;right:24px;max-width:380px} }
