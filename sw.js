@@ -9,7 +9,7 @@ const SHELL = [
   './js/data.js', './js/icons.js', './js/core.js', './js/home.js', './js/shops.js',
   './js/send.js', './js/rides.js', './js/tickets.js', './js/estate.js',
   './js/earn.js', './js/myshop.js', './js/mitra.js', './js/account.js', './js/admin.js',
-  './js/cloud.js', './js/brain.js', './js/geo.js', './js/ops.js', './js/auth.js', './js/face.js', './js/legal.js',
+  './js/cloud.js', './js/brain.js', './js/brain_ml.js', './js/geo.js', './js/ops.js', './js/auth.js', './js/face.js', './js/legal.js',
   './manifest.json', './config.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-180.png'
 ];

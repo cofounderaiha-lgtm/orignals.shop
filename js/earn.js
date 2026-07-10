@@ -147,7 +147,7 @@ function renderEarnPitch() {
 
   <div class="quote-strip">
     <span class="q-ava">${ic('user', 20)}</span>
-    <div>"I drop 2 tiffins on my way to college. Petrol paid, plus ₹1,800 a month extra."<small>— Ravi K. · cycle partner · 4,820 trips · ★ 4.9</small></div>
+    <div>"I drop 2 tiffins on my way to college — no extra petrol, just my usual route. That's ₹1,800 a month extra."<small>— Ravi K. · cycle partner · 4,820 trips · ★ 4.9</small></div>
   </div>
 
   <button class="btn-main wide lg" onclick="startPartnerReg()">Start earning on your route</button>

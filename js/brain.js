@@ -17,11 +17,37 @@
 const BRAIN = {
   D: 1024,                       // feature dims (hashing trick)
   LR: 0.15,
+  seedVer: 2,                    // bump → clients retrain on new seed (2 = 22-language pack)
   intents: ['order_item', 'track_order', 'cancel_order', 'book_ride', 'send_parcel',
     'wallet', 'book_tickets', 'my_bookings', 'recommend', 'hotel_stay', 'property',
     'earn_partner', 'shop_register', 'greeting'],
   W: null, b: null, version: 0, trained: 0
 };
+
+/* ---------- language detection (22 Indian languages, by script) ---------- */
+const MITRA_LANGS = {
+  hi: 'हिन्दी', as: 'অসমীয়া', bn: 'বাংলা', gu: 'ગુજરાતી', pa: 'ਪੰਜਾਬੀ',
+  ta: 'தமிழ்', te: 'తెలుగు', kn: 'ಕನ್ನಡ', ml: 'മലയാളം', or: 'ଓଡ଼ିଆ',
+  ur: 'اردو', sat: 'ᱥᱟᱱᱛᱟᱲᱤ', en: 'English'
+};
+/* Devanagari is shared by Hindi/Marathi/Nepali/Konkani/Maithili/Bodo/Dogri/
+   Sanskrit — we return 'hi' as the umbrella for responses. Bengali script
+   covers Bengali/Assamese/Manipuri → 'bn'/'as'. */
+function mitraDetectLang(text) {
+  const s = String(text || '');
+  if (/[஀-௿]/.test(s)) return 'ta';       // Tamil
+  if (/[ఀ-౿]/.test(s)) return 'te';       // Telugu
+  if (/[ಀ-೿]/.test(s)) return 'kn';       // Kannada
+  if (/[ഀ-ൿ]/.test(s)) return 'ml';       // Malayalam
+  if (/[઀-૿]/.test(s)) return 'gu';       // Gujarati
+  if (/[਀-੿]/.test(s)) return 'pa';       // Gurmukhi (Punjabi)
+  if (/[଀-୿]/.test(s)) return 'or';       // Odia
+  if (/[᱐-᱿]/.test(s)) return 'sat';      // Ol Chiki (Santali)
+  if (/[؀-ۿݐ-ݿ]/.test(s)) return 'ur';  // Perso-Arabic (Urdu/Sindhi/Kashmiri)
+  if (/[ঀ-৿]/.test(s)) return /অসম|গাখীৰ|আইতা|ক্ত/.test(s) ? 'as' : 'bn';  // Bengali/Assamese
+  if (/[ऀ-ॿ]/.test(s)) return 'hi';       // Devanagari umbrella
+  return 'en';
+}
 
 /* ---------- seed corpus (EN + Hinglish) — the model's birth data ---------- */
 const BRAIN_SEED = {
@@ -101,7 +127,11 @@ function brainHash(s) {
   return (h >>> 0) % BRAIN.D;
 }
 function brainFeatures(text) {
-  const t = String(text).toLowerCase().replace(/[^a-z0-9ऀ-ॿ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  /* keep letters & numbers of EVERY script (all 22 Indian languages +
+     Latin), strip only punctuation/symbols. \p{L}\p{N} needs the u flag. */
+  let t;
+  try { t = String(text).toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, ' ').replace(/\s+/g, ' ').trim(); }
+  catch (e) { t = String(text).toLowerCase().replace(/[^a-z0-9ऀ-෿؀-ۿ ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
   const f = new Map();
   const bump = k => { const i = brainHash(k); f.set(i, (f.get(i) || 0) + 1); };
   const words = t.split(' ').filter(Boolean);
@@ -154,10 +184,19 @@ function brainTrainOne(text, intent, steps) {
   }
   BRAIN.trained++;
 }
+function brainSeedCorpus() {
+  /* base EN/Hinglish + the 22-Indian-language pack (js/brain_ml.js) */
+  const merged = {};
+  for (const [k, v] of Object.entries(BRAIN_SEED)) merged[k] = v.slice();
+  if (typeof BRAIN_SEED_ML !== 'undefined') {
+    for (const [k, v] of Object.entries(BRAIN_SEED_ML)) merged[k] = (merged[k] || []).concat(v);
+  }
+  return merged;
+}
 function brainSeedTrain(epochs) {
   brainInit();
   const pairs = [];
-  for (const [intent, exs] of Object.entries(BRAIN_SEED)) exs.forEach(x => pairs.push([x, intent]));
+  for (const [intent, exs] of Object.entries(brainSeedCorpus())) exs.forEach(x => pairs.push([x, intent]));
   for (let e = 0; e < (epochs || 12); e++) {
     for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pairs[i], pairs[j]] = [pairs[j], pairs[i]]; }
     pairs.forEach(([x, y]) => brainTrainOne(x, y, 1));
@@ -169,7 +208,7 @@ function brainSeedTrain(epochs) {
 function brainSave() {
   try {
     localStorage.setItem('mitra_model', JSON.stringify({
-      v: BRAIN.version, trained: BRAIN.trained, D: BRAIN.D, intents: BRAIN.intents,
+      v: BRAIN.version, trained: BRAIN.trained, D: BRAIN.D, intents: BRAIN.intents, seedVer: BRAIN.seedVer,
       W: Array.from(BRAIN.W, x => Math.round(x * 1000) / 1000), b: Array.from(BRAIN.b, x => Math.round(x * 1000) / 1000)
     }));
   } catch (e) { console.warn('[brain] save failed', e); }
@@ -178,11 +217,12 @@ function brainSave() {
 function brainLoad() {
   try {
     const m = JSON.parse(localStorage.getItem('mitra_model') || 'null');
-    if (m && m.D === BRAIN.D && m.intents.length === BRAIN.intents.length) {
+    if (m && m.D === BRAIN.D && m.intents.length === BRAIN.intents.length && (m.seedVer || 1) === BRAIN.seedVer) {
       BRAIN.W = Float32Array.from(m.W); BRAIN.b = Float32Array.from(m.b);
       BRAIN.version = m.v; BRAIN.trained = m.trained || 0;
       return;
     }
+    /* seed changed (e.g. new language pack) → retrain from the fresh corpus */
   } catch (e) { /* fall through to seed */ }
   brainSeedTrain();
 }
@@ -229,7 +269,7 @@ function brainRetrain() {
 }
 function brainExportJSONL() {
   const rows = [];
-  for (const [intent, exs] of Object.entries(BRAIN_SEED)) exs.forEach(x => rows.push({ text: x, intent, src: 'seed' }));
+  for (const [intent, exs] of Object.entries(brainSeedCorpus())) exs.forEach(x => rows.push({ text: x, intent, src: 'seed' }));
   brainLog().filter(u => u.label).forEach(u => rows.push({ text: u.text, intent: u.label, src: u.src }));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([rows.map(r => JSON.stringify(r)).join('\n')], { type: 'application/jsonl' }));
@@ -308,6 +348,6 @@ async function brainAdoptGlobal() {
     localStorage.setItem('mitra_global_ver', String(g.version));
     brainSave();
     console.log('[brain] adopted global model v' + g.version + ' (' + g.examples + ' examples, ' + g.trained + ' steps)');
-    toast('Mitra Brain updated — backend model v' + g.version + ', trained on ' + g.examples + ' examples');
+    /* silent — model updates are internal, never shown to end users */
   } catch (e) { console.warn('[brain] global adopt skipped:', e.message); }
 }
