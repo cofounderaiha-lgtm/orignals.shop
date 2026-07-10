@@ -12,7 +12,7 @@ view('wallet', () => {
   <div class="wallet-card">
     <small>AVAILABLE BALANCE</small>
     <b>${money(S.wallet.bal)}</b>
-    <span>${esc(S.user.name)} · Orignals Pay</span>
+    <span>${esc(displayName())} · Orignals Pay</span>
   </div>
 
   <div class="sec-head"><h2>Add money</h2></div>
@@ -68,9 +68,9 @@ view('account', () => {
   const memberTill = S.memberTill && S.memberTill > Date.now();
   $('#view').innerHTML = `
   <div class="acct-head">
-    <span class="acct-ava">${(S.user.name || 'F')[0].toUpperCase()}</span>
-    <div><h1>${esc(S.user.name)}</h1><small>${esc(S.user.addr.name)} · ${esc(S.user.addr.sub)}</small></div>
-    <button class="lnk" onclick="editProfile()">Edit</button>
+    <span class="acct-ava">${displayName()[0].toUpperCase()}</span>
+    <div><h1>${esc(displayName())}</h1><small>${isGuest() ? 'Not signed in — sign in to secure your account' : esc(S.user.addr.name) + ' · ' + esc(S.user.addr.sub)}</small></div>
+    <button class="lnk" onclick="${isGuest() ? "go('login')" : 'editProfile()'}">${isGuest() ? 'Sign in' : 'Edit'}</button>
   </div>
 
   <div class="earn-tiles wide3">

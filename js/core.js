@@ -48,6 +48,20 @@ const money = n => {
 };
 /* always-INR formatter for the actual charge / invoices */
 const moneyINR = n => '₹' + Number(Math.round(n)).toLocaleString('en-IN');
+
+/* real identity: the signed-in name, or a set name, else 'Guest'.
+   'Friend' was a placeholder default — never treat it as a real login. */
+function isGuest() {
+  const a = (typeof authState === 'function') ? authState() : null;
+  if (a && a.token) return false;
+  return !(typeof S !== 'undefined' && S && S.user && S.user.name && S.user.name !== 'Friend');
+}
+function displayName() {
+  const a = (typeof authState === 'function') ? authState() : null;
+  if (a && a.name) return a.name;
+  if (typeof S !== 'undefined' && S && S.user && S.user.name && S.user.name !== 'Friend') return S.user.name;
+  return 'Guest';
+}
 const uid  = () => Math.random().toString(36).slice(2, 9);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const rnd  = (a, b) => Math.round(a + Math.random() * (b - a));

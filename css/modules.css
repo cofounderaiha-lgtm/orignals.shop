@@ -1064,3 +1064,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-of
 .chat-input{display:flex;gap:8px;align-items:center}
 .chat-input input{flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:50px;padding:11px 15px;font-family:inherit;font-size:.9rem;color:var(--ink)}
 .chat-input .btn-main{border-radius:50%;width:42px;height:42px;padding:0;flex:none;display:flex;align-items:center;justify-content:center}
+
+/* profile button: only on laptop/desktop (mobile & tablet use the bottom-nav 'You') */
+.hd-profile{display:none}
+@media(min-width:1024px){ .hd-profile{display:flex} }

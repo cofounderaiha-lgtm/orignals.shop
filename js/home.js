@@ -47,7 +47,7 @@ view('home', () => {
 
   $('#view').innerHTML = `
   <div class="home-hero">
-    <div class="home-greet">${greet}, <b>${esc(S.user.name)}</b></div>
+    <div class="home-greet">${greet}${isGuest() ? '' : ', <b>' + esc(displayName()) + '</b>'}${isGuest() ? ' — <b onclick="go(\'login\')" style="cursor:pointer;color:var(--primary)">sign in</b>' : ''}</div>
     <h1 class="home-title">Real food. Real shops.<br/><span>Verified by our own people.</span></h1>
     <div class="usp-strip">${ic('shield', 13)} No adulterated ghee. No fake paneer. Every batch purity-tested — Safety · Purity · Sustainability.</div>
 
