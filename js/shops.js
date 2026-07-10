@@ -484,17 +484,39 @@ function renderTrack(oid) {
   }
 }
 
-/* ---------- in-app contact: NO number exchange, all in our backend ---------- */
-function callOrder(oid) {
+/* ---------- in-app order chat: NO number exchange, all in our backend ---------- */
+function callOrder(oid) { orderChat(oid, 'buyer'); }
+let _chatOid = null, _chatRole = 'buyer', _chatTimer = null;
+function orderChat(oid, role) {
+  _chatOid = oid; _chatRole = role || 'buyer';
   const o = S.orders.find(x => x.id === oid);
-  const who = (o && o.realPartner && o.realPartner.taken_name) || (o && o.partner && o.partner.name) || 'your partner';
-  if (typeof callStart === 'function') { callStart(oid, who); return; }
-  /* honest interim until in-app voice is live: connect via Mitra, numbers never shared */
-  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Contact ${esc(who)}</h3>
-    <div class="trust-row">${ic('shield', 13)} Your name &amp; number are never shared — everything stays inside Orignals.</div>
-    <button class="place-row" onclick="closeSheet();toast('Opening chat');setTimeout(()=>go('mitra'),400)">
-      <span>${ic('spark', 17)}</span><div><b>Message via Mitra</b><small>Send a note about this order — no numbers exchanged</small></div><em>Chat</em></button>
-    <div class="foot-note sm">In-app voice calling (private, number-free) is rolling out soon. Until then, the OTP/QR completes your handover safely.</div>`);
+  const who = (o && o.realPartner && o.realPartner.taken_name) || (o && o.partner && o.partner.name) ||
+    (role === 'partner' ? 'the customer' : role === 'shop' ? 'the customer' : 'your delivery partner');
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Chat · ${esc(who)}</h3>
+    <div class="trust-row">${ic('shield', 12)} No numbers or names are shared — this chat stays inside Orignals.</div>
+    <div id="chatBox" class="chat-box"><div class="foot-note sm">Loading…</div></div>
+    <div class="chat-input"><input id="chatMsg" placeholder="Type a message…" onkeydown="if(event.key==='Enter')chatSend()"/>
+      <button class="btn-main sm" onclick="chatSend()">${ic('arrowr', 15)}</button></div>`);
+  chatRefresh();
+  clearInterval(_chatTimer);
+  _chatTimer = setInterval(() => { if (!document.getElementById('chatBox')) { clearInterval(_chatTimer); return; } chatRefresh(); }, 3500);
+}
+async function chatRefresh() {
+  const box = document.getElementById('chatBox'); if (!box || !_chatOid) return;
+  const msgs = await cloudChatRead(_chatOid);
+  const mine = S.deviceKey || 'anon';
+  box.innerHTML = msgs.length ? msgs.map(m => `<div class="chat-msg ${m.from_device === mine ? 'me' : ''}">
+      <span>${esc(m.msg)}</span><small>${new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</small></div>`).join('')
+    : `<div class="foot-note sm">Say hello — e.g. "I'm at the gate" or "please call the bell".</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+async function chatSend() {
+  const el = document.getElementById('chatMsg'); if (!el) return;
+  const msg = el.value.trim(); if (!msg) return;
+  el.value = '';
+  const r = await cloudChatSend(_chatOid, _chatRole, msg);
+  if (r && r.ok) chatRefresh();
+  else { el.value = msg; toast('Could not send — only order participants can chat'); }
 }
 
 function cancelScheduled(i) {

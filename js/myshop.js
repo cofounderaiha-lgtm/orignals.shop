@@ -235,6 +235,7 @@ function renderShopDash() {
         <div><b>${o.id} · ${esc(o.customer)}</b><small>${o.real ? '<b class="ok">LIVE · real buyer</b> · ' : ''}${o.km != null ? o.km + ' km away · ' : ''}${new Date(o.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</small></div>
         <em class="job-pay">${money(o.total)}</em></div>
       <div class="job-note">${o.items.map(i => `${i.emoji} ${esc(i.name)} × ${i.q}`).join(' · ')}</div>
+      ${(o.real && typeof orderChat === 'function') ? `<button class="lnk" onclick="orderChat('${o.id}','shop')">${ic('spark', 11)} Message customer</button>` : ''}
       ${o.status === 'new' ? `<div class="btn-pair">
           <button class="btn-main sm" onclick="shopOrderAct('${o.id}','accept')">✓ Accept</button>
           <button class="btn-main sm ghost" onclick="shopOrderAct('${o.id}','reject')">Reject</button></div>` : ''}

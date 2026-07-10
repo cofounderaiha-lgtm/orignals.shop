@@ -232,7 +232,7 @@ async function cloudJobs() {
     'live_jobs?status=eq.open&device_key=neq.' + encodeURIComponent(S.deviceKey || 'anon') +
     '&created_at=gte.' + since + '&order=created_at.desc&limit=20');
   return (rows || []).map(r => ({
-    id: r.id, cloud: true, what: r.what,
+    id: r.id, cloud: true, what: r.what, orderRef: r.order_ref || null,
     type: r.jtype === 'ride' ? 'ride' : (DB.parcelTypes.some(p => p.id === r.jtype) ? r.jtype : 'box'),
     from: r.from_name || 'Pickup point', to: r.to_name || 'Drop point',
     km: r.km != null ? +r.km : 1, pay: +r.pay || 0,
@@ -391,6 +391,17 @@ async function cloudClaimRefCredits() {
       notify('Referral reward!', '₹' + (n * 50) + ' added — ' + n + ' friend' + (n > 1 ? 's' : '') + ' joined with your code.');
     }
   } catch (e) {}
+}
+
+/* ---------- in-app order chat (no numbers exchanged) ---------- */
+function cloudChatSend(orderRef, role, msg) {
+  if (!CLOUD.on) return Promise.resolve({ ok: false });
+  return cloudFetch('rpc/chat_send', { method: 'POST', body: JSON.stringify({ p_order: orderRef, p_device: S.deviceKey || 'anon', p_role: role, p_msg: msg }) }).then(r => r || { ok: false }).catch(() => ({ ok: false }));
+}
+async function cloudChatRead(orderRef) {
+  if (!CLOUD.on) return [];
+  try { return await cloudFetch('rpc/chat_read', { method: 'POST', body: JSON.stringify({ p_order: orderRef, p_device: S.deviceKey || 'anon' }) }) || []; }
+  catch (e) { return []; }
 }
 
 /* real rating: recomputes the shop's average for everyone */

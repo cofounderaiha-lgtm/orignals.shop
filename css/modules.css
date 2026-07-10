@@ -1054,3 +1054,13 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-of
   #invoiceDoc{position:absolute;left:0;top:0;width:100%;border:none;margin:0}
   .noprint,.app-header,.bnav,.cart-bubble,.install-bar{display:none!important}
 }
+
+/* ---------- in-app order chat ---------- */
+.chat-box{max-height:320px;min-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:8px 2px;margin:6px 0}
+.chat-msg{max-width:80%;align-self:flex-start;background:var(--surface-2);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:8px 12px}
+.chat-msg.me{align-self:flex-end;background:var(--primary);color:#fff;border-radius:14px 14px 4px 14px;border-color:var(--primary)}
+.chat-msg span{display:block;font-size:.86rem;line-height:1.4}
+.chat-msg small{display:block;font-size:.6rem;opacity:.65;margin-top:2px;text-align:right}
+.chat-input{display:flex;gap:8px;align-items:center}
+.chat-input input{flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:50px;padding:11px 15px;font-family:inherit;font-size:.9rem;color:var(--ink)}
+.chat-input .btn-main{border-radius:50%;width:42px;height:42px;padding:0;flex:none;display:flex;align-items:center;justify-content:center}
