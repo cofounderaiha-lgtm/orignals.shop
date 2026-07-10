@@ -247,6 +247,20 @@ function renderAdminPanel(args) {
     const llmOn = llmCfg.apiKey && !String(llmCfg.apiKey).includes('YOUR-');
     body = `
     <div class="tip-strip">${ic('spark', 13)} <b>Mitra Brain</b> — Orignals' own model. It trains itself on every conversation: rules label the easy ones, you label the hard ones here, and (optionally) Claude's answers distill in. Zero API cost by default.</div>
+
+    <div class="card-block">
+      <h3>${ic('shield', 14)} Mitra — full capabilities &amp; control (Super Admin)</h3>
+      <div class="ck-line"><span>Universal navigator</span><span>${typeof MITRA_HELP !== 'undefined' ? MITRA_HELP.length : '—'} sections — takes any user to any screen &amp; explains it</span></div>
+      <div class="ck-line"><span>Intents understood</span><span>${BRAIN.intents.length} (order, track, ride, send, wallet, tickets, stays, property, earn, shop, help…)</span></div>
+      <div class="ck-line"><span>Languages</span><span>22 Indian languages + English/Hinglish</span></div>
+      <div class="ck-line"><span>Model lanes</span><span>Own in-browser brain (free) + Supabase trainer + optional Claude distillation</span></div>
+      <div class="ck-line"><span>Role intelligence</span><span>Buyers → shopping help · Admins → their department · Super Admin → full control (here)</span></div>
+      <div class="ck-line"><span>Claude escalation</span><span>${llmOn ? '<b class="ok">ON · ' + esc(llmCfg.model || '') + '</b>' : 'OFF — brain + rules handle everything'}</span></div>
+      <div class="btn-pair" style="margin-top:8px">
+        <button class="btn-main sm ghost" onclick="brainAdoptGlobal&&brainAdoptGlobal();toast('Pulled the latest backend model')">Sync backend model</button>
+        <button class="btn-main sm ghost" onclick="brainSeedTrain();toast('Retrained from the full multilingual seed');VIEWS.admin(['mitra'])">Retrain from seed</button>
+      </div>
+    </div>
     <div class="earn-tiles wide3">
       <div class="etile"><b>${st.utterances}</b><small>Utterances collected</small></div>
       <div class="etile"><b>${st.labeled}</b><small>Training labels</small></div>

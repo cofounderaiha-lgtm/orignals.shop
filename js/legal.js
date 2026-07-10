@@ -116,7 +116,7 @@ view('legal/shipping', () => {
     <h3>3. Serviceable area</h3>
     <p>Nearby shops are shown based on your delivery location. If nothing is available yet in your area, sellers are onboarding — check back soon.</p>
     <h3>4. Handover &amp; safety</h3>
-    <p>Deliveries are confirmed with a one-time code (OTP) at pickup and drop. Your phone number is masked; partners cannot see it.</p>`);
+    <p>Deliveries are confirmed with a one-time code (OTP) or QR at pickup and drop. Your phone number is never used — you and your partner talk through an in-app voice/video call and chat that exist only for the life of the order.</p>`);
 });
 
 /* ---------- Grievance Redressal ---------- */

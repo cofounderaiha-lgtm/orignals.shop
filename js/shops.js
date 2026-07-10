@@ -436,7 +436,7 @@ function renderTrack(oid) {
     <div class="pc-info"><b>${esc(p.name)} <small class="dim">★ ${(+p.rating || 4.8).toFixed(1)}</small></b>
       <small>${esc(p.veh || p.car || 'Verified partner')}${p.trips ? ' · ' + p.trips.toLocaleString('en-IN') + ' trips' : ''}</small>
       ${!done && !o.cancelled ? `<small class="ok">${rp ? (rp.picked_at ? 'On the way to you — live' : 'Heading to the shop') : 'Arriving soon'}</small>` : ''}</div>
-    ${!done ? `<button class="pc-call" onclick="callOrder('${o.id}')" title="Call in-app — no numbers shared">${ic('phone', 16)}</button>` : ''}
+    ${!done ? `<div class="pc-actions">${typeof callControls === 'function' ? callControls(o.id, 'buyer') : ''}<button class="pc-call msg" onclick="callOrder('${o.id}')" title="Message in-app — no numbers shared">${ic('spark', 16)}</button></div>` : ''}
   </div>
   ${!done && !o.cancelled ? `
   <div class="handover-card">
@@ -467,6 +467,8 @@ function renderTrack(oid) {
   ${o.kind === 'shop' ? `<button class="btn-main wide ghost" onclick="go('invoice/${o.id}')">${ic('receipt', 14)} View bill / invoice</button>` : ''}
   <button class="btn-main wide ghost" onclick="toast('Tell Mitra your issue — opening chat');setTimeout(()=>go('mitra'),600)">Need help with this order?</button>`;
   trackLiveMap('trkMap', o);
+  /* buyer listens for an in-app call from the partner currently on this order */
+  if (!done && !o.cancelled && typeof callWatch === 'function') callWatch(o.id, 'buyer');
   /* render the real, scannable handover QR (encodes the OTP) */
   if (o.partner && !done && !o.cancelled) qrRender('hoQR', 'ORIGNALS:' + o.id + ':' + o.partner.otp);
   /* fetch the REAL partner who claimed this order (live, cross-device) */
@@ -503,7 +505,9 @@ function orderChat(oid, role) {
 }
 async function chatRefresh() {
   const box = document.getElementById('chatBox'); if (!box || !_chatOid) return;
-  const msgs = await cloudChatRead(_chatOid);
+  let msgs = await cloudChatRead(_chatOid);
+  /* hide WebRTC call-signaling frames — they ride the same channel but are not chat */
+  msgs = (msgs || []).filter(m => !(m.msg && typeof CALL_SIG !== 'undefined' && m.msg.indexOf(CALL_SIG) === 0));
   const mine = S.deviceKey || 'anon';
   box.innerHTML = msgs.length ? msgs.map(m => `<div class="chat-msg ${m.from_device === mine ? 'me' : ''}">
       <span>${esc(m.msg)}</span><small>${new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</small></div>`).join('')

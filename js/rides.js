@@ -68,11 +68,17 @@ function rideCheckout(km) {
   const mult = RIDE.share ? 0.72 : 1;
   const fare = Math.round(kmFare(v, km) * mult);
   const sched = RIDE.when !== 'now';
+  /* transparent, statutory breakdown — GST on rides is 5% (cab aggregator),
+     plus a 3% platform/convenience fee that already absorbs the gateway cost */
+  const gst = Math.round(fare * 0.05);
+  const platform = Math.round(fare * 0.03);
+  const grand = fare + gst + platform;
   checkoutSheet({
     title: v.name + ' to ' + RIDE.to.name, icon: 'bike',
     meta: `${RIDE.from.name} → ${RIDE.to.name} · ${km.toFixed(1)} km · ${sched ? 'scheduled ' + RIDE.when : (RIDE.share ? 'shared ride' : 'solo')} · fixed fare`,
-    lines: [['Base fare', v.base], ['Distance (' + km.toFixed(1) + ' km × ' + money(v.perKm) + ')', Math.round(kmFare(v, km)) - v.base], ...(RIDE.share ? [['Ride-share saving', -(Math.round(kmFare(v, km)) - fare)]] : [])],
-    total: fare,
+    lines: [['Base fare', v.base], ['Distance (' + km.toFixed(1) + ' km × ' + money(v.perKm) + ')', Math.round(kmFare(v, km)) - v.base], ...(RIDE.share ? [['Ride-share saving', -(Math.round(kmFare(v, km)) - fare)]] : []),
+      ['GST (5%)', gst], ['Platform fee (3%)', platform]],
+    total: grand,
     onPay: (final) => {
       if (sched) {
         /* scheduled ride: confirmed for later, not tracked live now */

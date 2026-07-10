@@ -36,9 +36,9 @@ view('mitra', () => {
     </div>
   </div>`;
   if (!MSGS.length) {
-    mitraReply(`Namaste ${esc(S.user.name)}! I'm <b>Mitra</b> — this platform's own intelligence. Tell me what you need, in your own words.<br/><br/>
-      Try: <i>"order milk and bread"</i> · <i>"send tiffin to grandma"</i> · <i>"book 2 movie tickets"</i> · <i>"hotel for tomorrow"</i> · <i>"doodh mangwa do"</i>`,
-      ['Order milk and bread', 'Send tiffin to grandma', 'Book movie tickets', 'Find a hotel', 'My wallet']);
+    mitraReply(`Namaste ${esc(isGuest() ? 'there' : displayName())}! I'm <b>Mitra</b> — this platform's own intelligence, in 22 Indian languages. Tell me what you need, or ask me <b>where anything is</b> and I'll take you there.<br/><br/>
+      Try: <i>"order milk and bread"</i> · <i>"where is my wallet?"</i> · <i>"how do I register my shop?"</i> · <i>"take me to admin"</i> · <i>"doodh mangwa do"</i>`,
+      ['Order milk and bread', 'Where is my wallet?', 'How do I register my shop?', 'Book a ride', 'Get a document made']);
   } else renderMsgs();
 });
 
@@ -114,6 +114,63 @@ function searchItems(t) {
   return hits.sort((a, b) => b.score - a.score);
 }
 
+/* ============================================================
+   MITRA UNIVERSAL NAVIGATOR — every section, explained + reachable.
+   "If they can't locate any section they can just ask Mitra."
+   Keywords include EN + Hindi/Hinglish; the brain generalises the rest.
+   ============================================================ */
+const MITRA_HELP = [
+  { route: 'shops', title: 'Shops nearby', help: 'Browse every shop near you and order — or just tell me what to buy and I\'ll order it.', tips: ['Order 2 milk', 'Find a pharmacy'],
+    kw: ['shop', 'shops', 'store', 'kirana', 'grocery', 'nearby', 'dukaan', 'दुकान', 'shops kaha', 'shop kaha'] },
+  { route: 'send', title: 'Send Anything', help: 'Send a parcel, tiffin or documents — a verified partner passing by carries it.', tips: ['Send a tiffin', 'Courier documents'],
+    kw: ['send', 'parcel', 'courier', 'tiffin', 'bhej', 'भेज', 'deliver something'] },
+  { route: 'ride', title: 'Rides', help: 'Book a bike, auto or car — fixed fare, no surge, live map with directions.', tips: ['Book a bike', 'Auto to the station'],
+    kw: ['ride', 'rides', 'bike', 'auto', 'cab', 'taxi', 'gaadi', 'गाड़ी'] },
+  { route: 'tickets', title: 'Movies & Events', help: 'Book movie or event seats live with a real seat map.', tips: ['Book movie tickets'],
+    kw: ['movie', 'movies', 'ticket', 'cinema', 'event', 'show', 'film', 'फिल्म'] },
+  { route: 'tickets/dining', title: 'Dining', help: 'Reserve a table at restaurants near you — 20% off the bill.', tips: ['Reserve a table'],
+    kw: ['dining', 'restaurant', 'table', 'reserve', 'reservation'] },
+  { route: 'estate', title: 'Property & Stays', help: 'Buy, rent or list property, and book verified stays — with real maps & documents.', tips: ['2 BHK for rent', 'Book a hotel'],
+    kw: ['property', 'flat', 'rent', 'plot', 'hotel', 'stay', 'room', 'makaan', 'मकान', 'real estate', 'house'] },
+  { route: 'earn', title: 'Earn', help: 'Earn on your route — deliver, ride, sell products, or offer a service.', tips: ['I want to earn', 'Become a partner'],
+    kw: ['earn', 'deliver and earn', 'partner', 'job', 'kamai', 'कमाई', 'work'] },
+  { route: 'myshop', title: 'Your Shop', help: 'Put your shop online free — import your whole menu, add photos, choose delivery.', tips: ['Register my shop'],
+    kw: ['my shop', 'register shop', 'sell', 'list my', 'dukaan online', 'become a seller', 'add my menu'] },
+  { route: 'papers', title: 'Papers & Verification', help: 'Get ANY document made — GST, FSSAI, birth, death, marriage, PAN, passport, licences, property papers.', tips: ['Get a GST number', 'Death certificate'],
+    kw: ['document', 'documents', 'certificate', 'gst', 'fssai', 'licence', 'license', 'birth', 'death', 'marriage', 'passport', 'pan card', 'driving licence', 'papers', 'dastavez'] },
+  { route: 'wallet', title: 'Wallet', help: 'Your one wallet for everything — add money, see history, withdraw.', tips: ['Add 500 to wallet', 'Wallet balance'],
+    kw: ['wallet', 'balance', 'add money', 'top up', 'topup', 'paisa', 'पैसा'] },
+  { route: 'orders', title: 'Orders', help: 'Track and manage every order, ride and booking in one place.', tips: ['Track my order'],
+    kw: ['orders', 'my order', 'my orders', 'track', 'order status'] },
+  { route: 'account', title: 'Profile & Account', help: 'Your profile, currency, language, roles and security settings.', tips: ['Change currency', 'Sign in'],
+    kw: ['profile', 'account', 'settings', 'my account', 'currency', 'language', 'setting'] },
+  { route: 'facelock', title: 'Security & Face lock', help: 'Sign in, set a face lock (2FA), and turn on delivery alerts.', tips: ['Enable face lock'],
+    kw: ['security', 'face lock', 'face', '2fa', 'password', 'alerts', 'notifications'] },
+  { route: 'login', title: 'Sign in / Register', help: 'Create your account or sign in — secures your wallet, orders and shop.', tips: [],
+    kw: ['sign in', 'signin', 'log in', 'login', 'register', 'create account', 'sign up'] },
+  { route: 'legal', title: 'Legal & policies', help: 'Privacy, terms, refunds, and our grievance officer.', tips: [],
+    kw: ['privacy', 'terms', 'refund', 'grievance', 'policy', 'legal', 'complaint'] },
+  { route: 'papers', title: 'List a service', help: 'Any professional — tutor, salon, repair, consultant, team or firm — can offer a service after verifying expertise. Open Earn → Services.', tips: [],
+    kw: ['tuition', 'tutor', 'service', 'services', 'freelance', 'consultant', 'skill', 'professional'] },
+  { route: 'admin', title: 'Admin panel', help: 'Staff & admin control — you see only what your level permits. Super Admin sees everything, including my controls.', tips: [],
+    kw: ['admin', 'super admin', 'control panel', 'dashboard', 'staff', 'team', 'employees', 'manage'] }
+];
+function mitraNavigate(t) {
+  /* only trigger on explicit "find/where/how/open/take me" phrasing so
+     transactional asks ("order milk") still transact */
+  const wants = /\b(where|how do i|how to|how can|open|take me|go to|navigate|find|show me|reach|locate)\b/.test(t)
+    || /(kaha|kahan|कहाँ|कहां|kaise|कैसे|khol|खोल|dikha|दिखा|le chalo|ले चलो)/.test(t);
+  if (!wants) return null;
+  for (const h of MITRA_HELP) {
+    /* PRIVACY: the admin panel is invisible to regular users. Mitra never
+       navigates there, names it, or hints it exists unless the server has
+       confirmed this person is staff. No user/other-user data is ever exposed. */
+    if (h.route === 'admin' && !window.__isStaff) continue;
+    if (h.kw.some(k => t.includes(k))) return h;
+  }
+  return null;
+}
+
 function mitraThink(raw) {
   const t = norm(raw);
   const has = (...ws) => ws.some(w => t.includes(w));
@@ -122,6 +179,17 @@ function mitraThink(raw) {
      training labels (the flywheel). Skipped on internal re-dispatch. — */
   const _pred = brainPredict(raw);
   if (!window._brainHop) brainObserve(raw, _pred, ruleIntent(t), 'rules');
+
+  /* — UNIVERSAL NAVIGATOR / HELP: nobody is ever lost. If they ask
+     "where is X / how do I X / take me to X / open X", Mitra explains
+     it and takes them there. Works in every language. — */
+  const nav = mitraNavigate(t);
+  if (nav) {
+    const a = regAction(() => go(nav.route));
+    mitraReply(`<b>${esc(nav.title)}</b> — ${esc(nav.help)}<br/><button class="mbtn" onclick="runMitraAction(${a})">Open ${esc(nav.title)}</button>`,
+      nav.tips || ['What else can you do?'], nav.help);
+    return;
+  }
 
   /* — wallet — */
   if (has('wallet', 'balance', 'paisa', 'paise', 'money')) {

@@ -113,8 +113,7 @@ view('account', () => {
     <span>${ic('home', 20)}</span><div><b>Host — hotel &amp; stays</b><small>List rooms, homestays, hourly pods</small></div><em>Open</em></button>
   <button class="role-row" onclick="go('estate/buy')">
     <span>${ic('pin', 20)}</span><div><b>Property lister</b><small>${(S.myListings || []).length ? (S.myListings.length + ' live listing(s)') : 'Sell/rent property — GPS-pinned, fraud-proof'}</small></div><em>Open</em></button>
-  <button class="role-row admin" onclick="go('admin')">
-    <span>${ic('shield', 20)}</span><div><b>Super Admin</b><small>Full control — purity queue · KYC · fraud · orders · plans</small></div><em>Enter</em></button>
+  <div id="staffEntry"></div>
 
   <div class="sec-head"><h2>Settings</h2></div>
   <button class="role-row" onclick="installApp()">
@@ -139,12 +138,25 @@ view('account', () => {
   <div class="foot-note">Orignals · Safety · Purity · Sustainability — for all<br/>
   <span class="dim">People-first: small shops thrive, neighbours earn, no one loses their job to a machine.</span><br/>
   <span class="dim"><a onclick="go('legal/privacy')">Privacy</a> · <a onclick="go('legal/terms')">Terms</a> · <a onclick="go('legal/refund')">Refunds</a> · <a onclick="go('legal/grievance')">Grievance</a></span></div>`;
+
+  /* staff/admin entry appears ONLY for verified staff (server-checked) —
+     it is NEVER shown to regular users */
+  if (typeof adminApi === 'function' && typeof CLOUD !== 'undefined' && CLOUD.on && typeof authState === 'function' && authState() && authState().token) {
+    adminApi('admin_whoami', {}).then(w => {
+      window.__isStaff = !!(w && w.admin);           /* unlocks staff-only Mitra help; cleared for regular users */
+      window.__staffLevel = (w && w.level) || null;
+      const box = document.getElementById('staffEntry');
+      if (!box || !w || !w.admin) return;
+      box.innerHTML = `<button class="role-row admin" onclick="go('admin')">
+        <span>${ic('shield', 20)}</span><div><b>${esc((w.level || 'l1').toUpperCase())} · Staff console</b><small>Your department controls${w.ident ? ' · ' + esc(w.ident) : ''}</small></div><em>Enter</em></button>`;
+    });
+  }
 });
 
 function currencySheet() {
   sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Choose your currency</h3>
     <div class="foot-note sm" style="text-align:left;margin:0 0 8px">Prices show in your currency. Shops are in India, so the platform settles in ₹ (INR) — foreign amounts are indicative.</div>
-    ${Object.entries(CURRENCIES).map(([code, c]) => `<button class="place-row" onclick="setCurrency('${code}');closeSheet();toast('Prices now in ${code}');VIEWS.account([])">
+    ${Object.entries(CURRENCIES).map(([code, c]) => `<button class="place-row" onclick="setCurrency('${code}',true);closeSheet();toast('Prices now in ${code}');VIEWS.account([])">
       <span style="font-weight:800">${c.sym.trim() || code}</span><div><b>${esc(c.name)}</b><small>${code} · e.g. ${(() => { const p = CUR; CUR = Object.assign({ code }, c); const s = money(500); CUR = p; return s; })()} for ₹500</small></div>${CUR.code === code ? '<em class="ok">✓</em>' : '<em>Select</em>'}</button>`).join('')}`);
 }
 function buyMembership() {

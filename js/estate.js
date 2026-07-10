@@ -135,10 +135,10 @@ function propContact(pid) {
   /* real cross-device lead: the lister gets a genuine enquiry */
   if (p.community && typeof cloudPostLead === 'function') cloudPostLead(p, 'contact');
   sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${esc(p.title)}</h3>
-    <div class="trust-row">${ic('shield', 13)} Contact is masked-number protected — fraud-safe for both sides.</div>
+    <div class="trust-row">${ic('shield', 13)} You talk entirely inside Orignals — no phone number is ever shared with either side.</div>
     ${p.community ? `<div class="offer-strip">${ic('check', 12)} The owner has been notified of your interest.</div>` : ''}
-    <button class="place-row" onclick="toast('Connecting via masked number — your number stays private')">
-      <span>${ic('phone', 17)}</span><div><b>Call ${esc(p.by)}</b><small>Masked number · recorded for safety</small></div><em>Call</em></button>
+    <button class="place-row" onclick="closeSheet();toast('Request sent — the owner can start an in-app call or chat with you');">
+      <span>${ic('phone', 17)}</span><div><b>Request a call from ${esc(p.by)}</b><small>In-app voice call · no number · recorded for safety</small></div><em>Request</em></button>
     <button class="place-row" onclick="closeSheet();toast('Chat opening — talk via Mitra');setTimeout(()=>go('mitra'),500)">
       <span>${ic('spark', 17)}</span><div><b>Chat via Mitra</b><small>Negotiate, ask docs, schedule — in chat</small></div><em>Chat</em></button>`);
 }

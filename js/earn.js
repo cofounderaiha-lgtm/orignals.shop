@@ -394,7 +394,10 @@ function renderActiveJob() {
   <div class="job-card active">
     <div class="job-route"><i class="pin g"></i>${esc(j.from)}<span class="job-arrow">${ic('arrowr', 11)}</span><i class="pin r"></i>${esc(j.to)}<b>· ${j.km} km</b></div>
     ${j.note ? `<div class="job-note">${esc(j.note)}</div>` : ''}
-    ${(A.cloud && j.orderRef && typeof orderChat === 'function') ? `<button class="btn-main sm ghost wide" onclick="orderChat('${j.orderRef}','partner')">${ic('spark', 13)} Message the customer — no numbers shared</button>` : ''}
+    ${(A.cloud && j.orderRef && typeof orderChat === 'function') ? `<div class="job-contact">
+      ${typeof callControls === 'function' ? callControls(j.orderRef, 'partner') : ''}
+      <button class="btn-main sm ghost" onclick="orderChat('${j.orderRef}','partner')">${ic('spark', 13)} Message — no numbers</button>
+    </div>` : ''}
     <div class="otp-strip">${A.stage === 1 ? `Ask the ${j.type === 'ride' ? 'rider' : 'sender'} for their OTP to ${j.type === 'ride' ? 'start' : 'collect'}` : A.stage === 2 ? `Ask the ${j.type === 'ride' ? 'rider' : 'customer'} to show their OTP or QR — enter it below` : `Head to the pickup — tap Navigate for directions`}</div>
   </div>
 
@@ -428,6 +431,8 @@ function renderActiveJob() {
     }
   }
   startJobPing();   // share live location to the buyer (real jobs)
+  /* partner listens for an in-app call from the customer on this order */
+  if (A.cloud && j.orderRef && typeof callWatch === 'function') callWatch(j.orderRef, 'partner');
 }
 
 function jobNavigate() {

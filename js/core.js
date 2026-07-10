@@ -24,19 +24,26 @@ const CURRENCIES = {
   SAR: { sym: 'SAR ', rate: 22.1, loc: 'ar-SA', name: 'Saudi Riyal' }
 };
 let CUR = { code: 'INR', sym: '₹', rate: 1, loc: 'en-IN' };
-function setCurrency(code) {
+function setCurrency(code, manual) {
   const c = CURRENCIES[code]; if (!c) return;
   CUR = Object.assign({ code }, c);
-  if (typeof S !== 'undefined' && S) { S.currency = code; save(); }
+  if (manual && typeof S !== 'undefined' && S) { S.currency = code; S.currencyManual = true; save(); }
 }
 function detectCurrency() {
-  let code = (typeof S !== 'undefined' && S && S.currency) || null;
-  if (!code) {
-    const reg = ((navigator.language || 'en-IN').split('-')[1] || 'IN').toUpperCase();
-    code = { US: 'USD', GB: 'GBP', AE: 'AED', SG: 'SGD', AU: 'AUD', CA: 'CAD', NP: 'NPR', BD: 'BDT', SA: 'SAR',
-      DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', IE: 'EUR' }[reg] || 'INR';
-  }
-  setCurrency(code);
+  /* honour ONLY a currency the user picked themselves. Otherwise decide
+     by TIMEZONE (reliable) — India → ₹ always (never show $ in India). */
+  if (typeof S !== 'undefined' && S && S.currencyManual && CURRENCIES[S.currency]) { CUR = Object.assign({ code: S.currency }, CURRENCIES[S.currency]); return; }
+  let code = 'INR';
+  try {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+    if (!/Kolkata|Calcutta|Asia\/(Colombo|Kathmandu|Thimphu)/i.test(tz)) {
+      const reg = ((navigator.language || 'en-IN').split('-')[1] || 'IN').toUpperCase();
+      code = { US: 'USD', GB: 'GBP', AE: 'AED', SG: 'SGD', AU: 'AUD', CA: 'CAD', NP: 'NPR', BD: 'BDT', SA: 'SAR',
+        DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', IE: 'EUR' }[reg] || 'INR';
+      if (/Asia\/(Kolkata|Calcutta)/i.test(tz)) code = 'INR';
+    }
+  } catch (e) { code = 'INR'; }
+  CUR = Object.assign({ code }, CURRENCIES[code] || CURRENCIES.INR);
 }
 function isIndia() { return (CUR.code || 'INR') === 'INR'; }
 const money = n => {
@@ -168,10 +175,12 @@ function sheet(html, cls) {
   $('#sheetBody').className = 'sheet-body ' + (cls || '');
   $('#sheetWrap').classList.add('open');
   document.body.style.overflow = 'hidden';
+  document.body.classList.add('sheet-open');   /* hides page maps so Leaflet tiles can't float over the sheet */
 }
 function closeSheet() {
   $('#sheetWrap').classList.remove('open');
   document.body.style.overflow = '';
+  document.body.classList.remove('sheet-open');
   /* release any un-paid seat hold the user is walking away from */
   if (typeof releaseSeatHold === 'function') releaseSeatHold();
 }

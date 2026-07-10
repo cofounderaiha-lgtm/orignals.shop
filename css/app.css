@@ -427,8 +427,40 @@ b,strong{font-weight:700}
 /* ============================================================
    DESKTOP — full-width professional layout (PC compatible)
    ============================================================ */
+/* Leaflet paints its tiles/controls in their own stacking context and can
+   bleed OVER a bottom sheet. While any sheet is open, hide every page map so
+   nothing floats above the sheet. Also keep maps clipped inside their box. */
+.route-canvas,.ride-map,.track-map,.map-box,.mini-map,.leaflet-container{position:relative;overflow:hidden}
+body.sheet-open .leaflet-container{visibility:hidden!important}
+
+/* ---------- in-house call (voice/video) ---------- */
+.pc-actions,.call-ctrls,.job-contact{display:flex;align-items:center;gap:8px}
+.job-contact{margin:8px 0 2px}
+.call-btn{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:#fff;flex-shrink:0}
+.call-btn.voice{background:var(--primary,#1A5632)}
+.call-btn.video{background:#3457d5}
+.pc-call.msg{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.call-overlay{position:fixed;inset:0;z-index:3000;background:#0c1512;display:flex;align-items:center;justify-content:center}
+.call-stage{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff}
+.call-remote{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#0c1512}
+.call-local{position:absolute;top:18px;right:18px;width:110px;height:150px;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,.5);z-index:2;background:#000}
+.call-avatar{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#1A5632,#2e7d52);display:flex;align-items:center;justify-content:center;color:#fff}
+.call-head{position:relative;z-index:2;text-align:center}
+.call-head b{display:block;font-size:1.35rem}
+.call-head small{opacity:.85;display:flex;gap:5px;align-items:center;justify-content:center;margin-top:4px}
+.call-actions{position:relative;z-index:2;display:flex;gap:22px;margin-top:8px}
+.call-round{width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.18);color:#fff;backdrop-filter:blur(4px)}
+.call-round.off{background:#fff;color:#0c1512}
+.call-round.accept{background:#1fb268}
+.call-round.decline{background:#e23b3b}
+.call-round.decline svg{transform:rotate(135deg)}
+@media(min-width:1024px){.call-overlay .call-stage{max-width:520px;height:78vh;margin:auto;border-radius:26px;overflow:hidden}
+  .call-overlay{background:rgba(6,10,9,.75)}}
+
 @media(min-width:1024px){
-  .frame{max-width:1200px;border:none;box-shadow:0 0 80px rgba(19,20,43,.06)}
+  .frame{max-width:min(96vw,1440px);border:none;box-shadow:0 0 80px rgba(19,20,43,.06)}
   .app-header{padding:12px 32px;display:flex;align-items:center;gap:18px}
   .hd-row{flex:1;min-width:0}
   .hd-nav{display:flex;margin-left:14px}
