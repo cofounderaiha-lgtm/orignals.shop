@@ -72,13 +72,17 @@ async function authSubmit() {
     refreshChrome && refreshChrome();
     go('account');
   };
-  /* password OK — if face 2FA is enrolled, require the second factor */
+  /* password OK — layer any enabled second factors: face, then authenticator */
+  const afterFace = () => {
+    if (_authMode === 'login' && typeof twofaLoginStep === 'function') twofaLoginStep(r.token, r.ident, finalize);
+    else finalize();
+  };
   if (_authMode === 'login' && r.face && typeof faceVerifyStep === 'function') {
     toast('Password OK — now confirm your face');
-    faceVerifyStep(r.ident, finalize);
+    faceVerifyStep(r.ident, afterFace);
     return;
   }
-  finalize();
+  afterFace();
 }
 
 function authLogout() {
@@ -199,6 +203,9 @@ view('facelock', () => {
       <button class="btn-main sm ghost red" onclick="faceRemoveServer()">Remove</button>`
     : `<button class="btn-main sm" ${a && a.token ? `onclick="faceEnrol()"` : `onclick="toast('Sign in first to enable face lock');go('login')"`}>${ic('camera', 14)} Enrol my face</button>`}
   </div>
+  <div class="card-block" id="totpCard">
+    <h3>${ic('shield', 15)} Authenticator app (2FA)</h3><p class="movie-about">Loading…</p>
+  </div>
   <div class="card-block">
     <h3>${ic('bell', 15)} Delivery &amp; order alerts</h3>
     <p class="movie-about">Get notified the moment your order moves — even when the app is closed. Runs on our own push keys, no third-party alert service.</p>
@@ -206,7 +213,84 @@ view('facelock', () => {
     ${!pushAvailable() ? `<div class="foot-note sm" style="text-align:left">Push activates automatically once your VAPID key is set in config — nothing to change in the app.</div>` : ''}
   </div>
   <div class="foot-note">${ic('shield', 12)} Delivery hand-overs can also capture the collector's photo, so even if a friend picks up your parcel, there's a verified record of who took it.</div>`;
+  twofaLoad();
 });
+
+/* ============================================================
+   AUTHENTICATOR-APP 2FA (TOTP) — client. Verified server-side.
+   ============================================================ */
+const _tfaFld = 'width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin:8px 0;font:inherit;letter-spacing:3px;text-align:center;font-size:1.1rem;background:var(--card,#fff);color:inherit';
+async function twofaLoad() {
+  const box = document.getElementById('totpCard'); if (!box) return;
+  const a = authState();
+  if (!a || !a.token || typeof CLOUD === 'undefined' || !CLOUD.on) {
+    box.innerHTML = `<h3>${ic('shield', 15)} Authenticator app (2FA)</h3><p class="movie-about">Sign in to add an authenticator app (Google Authenticator, Authy, Microsoft Authenticator…) as a code-based second factor.</p>`;
+    return;
+  }
+  const st = await authCall('twofa_status', { p_token: a.token });
+  if (st && st.totp) {
+    box.innerHTML = `<h3>${ic('check', 15)} Authenticator app — <b class="ok">ON</b></h3>
+      <p class="movie-about">A 6-digit code from your authenticator app is required at sign-in. <b>${st.backup_left || 0}</b> backup code${st.backup_left === 1 ? '' : 's'} left for recovery.</p>
+      <button class="btn-main sm ghost red" onclick="twofaOff()">Turn off authenticator</button>`;
+  } else {
+    box.innerHTML = `<h3>${ic('shield', 15)} Authenticator app (2FA)</h3>
+      <p class="movie-about">Add Google Authenticator, Authy or any TOTP app as a second factor. Works offline, needs no SMS, and can't be SIM-swapped.</p>
+      <button class="btn-main sm" onclick="twofaSetupStart()">${ic('shield', 14)} Set up authenticator</button>`;
+  }
+}
+async function twofaSetupStart() {
+  const a = authState(); if (!a || !a.token) { toast('Sign in first'); return; }
+  toast('Preparing…');
+  const r = await authCall('twofa_totp_setup', { p_token: a.token });
+  if (!r || !r.ok) { toast('Could not start setup — try again'); return; }
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Set up authenticator</h3>
+    <p class="foot-note sm" style="text-align:left">1. Open your authenticator app.  2. Scan this QR (or type the key).  3. Enter the 6-digit code it shows.</p>
+    <div id="totpQR" style="display:flex;justify-content:center;margin:10px 0"></div>
+    <div class="ck-line"><span>Manual key</span><b style="letter-spacing:1px;font-family:monospace">${esc(r.secret)}</b></div>
+    <input id="totpCode" inputmode="numeric" maxlength="6" placeholder="000000" style="${_tfaFld}"/>
+    <button class="btn-main wide" onclick="twofaConfirm()">${ic('check', 14)} Verify &amp; turn on</button>`);
+  if (typeof qrRender === 'function') qrRender('totpQR', r.otpauth);
+  setTimeout(() => { const e = document.getElementById('totpCode'); if (e) e.focus(); }, 80);
+}
+async function twofaConfirm() {
+  const a = authState(); const code = ((document.getElementById('totpCode') || {}).value || '');
+  if (code.replace(/\D/g, '').length < 6) { toast('Enter the 6-digit code from the app'); return; }
+  toast('Verifying…');
+  const r = await authCall('twofa_totp_enable', { p_token: a.token, p_code: code });
+  if (!r || !r.ok) { toast(r && r.reason === 'bad_code' ? 'Code incorrect — enter the current one' : 'Could not enable — try again'); return; }
+  const codes = r.backup_codes || [];
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${ic('check', 16)} Authenticator is on</h3>
+    <div class="trust-row">${ic('shield', 12)} Save these backup codes somewhere safe. Each one works once if you ever lose your phone.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;font-family:monospace;font-size:1.05rem">
+      ${codes.map(c => `<div style="background:var(--wash,#f4f4f5);padding:10px;border-radius:9px;text-align:center">${esc(c)}</div>`).join('')}</div>
+    <button class="btn-main wide" onclick="closeSheet();go('facelock')">I've saved them — Done</button>`);
+  confettiBurst();
+}
+async function twofaOff() {
+  if (!confirm('Turn off authenticator 2FA? Your account will then rely on password' + ((authState() || {}).face ? ' + face lock' : '') + '.')) return;
+  const a = authState();
+  const r = await authCall('twofa_totp_disable', { p_token: a.token });
+  if (r && r.ok) { toast('Authenticator turned off'); go('facelock'); } else toast('Could not turn off — try again');
+}
+/* login-time second factor */
+async function twofaLoginStep(token, ident, done) {
+  const st = await authCall('twofa_status', { p_token: token });
+  if (!st || !st.totp) { done(); return; }
+  window._tfaIdent = ident; window._tfaDone = done;
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Two-factor code</h3>
+    <p class="foot-note sm" style="text-align:left">Enter the 6-digit code from your authenticator app — or an 8-digit backup code.</p>
+    <input id="tfaLogin" inputmode="numeric" placeholder="000000" style="${_tfaFld}"/>
+    <button class="btn-main wide" onclick="twofaLoginVerify()">Verify &amp; sign in</button>`);
+  setTimeout(() => { const e = document.getElementById('tfaLogin'); if (e) e.focus(); }, 80);
+}
+async function twofaLoginVerify() {
+  const code = ((document.getElementById('tfaLogin') || {}).value || '');
+  if (!code.trim()) { toast('Enter your code'); return; }
+  toast('Verifying…');
+  const r = await authCall('twofa_verify_login', { p_ident: window._tfaIdent, p_code: code });
+  if (r && r.ok && !r.reason) { closeSheet(); const d = window._tfaDone; window._tfaDone = null; if (d) d(); }
+  else toast('Code incorrect — try again');
+}
 function enrolFace() {
   captureCameraPhoto('Enrol your face', 'Look straight at the camera in good light.', (data) => {
     S.faceRef = data; save();
