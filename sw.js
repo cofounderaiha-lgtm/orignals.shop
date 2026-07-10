@@ -1,7 +1,7 @@
 /* Orignals service worker — offline shell + on-device map tile cache.
    Tiles are cached cache-first (capped), which makes maps load instantly,
    work offline, and massively cuts traffic to the open-source tile servers. */
-const CACHE = 'orignals-v18';
+const CACHE = 'orignals-v19';
 const TILES = 'orignals-tiles-v1';
 const TILE_CAP = 900;
 const SHELL = [

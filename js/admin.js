@@ -30,11 +30,11 @@ function adminSeed() {
 
 /* ---------- admin control levels ---------- */
 const ADMIN_ROLES = [
-  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments, live visitor analytics and the Test console.', perms: ['overview', 'analytics', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'data', 'mitra', 'test'] },
-  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: live analytics, KYC, fraud, all orders, database read, onboard staff up to L3.', perms: ['overview', 'analytics', 'kyc', 'fraud', 'orders', 'roles', 'data', 'mitra'] },
-  { id: 'l3', name: 'L3 · Purity Inspector', desc: 'Field & lab team. Seals or delists batches. Nothing else.', perms: ['overview', 'purity', 'roles'] },
-  { id: 'l2', name: 'L2 · City Manager', desc: 'Onboards shops & partners in their city, watches local orders.', perms: ['overview', 'kyc', 'orders', 'roles'] },
-  { id: 'l1', name: 'L1 · Support Agent', desc: 'Sees order status to help customers. Read-only.', perms: ['overview', 'orders', 'roles'] }
+  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments, org-wide HRMS, live visitor analytics and the Test console.', perms: ['overview', 'analytics', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'hrms', 'data', 'mitra', 'test'] },
+  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: live analytics, org-wide HRMS, KYC, fraud, all orders, database read, onboard staff up to L3.', perms: ['overview', 'analytics', 'kyc', 'fraud', 'orders', 'roles', 'hrms', 'data', 'mitra'] },
+  { id: 'l3', name: 'L3 · Purity Inspector', desc: 'Field & lab team. Seals or delists batches, runs their department HR. ', perms: ['overview', 'purity', 'roles', 'hrms'] },
+  { id: 'l2', name: 'L2 · City Manager', desc: 'Onboards shops & partners in their city, watches local orders, runs their department HR.', perms: ['overview', 'kyc', 'orders', 'roles', 'hrms'] },
+  { id: 'l1', name: 'L1 · Support Agent', desc: 'Sees order status to help customers; own attendance & leave.', perms: ['overview', 'orders', 'roles', 'hrms'] }
 ];
 /* server-verified level (from admin_whoami); falls back to l5 only for
    pure-local/offline demo mode where there is no cloud to check against */
@@ -106,7 +106,7 @@ function renderAdminPanel(args) {
   let tab = args[0] || 'overview';
   if (!role.perms.includes(tab)) tab = 'overview';
   const A = S.admin;
-  const tabs = [['overview', 'Overview'], ['analytics', 'Analytics'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
+  const tabs = [['overview', 'Overview'], ['analytics', 'Analytics'], ['hrms', 'HR &amp; Staff'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
   const gmv = S.orders.reduce((a, o) => a + o.total, 0) + (S.myShop ? S.myShop.revenue : 0);
   let body = '';
 
@@ -136,6 +136,15 @@ function renderAdminPanel(args) {
     <div class="ana-map-wrap"><div id="anaMap" class="ana-map"></div><div class="ana-map-cap">${ic('pin', 11)} Live visitors — city-precise, last 5 min</div></div>
     <div id="anaCards" class="earn-tiles wide3"><div class="etile"><b>…</b><small>loading</small></div></div>
     <div id="anaBody"><div class="empty sm"><span>${ic('search', 26)}</span><b>Crunching your traffic…</b></div></div>`;
+
+  if (tab === 'hrms') body = `
+    <div class="tip-strip">${ic('shield', 13)} Full HRMS — departments, staff, attendance, leave & payroll. You see <b id="hrScope">your scope</b>: Super/Ops admins see the whole org, department admins see only their own department.</div>
+    <div class="card-block" id="hrSelf"><h3>${ic('user', 15)} My workday</h3><p class="movie-about">Loading…</p></div>
+    <div id="hrCards" class="earn-tiles wide3"><div class="etile"><b>…</b><small>loading</small></div></div>
+    <div class="chip-row" id="hrTabs">
+      ${[['team', 'Employees'], ['leave', 'Leave'], ['attend', 'Attendance'], ['pay', 'Payroll'], ['depts', 'Departments']].map(t => `<button class="chip ${(_HR_SUB || 'team') === t[0] ? 'on' : ''}" onclick="adminHRSub('${t[0]}')">${t[1]}</button>`).join('')}
+    </div>
+    <div id="hrBody"><div class="empty sm"><span>${ic('users', 26)}</span><b>Loading your team…</b></div></div>`;
 
   if (tab === 'purity') body = `
     <div class="tip-strip">${ic('leaf', 13)} Our key promise: naturally made &amp; grown food, zero adulteration. Approve only lab-passed batches.</div>
@@ -360,6 +369,136 @@ function renderAdminPanel(args) {
   }
   if (tab === 'roles' && ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 4) adminLoadTeam();
   if (tab === 'analytics') adminAnalyticsBoot(); else adminAnalyticsStop();
+  if (tab === 'hrms') adminHRLoad();
+}
+
+/* ============================================================
+   HRMS — departments, staff, attendance, leave, payroll.
+   Server enforces department scoping; UI just renders it.
+   ============================================================ */
+let _HR_SUB = 'team', _HR = { over: null, month: null };
+function adminHRSub(s) { _HR_SUB = s; document.querySelectorAll('#hrTabs .chip').forEach(c => c.classList.remove('on')); adminHRRenderSub(); }
+async function adminHRLoad() {
+  const o = await adminApi('hr_overview', {});
+  _HR.over = o;
+  const sc = document.getElementById('hrScope'); if (sc && o && o.scope) sc.textContent = o.scope === 'org' ? 'the whole organisation' : ('the ' + o.scope + ' department');
+  const cards = document.getElementById('hrCards');
+  if (cards) cards.innerHTML = o && o.ok ? `
+    <div class="etile"><b>${o.headcount}</b><small>Staff</small></div>
+    <div class="etile"><b>${o.present_today}</b><small>Present today</small></div>
+    <div class="etile"><b>${o.on_leave}</b><small>On leave</small></div>
+    <div class="etile"><b>${o.pending_leave}</b><small>Leave to approve</small></div>
+    <div class="etile"><b>${money(o.payroll_month)}</b><small>Monthly payroll</small></div>
+    <div class="etile"><b>${(o.by_dept || []).length}</b><small>Departments</small></div>` : `<div class="etile"><b>—</b><small>no access</small></div>`;
+  /* self-service strip (works for every staff level) */
+  const self = document.getElementById('hrSelf');
+  if (self) self.innerHTML = `<h3>${ic('user', 15)} My workday</h3>
+    <div class="btn-pair">
+      <button class="btn-main sm" onclick="adminHRAttend('in')">${ic('check', 13)} Check in</button>
+      <button class="btn-main sm ghost" onclick="adminHRAttend('out')">${ic('clock', 13)} Check out</button>
+    </div>
+    <button class="btn-main sm ghost wide" onclick="adminHRLeaveApply()">${ic('receipt', 13)} Apply for leave</button>`;
+  adminHRRenderSub();
+}
+async function adminHRRenderSub() {
+  const box = document.getElementById('hrBody'); if (!box) return;
+  box.innerHTML = `<div class="empty sm"><span>${ic('users', 22)}</span><b>Loading…</b></div>`;
+  const canManage = ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 4;
+  const canDecide = ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 3;
+  const isL5 = ADMIN_LEVEL === 'l5';
+  if (_HR_SUB === 'team') {
+    const rows = await adminApi('hr_employees', { p_q: '', p_dept: '', p_limit: 200, p_offset: 0 });
+    box.innerHTML = (Array.isArray(rows) && rows.length) ? rows.map(e => `
+      <div class="job-card">
+        <div class="job-top"><span class="job-emoji">${ic('user', 18)}</span>
+          <div><b>${esc(e.name || e.ident)} <small class="dim">${(e.level || '').toUpperCase()}</small></b>
+            <small>${esc(e.designation || 'Staff')} · ${esc(e.department)}</small>
+            <small class="dim">${money(e.salary || 0)}/mo · joined ${e.joined_on || '—'} · <b class="${e.status === 'active' ? 'ok' : ''}">${esc(e.status || 'active')}</b></small></div>
+          ${canManage ? `<button class="lnk" onclick="adminHREdit('${esc(e.ident)}')">Edit</button>` : ''}</div>
+      </div>`).join('') : `<div class="empty sm"><span>${ic('users', 26)}</span><b>No staff in your scope yet</b><p>Add staff in Team &amp; levels, then set their department & salary here.</p></div>`;
+  } else if (_HR_SUB === 'leave') {
+    const rows = await adminApi('hr_leave_list', { p_all: true });
+    box.innerHTML = (Array.isArray(rows) && rows.length) ? rows.map(l => `
+      <div class="job-card">
+        <div class="job-top"><span class="job-emoji">${ic('receipt', 18)}</span>
+          <div><b>${esc(l.name || l.ident)}</b><small>${esc(l.kind)} leave · ${l.from_date} → ${l.to_date} · ${esc(l.department)}</small>
+            <small class="dim">${esc(l.reason || '')} · <b class="${l.status === 'approved' ? 'ok' : l.status === 'rejected' ? 'red' : ''}">${esc(l.status)}</b></small></div></div>
+        ${(canDecide && l.status === 'pending') ? `<div class="btn-pair">
+          <button class="btn-main sm" onclick="adminHRLeave(${l.id},'approved')">${ic('check', 13)} Approve</button>
+          <button class="btn-main sm ghost" onclick="adminHRLeave(${l.id},'rejected')">Reject</button></div>` : ''}
+      </div>`).join('') : `<div class="empty sm"><span>${ic('receipt', 26)}</span><b>No leave requests</b></div>`;
+  } else if (_HR_SUB === 'attend') {
+    const rows = await adminApi('hr_attendance_today', {});
+    box.innerHTML = `<div class="foot-note sm" style="text-align:left">Today · ${new Date().toLocaleDateString('en-IN')}</div>` + ((Array.isArray(rows) && rows.length) ? rows.map(a => `
+      <div class="ck-line"><span>${ic('user', 12)} ${esc(a.name || a.ident)} <small class="dim">${esc(a.department)}</small></span>
+        <span>${a.check_in ? '🟢 ' + new Date(a.check_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}${a.check_out ? ' → ' + new Date(a.check_out).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span></div>`).join('') : `<div class="empty sm"><span>${ic('clock', 26)}</span><b>Nobody has checked in yet</b></div>`);
+  } else if (_HR_SUB === 'pay') {
+    const pl = await adminApi('hr_payroll_list', { p_month: '' });
+    _HR.month = pl && pl.month;
+    box.innerHTML = `
+      <div class="earn-tiles wide3">
+        <div class="etile"><b>${money((pl && pl.total) || 0)}</b><small>Payroll ${pl && pl.month || ''}</small></div>
+        <div class="etile"><b>${money((pl && pl.paid) || 0)}</b><small>Paid</small></div>
+        <div class="etile"><b>${money(((pl && pl.total) || 0) - ((pl && pl.paid) || 0))}</b><small>Due</small></div>
+      </div>
+      ${isL5 ? `<button class="btn-main sm ghost wide" onclick="adminHRPayrollRun()">${ic('wallet', 13)} Generate this month's payroll from salaries</button>` : ''}
+      ${(pl && Array.isArray(pl.rows) && pl.rows.length) ? pl.rows.map(r => `
+      <div class="ck-line"><span>${esc(r.name || r.ident)} <small class="dim">${esc(r.department)}</small></span>
+        <span>${money(r.amount)} · ${r.status === 'paid' ? '<b class="ok">paid</b>' : (isL5 ? `<button class="lnk" onclick="adminHRPay(${r.id})">Mark paid</button>` : '<b>due</b>')}</span></div>`).join('') : `<div class="empty sm"><span>${ic('wallet', 26)}</span><b>No payroll yet</b><p>${isL5 ? 'Generate it from staff salaries above.' : 'Ask a Super Admin to run payroll.'}</p></div>`}`;
+  } else if (_HR_SUB === 'depts') {
+    const d = await adminApi('hr_departments_list', {});
+    box.innerHTML = (Array.isArray(d) && d.length) ? d.map(x => `
+      <div class="ck-line"><span>${ic('grid', 12)} <b>${esc(x.name)}</b>${x.head ? ' · head ' + esc(x.head) : ''}</span><span>${x.headcount} staff</span></div>`).join('') : `<div class="empty sm"><span>${ic('grid', 26)}</span><b>No departments</b></div>`;
+  }
+}
+async function adminHRAttend(action) {
+  const r = await adminApi('hr_attendance_mark', { p_action: action });
+  if (r && r.ok) { toast(action === 'in' ? 'Checked in ✓' : 'Checked out ✓'); if (_HR_SUB === 'attend') adminHRRenderSub(); adminHRLoad(); }
+  else toast('Could not record — are you staff?');
+}
+function adminHRLeaveApply() {
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Apply for leave</h3>
+    <div class="ck-line"><span>From</span><input id="hrLvFrom" type="date" style="${_fld}"/></div>
+    <div class="ck-line"><span>To</span><input id="hrLvTo" type="date" style="${_fld}"/></div>
+    <input id="hrLvReason" placeholder="Reason (optional)" style="${_fld}"/>
+    <button class="btn-main wide" onclick="adminHRLeaveSubmit()">Submit request</button>`);
+}
+async function adminHRLeaveSubmit() {
+  const from = (document.getElementById('hrLvFrom') || {}).value, to = (document.getElementById('hrLvTo') || {}).value;
+  const reason = (document.getElementById('hrLvReason') || {}).value || '';
+  if (!from || !to) { toast('Pick both dates'); return; }
+  const r = await adminApi('hr_leave_apply', { p_kind: 'casual', p_from: from, p_to: to, p_reason: reason });
+  if (r && r.ok) { closeSheet(); toast('Leave request submitted'); adminHRLoad(); } else toast('Could not submit');
+}
+async function adminHRLeave(id, decision) {
+  const r = await adminApi('hr_leave_decide', { p_id: id, p_decision: decision });
+  if (r && r.ok) { toast('Leave ' + decision); adminHRRenderSub(); adminHRLoad(); } else toast((r && r.reason === 'out_of_scope') ? 'Not in your department' : 'Could not update');
+}
+function adminHREdit(ident) {
+  const depts = ((_HR.over && _HR.over.by_dept) || []).map(d => d.dept);
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Edit staff · ${esc(ident)}</h3>
+    <input id="hrDept" placeholder="Department (e.g. Support)" style="${_fld}"/>
+    <input id="hrDesig" placeholder="Designation (e.g. City Lead)" style="${_fld}"/>
+    <input id="hrSal" type="number" inputmode="numeric" placeholder="Monthly salary ₹" style="${_fld}"/>
+    <select id="hrStatus" style="${_fld}"><option value="">Keep status</option><option value="active">Active</option><option value="on_leave">On leave</option><option value="suspended">Suspended</option><option value="exited">Exited</option></select>
+    <button class="btn-main wide" onclick="adminHRSave('${esc(ident)}')">Save</button>`);
+}
+async function adminHRSave(ident) {
+  const dept = (document.getElementById('hrDept') || {}).value || '';
+  const desig = (document.getElementById('hrDesig') || {}).value || '';
+  const sal = (document.getElementById('hrSal') || {}).value;
+  const status = (document.getElementById('hrStatus') || {}).value || '';
+  const r = await adminApi('hr_employee_set', { p_ident: ident, p_department: dept, p_designation: desig, p_salary: sal === '' ? null : Number(sal), p_status: status });
+  if (r && r.ok) { closeSheet(); toast('Staff updated'); adminHRRenderSub(); adminHRLoad(); } else toast(r && r.reason === 'forbidden' ? 'Needs Ops/Super admin' : 'Could not save');
+}
+async function adminHRPayrollRun() {
+  if (!confirm('Generate payroll for this month from every active staff salary?')) return;
+  const r = await adminApi('hr_payroll_run', { p_month: '' });
+  if (r && r.ok) { toast('Payroll generated · ' + r.rows + ' staff'); adminHRRenderSub(); } else toast(r && r.reason === 'only_l5' ? 'Super Admin only' : 'Could not run');
+}
+async function adminHRPay(id) {
+  const r = await adminApi('hr_payroll_pay', { p_id: id });
+  if (r && r.ok) { toast('Marked paid'); adminHRRenderSub(); } else toast('Could not update');
 }
 
 /* ============================================================
