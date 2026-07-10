@@ -437,7 +437,15 @@ function mitraThink(raw) {
     return;
   }
 
-  /* — fallback — */
+  /* — fallback — language-aware. If the message is in a language Mitra isn't
+     fully trained in yet, greet in that language, say it's learning, and still
+     help. The utterance is already logged (brainObserve) for on-demand training. */
+  const _li = (typeof mitraLangInfo === 'function') ? mitraLangInfo(raw) : null;
+  if (_li && !_li.trained && _li.code !== 'en') {
+    mitraReply(`<b>${esc(_li.hello)}</b> 🙏 I can see you're writing in <b>${esc(_li.name)}</b> <small class="dim">(${esc(_li.native)})</small>. I understand a little, and I'm learning to speak it fully — I've noted this so my team can train me in ${esc(_li.name)}. For now, tell me in a few words or English and I'll do it: <i>"order milk"</i>, <i>"book a ride"</i>, <i>"send a parcel"</i>.`,
+      ['Help', 'Order milk', 'Book a ride'], _li.hello);
+    return;
+  }
   mitraReply(`Hmm, I didn't find that nearby. Try simpler words like <i>"milk"</i>, <i>"biryani"</i>, <i>"medicine"</i>, <i>"flowers"</i> — or say <i>"help"</i> to see everything I can do. <small class="malt">(Every question teaches Mitra Brain — it gets smarter daily.)</small>`,
     ['Help', 'Order bread', 'Send a parcel']);
 }

@@ -1,7 +1,7 @@
 /* Orignals service worker — offline shell + on-device map tile cache.
    Tiles are cached cache-first (capped), which makes maps load instantly,
    work offline, and massively cuts traffic to the open-source tile servers. */
-const CACHE = 'orignals-v20';
+const CACHE = 'orignals-v21';
 const TILES = 'orignals-tiles-v1';
 const TILE_CAP = 900;
 const SHELL = [
@@ -9,7 +9,7 @@ const SHELL = [
   './js/data.js', './js/icons.js', './js/core.js', './js/home.js', './js/shops.js',
   './js/send.js', './js/rides.js', './js/tickets.js', './js/estate.js',
   './js/earn.js', './js/myshop.js', './js/mitra.js', './js/account.js', './js/admin.js', './js/call.js',
-  './js/cloud.js', './js/analytics.js', './js/brain.js', './js/brain_ml.js', './js/geo.js', './js/ops.js', './js/auth.js', './js/face.js', './js/legal.js',
+  './js/cloud.js', './js/analytics.js', './js/brain.js', './js/brain_ml.js', './js/langs.js', './js/geo.js', './js/ops.js', './js/auth.js', './js/face.js', './js/legal.js',
   './manifest.json', './config.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-180.png'
 ];

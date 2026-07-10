@@ -273,7 +273,7 @@ function renderAdminPanel(args) {
       <h3>${ic('shield', 14)} Mitra — full capabilities &amp; control (Super Admin)</h3>
       <div class="ck-line"><span>Universal navigator</span><span>${typeof MITRA_HELP !== 'undefined' ? MITRA_HELP.length : '—'} sections — takes any user to any screen &amp; explains it</span></div>
       <div class="ck-line"><span>Intents understood</span><span>${BRAIN.intents.length} (order, track, ride, send, wallet, tickets, stays, property, earn, shop, help…)</span></div>
-      <div class="ck-line"><span>Languages</span><span>22 Indian languages + English/Hinglish</span></div>
+      <div class="ck-line"><span>Languages</span><span><b>${typeof langCount === 'function' ? langCount() : 289}+</b> recognised — 22 trained deeply, the rest understood at script level &amp; trainable on demand below</span></div>
       <div class="ck-line"><span>Model lanes</span><span>Own in-browser brain (free) + Supabase trainer + optional Claude distillation</span></div>
       <div class="ck-line"><span>Role intelligence</span><span>Buyers → shopping help · Admins → their department · Super Admin → full control (here)</span></div>
       <div class="ck-line"><span>Claude escalation</span><span>${llmOn ? '<b class="ok">ON · ' + esc(llmCfg.model || '') + '</b>' : 'OFF — brain + rules handle everything'}</span></div>
@@ -281,6 +281,16 @@ function renderAdminPanel(args) {
         <button class="btn-main sm ghost" onclick="brainAdoptGlobal&&brainAdoptGlobal();toast('Pulled the latest backend model')">Sync backend model</button>
         <button class="btn-main sm ghost" onclick="brainSeedTrain();toast('Retrained from the full multilingual seed');VIEWS.admin(['mitra'])">Retrain from seed</button>
       </div>
+    </div>
+
+    <div class="card-block">
+      <h3>${ic('spark', 14)} Teach Mitra a language (on demand)</h3>
+      <p class="movie-about">Type a real phrase in <b>any</b> of the ${typeof langCount === 'function' ? langCount() : 289}+ languages, pick what it means, and Mitra learns it instantly — on-device and queued to the backend trainer. Do this a few times per language and it graduates to full support.</p>
+      <select id="teachLang" class="txt sm" style="width:100%;margin:4px 0">${(typeof LANG_LIST !== 'undefined' ? LANG_LIST : ['Hindi']).map(l => `<option>${esc(l)}</option>`).join('')}</select>
+      <input id="teachPhrase" class="txt" placeholder="Phrase in that language — e.g. &quot;мне нужно молоко&quot;" style="width:100%;margin:4px 0"/>
+      <select id="teachIntent" class="txt sm" style="width:100%;margin:4px 0">${(BRAIN.intents || []).map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('')}</select>
+      <button class="btn-main sm wide" onclick="mitraTeach()">${ic('check', 13)} Teach Mitra this</button>
+      <div id="teachLog" class="foot-note sm" style="text-align:left"></div>
     </div>
     <div class="earn-tiles wide3">
       <div class="etile"><b>${st.utterances}</b><small>Utterances collected</small></div>
@@ -603,6 +613,20 @@ function anaEventCard(ev) {
   if (!ev.length) return anaEmptyCard('Key events');
   return `<div class="card-block"><h3>Key events</h3>${ev.map(e => `
     <div class="ck-line"><span>${esc(e.name)}</span><span><b>${(+e.n || 0).toLocaleString('en-IN')}</b>${+e.value ? ' · ' + money(e.value) : ''}</span></div>`).join('')}</div>`;
+}
+/* on-demand language training: adds a labeled example → trains the on-device
+   brain immediately + queues to the backend trainer (mitra_utterances) */
+function mitraTeach() {
+  const lang = (document.getElementById('teachLang') || {}).value || '';
+  const phrase = ((document.getElementById('teachPhrase') || {}).value || '').trim();
+  const intent = (document.getElementById('teachIntent') || {}).value || '';
+  if (phrase.length < 2) { toast('Type a phrase first'); return; }
+  if (!intent) { toast('Pick what it means'); return; }
+  if (typeof brainObserve === 'function') brainObserve(phrase, { intent, conf: 1 }, intent, 'human');
+  const box = document.getElementById('teachLog');
+  if (box) box.innerHTML = `${ic('check', 11)} Learned <b>"${esc(phrase)}"</b> = <b>${esc(intent)}</b> (${esc(lang)}). Mitra now understands it. Add a few more for full ${esc(lang)} support.` + box.innerHTML.replace(/^.*?(<br|$)/, '$1');
+  const el = document.getElementById('teachPhrase'); if (el) { el.value = ''; el.focus(); }
+  toast('Mitra learned it — model updated');
 }
 function anaFlag(cc) {
   if (!cc || cc.length !== 2) return '🌐';
