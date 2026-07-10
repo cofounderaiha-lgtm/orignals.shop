@@ -1,7 +1,7 @@
 /* Orignals service worker — offline shell + on-device map tile cache.
    Tiles are cached cache-first (capped), which makes maps load instantly,
    work offline, and massively cuts traffic to the open-source tile servers. */
-const CACHE = 'orignals-v15';
+const CACHE = 'orignals-v16';
 const TILES = 'orignals-tiles-v1';
 const TILE_CAP = 900;
 const SHELL = [
@@ -74,9 +74,23 @@ self.addEventListener('fetch', e => {
   if (url.hostname.endsWith('supabase.co') || url.hostname.includes('nominatim') ||
       url.hostname.includes('anthropic') || url.hostname.endsWith('razorpay.com')) return;
 
+  /* OUR OWN app shell (html/css/js): NETWORK-FIRST so every deploy shows up
+     immediately. The cache is only a fallback for offline. This is what stops
+     the "stuck on an old version" problem. */
+  if (url.origin === self.location.origin) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
+        return res;
+      }).catch(() => caches.match(e.request).then(hit => hit || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  /* third-party immutable assets (e.g. unpkg Leaflet): cache-first is fine */
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      if ((res.ok && url.origin === self.location.origin) || (res.type === 'opaque' && url.hostname === 'unpkg.com')) {
+      if (res.type === 'opaque' && url.hostname === 'unpkg.com') {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
       }

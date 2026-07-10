@@ -505,8 +505,21 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof authBoot === 'function') setTimeout(authBoot, 500);      // validate session (fail-open)
   if (typeof cloudClaimRefCredits === 'function') setTimeout(cloudClaimRefCredits, 3000);  // referral rewards
   if (typeof maybeShowConsent === 'function') setTimeout(maybeShowConsent, 700);  // first-run consent (DPDP)
+  /* one-time cleanup: purge the old infra "Cloud sync active" notification spam
+     that earlier builds left piled up in local storage */
+  if (Array.isArray(S.notifs) && S.notifs.length) {
+    const before = S.notifs.length;
+    S.notifs = S.notifs.filter(n => !/cloud sync|mirror to the database|backed by your supabase/i.test((n.title || '') + ' ' + (n.body || '')));
+    if (S.notifs.length !== before) save();
+  }
   if (!S.notifs.length) notify('Welcome to Orignals', 'Purity-verified food, every shop nearby, earn as you go. ₹500 free in your wallet.');
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
+    /* when a fresh service worker takes control, reload ONCE so the newest
+       deploy is shown immediately — no more stale cached app */
+    let _swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_swReloaded) return; _swReloaded = true; location.reload();
+    });
   }
 });
