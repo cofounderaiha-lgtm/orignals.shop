@@ -20,54 +20,72 @@ const CINEMAS = [
 ];
 
 view('tickets', args => {
-  const tab = args[0] || 'movies';
-  window._tkDate = window._tkDate || tkDates()[0].key;
-  const fmt = window._tkFmt || 'All';
+  const tab = args[0] || 'events';
 
-  const tabs = [['movies', 'Movies'], ['events', 'Events'], ['dining', 'Dining'], ['mine', 'My bookings']];
+  const tabs = [['events', 'Events'], ['planners', 'Planners'], ['venues', 'Venues'], ['dining', 'Dining'], ['mine', 'My bookings']];
   let body = '';
 
-  if (tab === 'movies') {
-    let list = DB.movies;
-    if (fmt !== 'All') list = list.filter(m => m.tag.includes(fmt));
-    body = `
-    <div class="date-strip">
-      ${tkDates().map(d => `<button class="date-pill ${window._tkDate === d.key ? 'on' : ''}" onclick="window._tkDate='${d.key}';VIEWS.tickets(['movies'])"><small>${d.day}</small><b>${d.num}</b></button>`).join('')}
-    </div>
-    <div class="chip-row">
-      ${['All', '2D', '3D', 'IMAX', 'Dolby'].map(f => `<button class="chip ${fmt === f ? 'on' : ''}" onclick="window._tkFmt='${f}';VIEWS.tickets(['movies'])">${f}</button>`).join('')}
-    </div>
-    <div class="legend"><span><i class="lg avail"></i>Available</span><span><i class="lg fill"></i>Filling fast</span><span><i class="lg full"></i>Almost full</span></div>
-    <div class="movie-grid">
-      ${list.map(m => `
-      <div class="movie-card" onclick="go('movie/${m.id}')">
-        <div class="poster">
-          <b>${esc(m.title)}</b><small>${esc(m.tag)}</small>
-          <span class="poster-rate">★ ${m.rating}</span>
-        </div>
-        <div class="movie-body">
-          <b>${esc(m.title)}</b>
-          <small>${m.cert} · ${esc(m.lang)} · ${Math.floor(m.mins / 60)}h ${m.mins % 60}m</small>
-          <small class="dim">${esc(m.genre)}</small>
-        </div>
-      </div>`).join('')}
-    </div>`;
-  }
-
   if (tab === 'events') {
-    body = `<div class="event-list">
-      ${DB.events.map(e => `
+    window._evScope = window._evScope || 'All';
+    window._evCat = window._evCat || 'All';
+    const scopes = ['All', 'Nearby', 'Society', 'City', 'State', 'National'];
+    const cats = ['All', ...Array.from(new Set(DB.events.map(e => e.cat)))];
+    let list = DB.events;
+    if (window._evScope !== 'All') list = list.filter(e => e.scope === window._evScope);
+    if (window._evCat !== 'All') list = list.filter(e => e.cat === window._evCat);
+    body = `
+    <div class="tip-strip">${ic('star', 13)} Everything happening around you — society melas to national summits. Book a seat, or plan your own below.</div>
+    <div class="chip-row">${scopes.map(s => `<button class="chip ${window._evScope === s ? 'on' : ''}" onclick="window._evScope='${s}';VIEWS.tickets(['events'])">${s}</button>`).join('')}</div>
+    <div class="chip-row">${cats.map(c => `<button class="chip ${window._evCat === c ? 'on' : ''}" onclick="window._evCat='${c}';VIEWS.tickets(['events'])">${esc(c)}</button>`).join('')}</div>
+    <div class="event-list">
+      ${list.length ? list.map(e => `
       <div class="event-card" onclick="eventSheet('${e.id}')">
-        <div class="event-img">
+        <div class="event-img" ${e.grad ? `style="background:linear-gradient(135deg,${e.grad[0]},${e.grad[1]})"` : ''}>
           ${e.img ? `<img src="${e.img}" alt="" loading="lazy" onerror="this.remove()"/>` : ''}
-          <em>${esc(e.cat)}</em></div>
+          <em>${esc(e.cat)}</em>${e.scope ? `<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;font-size:.65rem;padding:2px 8px;border-radius:20px">${esc(e.scope)}</span>` : ''}</div>
         <div class="event-body">
           <b>${esc(e.title)}</b>
           <small>${ic('pin', 11)} ${esc(e.venue)}</small>
           <small>${ic('clock', 11)} ${esc(e.when)}</small>
-          <div class="event-foot"><b>${money(e.price)}</b><span>onwards</span><em>Book ${ic('arrowr', 11)}</em></div>
+          <div class="event-foot"><b>${e.price ? money(e.price) : 'Free'}</b>${e.price ? '<span>onwards</span>' : ''}<em>${e.price ? 'Book' : 'RSVP'} ${ic('arrowr', 11)}</em></div>
         </div>
-      </div>`).join('')}</div>`;
+      </div>`).join('') : `<div class="empty"><span>${ic('star', 40)}</span><b>No events in ${esc(window._evScope)}${window._evCat !== 'All' ? ' · ' + esc(window._evCat) : ''}</b><p>Try another filter — or plan your own below.</p></div>`}
+    </div>
+    <div class="sec-head" style="margin-top:16px"><h2>Plan your own event</h2></div>
+    <div class="dir-grid">
+      <button class="svc" onclick="go('tickets/planners')"><span class="svc-ic">${ic('user', 20)}</span><b>Event planners</b><small>Weddings · corporate · birthdays</small></button>
+      <button class="svc" onclick="go('tickets/venues')"><span class="svc-ic">${ic('home', 20)}</span><b>Venues &amp; places</b><small>Halls · lawns · rooftops</small></button>
+    </div>`;
+  }
+
+  if (tab === 'planners') {
+    body = `
+    <div class="tip-strip">${ic('shield', 13)} Every planner is identity- &amp; work-verified before onboarding. Get a quote in-app — no numbers shared.</div>
+    ${DB.eventPros.map(p => `
+    <div class="job-card" onclick="plannerSheet('${p.id}')">
+      <div class="job-top"><span class="job-emoji">${ic('user', 20)}</span>
+        <div><b>${esc(p.name)} ${p.verified ? `<small class="ok">${ic('check', 10)} Verified</small>` : '<small class="dim">Under review</small>'}</b>
+          <small>${esc(p.kind)} · ★ ${p.rating} · ${p.jobs} events</small>
+          <small class="dim">${esc(p.area)} · ${p.tags.map(esc).join(' · ')}</small></div>
+        <em class="job-pay">${money(p.from)}<small>from</small></em></div>
+    </div>`).join('')}
+    <button class="btn-main wide ghost" onclick="toast('List your services & verify your expertise to get onboarded');go('myshop')">${ic('spark', 14)} Are you an event professional? Get onboarded</button>`;
+  }
+
+  if (tab === 'venues') {
+    body = `
+    <div class="tip-strip">${ic('pin', 13)} Book a hall, lawn or rooftop near you — check the date and hold it in-app.</div>
+    <div class="prop-list">
+    ${DB.venues.map(v => `
+    <div class="shop-card" onclick="venueSheet('${v.id}')">
+      <div style="background:linear-gradient(135deg,#0F3B21,#1A5632);color:#fff;padding:16px;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center"><b>${esc(v.kind)}</b><span style="opacity:.85;font-size:.8rem">${esc(v.cap)}</span></div>
+      <div class="shop-body">
+        <div class="shop-line1"><b>${esc(v.name)}</b></div>
+        <div class="shop-line2">${esc(v.tags.join(' · '))}</div>
+        <div class="shop-line3"><span>${ic('pin', 11)} ${esc(v.area)} · ${v.km} km</span></div>
+        <div class="event-foot"><b>${money(v.from)}</b><span>per day</span><em>Check dates ${ic('arrowr', 11)}</em></div>
+      </div></div>`).join('')}
+    </div>`;
   }
 
   if (tab === 'dining') {
@@ -109,12 +127,12 @@ view('tickets', args => {
       ${sts.map((st, i) => `<div class="order-row static"><span class="or-emoji">${ic('home', 18)}</span>
         <div class="or-info"><b>${esc(st.hotel)}</b><small>${esc(st.day)} · ${st.nights} night${st.nights > 1 ? 's' : ''} · ${st.guests} guests</small></div>
         <div class="or-right"><b>${money(st.total)}</b><span class="or-status done">Booked</span><button class="lnk red" onclick="cancelStay(${i})">Cancel</button></div></div>`).join('')}`
-      : `<div class="empty"><span>${ic('star', 40)}</span><b>No bookings yet</b><p>Movie tickets, tables and stays appear here.</p></div>`;
+      : `<div class="empty"><span>${ic('star', 40)}</span><b>No bookings yet</b><p>Event tickets, tables and stays appear here.</p></div>`;
   }
 
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="go('home')">${ic('chevl', 16)}</button>
-    <div><h1>Movies, events &amp; more</h1><small>Live seats · instant tickets · zero convenience fee</small></div></div>
+    <div><h1>Events near you</h1><small>Society melas to national summits · plan &amp; host your own</small></div></div>
   <div class="chip-row">
     ${tabs.map(t => `<button class="chip ${tab === t[0] ? 'on' : ''}" onclick="go('tickets/${t[0]}')">${t[1]}</button>`).join('')}
   </div>
@@ -389,6 +407,47 @@ function eventBook(eid) {
       go('ticket/' + t.id);
     }
   });
+}
+
+/* ---------- EVENT PLANNERS & CONSULTANTS (quote-based, in-app) ---------- */
+const _fld = 'width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;margin:6px 0;font:inherit;background:var(--card,#fff);color:inherit';
+function plannerSheet(id) {
+  const p = DB.eventPros.find(x => x.id === id); if (!p) return;
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${esc(p.name)}</h3>
+    <div class="trust-row">${ic('shield', 12)} ${p.verified ? 'Identity &amp; work verified' : 'Verification under review'} · you talk in-app, no numbers shared.</div>
+    <p class="movie-about">${esc(p.kind)} · ★ ${p.rating} · ${p.jobs} events · ${esc(p.area)}<br/>Specialities: ${p.tags.map(esc).join(', ')}. Starting from <b>${money(p.from)}</b>.</p>
+    <input id="evWhen" placeholder="When is your event? e.g. 14 Dec, evening" style="${_fld}"/>
+    <input id="evGuests" placeholder="Guests / scale — e.g. 300 guests" style="${_fld}"/>
+    <button class="btn-main wide" onclick="sendPlannerEnquiry('${id}')">${ic('spark', 14)} Send enquiry &amp; get a quote</button>`);
+}
+function sendPlannerEnquiry(id) {
+  const p = DB.eventPros.find(x => x.id === id); if (!p) return;
+  const when = (document.getElementById('evWhen') || {}).value || '';
+  const g = (document.getElementById('evGuests') || {}).value || '';
+  if (!S.eventLeads) S.eventLeads = [];
+  S.eventLeads.unshift({ id: uid(), pro: p.name, when, guests: g, ts: Date.now() });
+  save(); closeSheet(); confettiBurst();
+  notify('Enquiry sent to ' + p.name, (when ? when + ' · ' : '') + (g || 'quote requested') + ' — they will reply with a quote in your chat.', '📩');
+  toast('Enquiry sent — ' + p.name + ' will reply in-app');
+}
+
+/* ---------- EVENT VENUES / PLACES (date hold, in-app) ---------- */
+function venueSheet(id) {
+  const v = DB.venues.find(x => x.id === id); if (!v) return;
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${esc(v.name)}</h3>
+    <p class="movie-about">${esc(v.kind)} · capacity ${esc(v.cap)} · ${esc(v.area)} (${v.km} km)<br/>${v.tags.map(esc).join(' · ')}. From <b>${money(v.from)}</b> per day.</p>
+    <input id="vnDate" type="date" style="${_fld}"/>
+    <button class="btn-main wide" onclick="holdVenue('${id}')">${ic('check', 14)} Check availability &amp; hold</button>`);
+}
+function holdVenue(id) {
+  const v = DB.venues.find(x => x.id === id); if (!v) return;
+  const d = (document.getElementById('vnDate') || {}).value || '';
+  if (!d) { toast('Pick a date first'); return; }
+  if (!S.eventLeads) S.eventLeads = [];
+  S.eventLeads.unshift({ id: uid(), venue: v.name, when: d, ts: Date.now() });
+  save(); closeSheet(); confettiBurst();
+  notify('Date held at ' + v.name, d + ' — confirm within 48h to lock it in.', '📍');
+  toast('Held ' + v.name + ' for ' + d);
 }
 
 /* ---------- DINING RESERVATION ---------- */

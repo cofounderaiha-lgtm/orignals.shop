@@ -126,8 +126,8 @@ const MITRA_HELP = [
     kw: ['send', 'parcel', 'courier', 'tiffin', 'bhej', 'भेज', 'deliver something'] },
   { route: 'ride', title: 'Rides', help: 'Book a bike, auto or car — fixed fare, no surge, live map with directions.', tips: ['Book a bike', 'Auto to the station'],
     kw: ['ride', 'rides', 'bike', 'auto', 'cab', 'taxi', 'gaadi', 'गाड़ी'] },
-  { route: 'tickets', title: 'Movies & Events', help: 'Book movie or event seats live with a real seat map.', tips: ['Book movie tickets'],
-    kw: ['movie', 'movies', 'ticket', 'cinema', 'event', 'show', 'film', 'फिल्म'] },
+  { route: 'tickets', title: 'Events', help: 'Find events near you — society melas to national summits — book a seat, hire a planner, or book a venue.', tips: ['Events this weekend', 'Book an event planner'],
+    kw: ['event', 'events', 'ticket', 'concert', 'show', 'planner', 'venue', 'wedding', 'expo', 'इवेंट', 'कार्यक्रम'] },
   { route: 'tickets/dining', title: 'Dining', help: 'Reserve a table at restaurants near you — 20% off the bill.', tips: ['Reserve a table'],
     kw: ['dining', 'restaurant', 'table', 'reserve', 'reservation'] },
   { route: 'estate', title: 'Property & Stays', help: 'Buy, rent or list property, and book verified stays — with real maps & documents.', tips: ['2 BHK for rent', 'Book a hotel'],
@@ -306,14 +306,14 @@ function mitraThink(raw) {
     return;
   }
 
-  /* — movies & tickets — */
-  if (has('movie', 'ticket', 'cinema', 'show ', 'film')) {
-    const mv = DB.movies.find(m => t.includes(m.title.toLowerCase().split(' ')[0].toLowerCase()));
-    const a = regAction(() => go(mv ? 'movie/' + mv.id : 'tickets'));
-    mitraReply(mv
-      ? `<b>${esc(mv.title)}</b> — ★ ${mv.rating}, ${esc(mv.tag)}. Shows today from ${mv.times[0]}.<br/><button class="mbtn" onclick="runMitraAction(${a})">Pick seats live</button>`
-      : `Blockbusters &amp; events this week — pick your seat on a live map, zero convenience fee.<br/><button class="mbtn" onclick="runMitraAction(${a})">Open movies &amp; events</button>`,
-      ['Open movies', 'Events this weekend']);
+  /* — events, planners & venues — */
+  if (has('event', 'ticket', 'concert', 'show ', 'planner', 'venue', 'wedding', 'expo', 'mela')) {
+    const ev = DB.events.find(e => t.includes(e.title.toLowerCase().split(' ')[0].toLowerCase()) || t.includes((e.cat || '').toLowerCase()));
+    const a = regAction(() => go('tickets'));
+    mitraReply(ev
+      ? `<b>${esc(ev.title)}</b> — ${esc(ev.cat)} · ${esc(ev.venue)}, ${esc(ev.when)}. ${ev.price ? 'From ' + money(ev.price) : 'Free entry'}.<br/><button class="mbtn" onclick="runMitraAction(${a})">Open events</button>`
+      : `Everything happening around you — society melas to national summits. You can also hire a verified event planner or book a venue.<br/><button class="mbtn" onclick="runMitraAction(${a})">Open events</button>`,
+      ['Events this weekend', 'Book an event planner']);
     return;
   }
   /* — hotels & stays — */

@@ -314,7 +314,7 @@ function renderAdminPanel(args) {
   if (tab === 'test') {
     const routes = [
       ['home', 'Home', 'store'], ['shops', 'Shops', 'store'], ['send', 'Send', 'package'], ['ride', 'Rides', 'bike'],
-      ['tickets', 'Movies', 'star'], ['tickets/dining', 'Dining', 'bowl'], ['estate', 'Property', 'home'], ['estate/hotels', 'Stays', 'home'],
+      ['tickets', 'Events', 'star'], ['tickets/dining', 'Dining', 'bowl'], ['estate', 'Property', 'home'], ['estate/hotels', 'Stays', 'home'],
       ['earn', 'Earn', 'users'], ['myshop', 'Your Shop', 'chart'], ['papers', 'Papers', 'shield'], ['wallet', 'Wallet', 'wallet'],
       ['orders', 'Orders', 'receipt'], ['mitra', 'Mitra', 'spark'], ['login', 'Login', 'shield'], ['facelock', 'Security', 'camera'],
       ['legal', 'Legal', 'shield'], ['promise', 'Promise', 'check'], ['categories', 'Categories', 'grid'], ['notifs', 'Alerts', 'bell']

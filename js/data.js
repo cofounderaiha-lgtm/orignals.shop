@@ -367,18 +367,45 @@ const DB = {
 
   /* ---------- EVENTS ---------- */
   events: [
-    { id:'ev1', title:'Laugh Riot — Standup Night', cat:'Comedy', venue:'The Attic, MG Road', when:'Sat, 8:00 PM', price:499,
+    { id:'ev1', title:'Laugh Riot — Standup Night', cat:'Comedy', scope:'Nearby', venue:'The Attic, MG Road', when:'Sat, 8:00 PM', price:499,
       img:'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=800&q=60&auto=format&fit=crop', grad:['#0F3B21','#1A5632'],
       about:'90 minutes, 4 comics, zero mercy. Age 16+.' },
-    { id:'ev2', title:'Indie Sundowner Concert', cat:'Music', venue:'Lakeside Amphitheatre', when:'Sun, 5:30 PM', price:799,
+    { id:'ev2', title:'Indie Sundowner Concert', cat:'Music', scope:'City', venue:'Lakeside Amphitheatre', when:'Sun, 5:30 PM', price:799,
       img:'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=60&auto=format&fit=crop', grad:['#0F3B21','#1A5632'],
       about:'5 indie bands, open lawns, food trucks by the lake.' },
-    { id:'ev3', title:'Big Match — Giant Screening', cat:'Sports', venue:'Grand Stadium, Gate 4', when:'Sat, 7:00 PM', price:299,
+    { id:'ev3', title:'Big Match — Giant Screening', cat:'Sports', scope:'City', venue:'Grand Stadium, Gate 4', when:'Sat, 7:00 PM', price:299,
       img:'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&q=60&auto=format&fit=crop', grad:['#0F3B21','#1A5632'],
       about:'The final, on a 60-ft screen, with 5,000 fans.' },
-    { id:'ev4', title:'Street Food Carnival', cat:'Food Fest', venue:'Central Mall Grounds', when:'Sat–Sun, 12 PM on', price:199,
+    { id:'ev4', title:'Street Food Carnival', cat:'Food Fest', scope:'Nearby', venue:'Central Mall Grounds', when:'Sat–Sun, 12 PM on', price:199,
       img:'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=60&auto=format&fit=crop', grad:['#0F3B21','#1A5632'],
-      about:'60 stalls, 12 states, one entry band. Kids free.' }
+      about:'60 stalls, 12 states, one entry band. Kids free.' },
+    { id:'ev5', title:'Society Diwali Mela & Cultural Night', cat:'Community', scope:'Society', venue:'Your society lawn', when:'Next Sat, 6:00 PM', price:0, grad:['#7a3b12','#E8A020'],
+      about:'Resident stalls, kids games and a cultural evening. Free for members.' },
+    { id:'ev6', title:'State Handloom & Craft Expo', cat:'Exhibition', scope:'State', venue:'State Exhibition Grounds', when:'Fri–Sun, 10:00 AM', price:50, grad:['#0F3B21','#1A5632'],
+      about:'300+ weavers and artisans from across the state, under one roof.' },
+    { id:'ev7', title:'National Startup Summit', cat:'Corporate', scope:'National', venue:'Convention Centre, Hall A', when:'15–16 Aug', price:1499, grad:['#12324f','#3457d5'],
+      about:'Founders, investors and 120 speakers. 2-day delegate pass.' },
+    { id:'ev8', title:'Wedding Ideas Expo', cat:'Wedding', scope:'City', venue:'Grand Banquet Convention', when:'Sun, 11:00 AM', price:0, grad:['#7a1b3a','#c0396b'],
+      about:'Meet 80+ planners, decorators and caterers in one place. Free entry.' }
+  ],
+
+  /* ---------- EVENT PLANNERS & CONSULTANTS (verified, quote-based) ---------- */
+  eventPros: [
+    { id:'ep1', name:'Saanvi Event Studio', kind:'Weddings & Receptions', rating:4.9, jobs:212, from:75000, verified:true, area:'City-wide', tags:['Décor','Catering tie-ups','Stage & lights'] },
+    { id:'ep2', name:'BluePrint Corporate Events', kind:'Corporate & Conferences', rating:4.8, jobs:96, from:120000, verified:true, area:'State-wide', tags:['AV & stage','Hospitality','Registration desk'] },
+    { id:'ep3', name:'LittleStars Birthday Planners', kind:'Birthdays & Kids', rating:4.9, jobs:340, from:12000, verified:true, area:'Nearby', tags:['Theme décor','Games host','Return gifts'] },
+    { id:'ep4', name:'Mandap Traditions', kind:'Pujas & Traditional', rating:4.7, jobs:158, from:25000, verified:true, area:'City-wide', tags:['Pandit tie-up','Mandap','Bhojan'] },
+    { id:'ep5', name:'Rhythm Sound & Light', kind:'Concerts & Sound', rating:4.6, jobs:74, from:40000, verified:false, area:'State-wide', tags:['Line array','LED wall','Backline'] },
+    { id:'ep6', name:'GreenLeaf Caterers', kind:'Catering & Food', rating:4.8, jobs:410, from:350, verified:true, area:'City-wide', tags:['Per plate','Veg & non-veg','Live counters'] }
+  ],
+
+  /* ---------- EVENT VENUES / PLACES ---------- */
+  venues: [
+    { id:'vn1', name:'Grand Banquet Convention', kind:'Banquet Hall', cap:'up to 800', from:60000, area:'City Centre', km:3.2, tags:['AC','Parking 200','In-house catering'] },
+    { id:'vn2', name:'Lakeside Lawns', kind:'Open Lawn', cap:'up to 1500', from:90000, area:'Riverside', km:5.1, tags:['Outdoor','Poolside','Valet'] },
+    { id:'vn3', name:'Community Hall — Sector 12', kind:'Community Hall', cap:'up to 250', from:12000, area:'Sector 12', km:1.4, tags:['Society rate','Stage','Kitchen'] },
+    { id:'vn4', name:'Skyline Rooftop', kind:'Rooftop', cap:'up to 150', from:35000, area:'City Centre', km:2.8, tags:['City view','Bar setup','DJ ready'] },
+    { id:'vn5', name:'Heritage Auditorium', kind:'Auditorium', cap:'up to 600', from:45000, area:'Old Town', km:4.6, tags:['Seated','Green rooms','Pro AV'] }
   ],
 
   /* ---------- MEGA CATEGORY DIRECTORY — sell everything ---------- */
