@@ -30,8 +30,8 @@ function adminSeed() {
 
 /* ---------- admin control levels ---------- */
 const ADMIN_ROLES = [
-  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments and the Test console.', perms: ['overview', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'data', 'mitra', 'test'] },
-  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: KYC, fraud, all orders, database read, onboard staff up to L3.', perms: ['overview', 'kyc', 'fraud', 'orders', 'roles', 'data', 'mitra'] },
+  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments, live visitor analytics and the Test console.', perms: ['overview', 'analytics', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'data', 'mitra', 'test'] },
+  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: live analytics, KYC, fraud, all orders, database read, onboard staff up to L3.', perms: ['overview', 'analytics', 'kyc', 'fraud', 'orders', 'roles', 'data', 'mitra'] },
   { id: 'l3', name: 'L3 · Purity Inspector', desc: 'Field & lab team. Seals or delists batches. Nothing else.', perms: ['overview', 'purity', 'roles'] },
   { id: 'l2', name: 'L2 · City Manager', desc: 'Onboards shops & partners in their city, watches local orders.', perms: ['overview', 'kyc', 'orders', 'roles'] },
   { id: 'l1', name: 'L1 · Support Agent', desc: 'Sees order status to help customers. Read-only.', perms: ['overview', 'orders', 'roles'] }
@@ -106,7 +106,7 @@ function renderAdminPanel(args) {
   let tab = args[0] || 'overview';
   if (!role.perms.includes(tab)) tab = 'overview';
   const A = S.admin;
-  const tabs = [['overview', 'Overview'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
+  const tabs = [['overview', 'Overview'], ['analytics', 'Analytics'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
   const gmv = S.orders.reduce((a, o) => a + o.total, 0) + (S.myShop ? S.myShop.revenue : 0);
   let body = '';
 
@@ -126,6 +126,16 @@ function renderAdminPanel(args) {
     <div class="card-block"><h3>Verification pipeline</h3>
       ${['Field inspector visits the shop/farm', 'Batch sample sealed & lab-tested', 'Pass → batch gets a Purity ✓ seal + trace ID', 'Fail → item delisted, seller warned/removed'].map((s, i) =>
         `<div class="ck-line"><span><b>${i + 1}.</b> ${s}</span><span></span></div>`).join('')}</div>`;
+
+  if (tab === 'analytics') body = `
+    <div class="tip-strip">${ic('shield', 13)} First-party & private — your own data, no Google Analytics. Precise to city level from the network edge; anonymous device keys, no personal info.</div>
+    <div class="ana-live-bar"><span class="ana-dot"></span> <b id="anaLiveNow">…</b> online right now</div>
+    <div class="chip-row" id="anaRange" style="margin:2px 0 10px">
+      ${[[1, 'Today'], [7, '7 days'], [30, '30 days'], [90, '90 days']].map(r => `<button class="chip ${(_ANA_DAYS || 30) === r[0] ? 'on' : ''}" onclick="adminAnaSetRange(${r[0]})">${r[1]}</button>`).join('')}
+    </div>
+    <div class="ana-map-wrap"><div id="anaMap" class="ana-map"></div><div class="ana-map-cap">${ic('pin', 11)} Live visitors — city-precise, last 5 min</div></div>
+    <div id="anaCards" class="earn-tiles wide3"><div class="etile"><b>…</b><small>loading</small></div></div>
+    <div id="anaBody"><div class="empty sm"><span>${ic('search', 26)}</span><b>Crunching your traffic…</b></div></div>`;
 
   if (tab === 'purity') body = `
     <div class="tip-strip">${ic('leaf', 13)} Our key promise: naturally made &amp; grown food, zero adulteration. Approve only lab-passed batches.</div>
@@ -349,6 +359,119 @@ function renderAdminPanel(args) {
     opsAdminHTML().then(h => { const el = document.getElementById('opsPanel'); if (el) el.innerHTML = h; });
   }
   if (tab === 'roles' && ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 4) adminLoadTeam();
+  if (tab === 'analytics') adminAnalyticsBoot(); else adminAnalyticsStop();
+}
+
+/* ============================================================
+   ANALYTICS — live visitor map + full breakdowns (L4+ only,
+   server-gated). One overview call + a fast live poll.
+   ============================================================ */
+let _ANA_DAYS = 30, _anaLiveTimer = null, _anaMap = null, _anaLayer = null, _anaBooted = false;
+
+function adminAnaSetRange(d) { _ANA_DAYS = d; VIEWS.admin(['analytics']); }
+
+function adminAnalyticsBoot() {
+  adminAnalyticsLoad();
+  clearInterval(_anaLiveTimer);
+  adminAnalyticsLive();
+  _anaLiveTimer = setInterval(() => { if (document.getElementById('anaMap')) adminAnalyticsLive(); else adminAnalyticsStop(); }, 5000);
+}
+function adminAnalyticsStop() {
+  clearInterval(_anaLiveTimer); _anaLiveTimer = null;
+  try { if (_anaMap) _anaMap.remove(); } catch (e) {}
+  _anaMap = null; _anaLayer = null;
+}
+
+async function adminAnalyticsLoad() {
+  const r = await adminApi('analytics_overview', { p_days: _ANA_DAYS });
+  if (!r || !r.ok) { const b = document.getElementById('anaBody'); if (b) b.innerHTML = `<div class="empty sm"><span>${ic('lock', 26)}</span><b>${r && r.reason === 'forbidden' ? 'Analytics is L4+ only' : 'No data yet — traffic will appear as people visit'}</b></div>`; return; }
+  const c = r.cards || {};
+  const conv = c.visits_30d ? Math.round((c.orders_window / Math.max(c.visits_30d, 1)) * 1000) / 10 : 0;
+  const cards = document.getElementById('anaCards');
+  if (cards) cards.outerHTML = `<div id="anaCards">
+    <div class="earn-tiles wide3">
+      <div class="etile"><b>${(c.visits_today || 0).toLocaleString('en-IN')}</b><small>Visitors today</small></div>
+      <div class="etile"><b>${(c.visits_7d || 0).toLocaleString('en-IN')}</b><small>Last 7 days</small></div>
+      <div class="etile"><b>${(c.visits_30d || 0).toLocaleString('en-IN')}</b><small>Last 30 days</small></div>
+    </div>
+    <div class="earn-tiles wide3">
+      <div class="etile"><b>${(c.views_window || 0).toLocaleString('en-IN')}</b><small>Page views (${_ANA_DAYS}d)</small></div>
+      <div class="etile"><b>${(c.orders_window || 0).toLocaleString('en-IN')}</b><small>Orders (${_ANA_DAYS}d)</small></div>
+      <div class="etile"><b>${money(c.gmv_window || 0)}</b><small>GMV (${_ANA_DAYS}d)</small></div>
+    </div>`;
+  const body = document.getElementById('anaBody');
+  if (body) body.innerHTML =
+    anaTrendCard(r.series || []) +
+    anaBarCard('Top pages', (r.pages || []).map(p => [p.name || '—', p.visitors, p.views + ' views'])) +
+    anaGeoCard(r.geo || []) +
+    anaBarCard('Where they come from', (r.refs || []).map(x => [x.ref, x.visitors])) +
+    anaBarCard('Device', (r.devices || []).map(x => [x.uad, x.visitors])) +
+    anaEventCard(r.events || []) +
+    `<div class="foot-note sm">Conversion (30d): <b>${conv}%</b> of visitors ordered. Data is first-party & anonymous.</div>`;
+}
+
+function anaMax(rows, i) { return Math.max(1, ...rows.map(r => +r[i] || 0)); }
+function anaBarCard(title, rows) {
+  if (!rows.length) return '';
+  const mx = anaMax(rows, 1);
+  return `<div class="card-block"><h3>${esc(title)}</h3>${rows.map(r => `
+    <div class="ana-bar"><span class="ana-bl">${esc(String(r[0]))}</span>
+      <span class="ana-bt"><i style="width:${Math.round((+r[1] || 0) / mx * 100)}%"></i></span>
+      <b>${(+r[1] || 0).toLocaleString('en-IN')}${r[2] ? ` <small class="dim">${esc(String(r[2]))}</small>` : ''}</b></div>`).join('')}</div>`;
+}
+function anaTrendCard(series) {
+  if (!series.length) return '';
+  const mx = Math.max(1, ...series.map(s => +s.visits || 0));
+  const bars = series.map(s => `<div class="ana-col" title="${esc(s.d)} · ${s.visits} visitors">
+    <i style="height:${Math.round((+s.visits || 0) / mx * 100)}%"></i></div>`).join('');
+  return `<div class="card-block"><h3>Visitors per day</h3><div class="ana-trend">${bars}</div>
+    <div class="ana-trend-x"><small>${esc(series[0].d)}</small><small>${esc(series[series.length - 1].d)}</small></div></div>`;
+}
+function anaGeoCard(geo) {
+  if (!geo.length) return '';
+  const mx = anaMax(geo, 2);
+  return `<div class="card-block"><h3>${ic('pin', 14)} Where in the world</h3>${geo.map(g => `
+    <div class="ana-bar"><span class="ana-bl">${esc(anaFlag(g.country))} ${esc(g.city || '—')}<small class="dim"> · ${esc(g.country)}</small></span>
+      <span class="ana-bt"><i style="width:${Math.round((+g.visitors || 0) / mx * 100)}%"></i></span>
+      <b>${(+g.visitors || 0).toLocaleString('en-IN')}</b></div>`).join('')}</div>`;
+}
+function anaEventCard(ev) {
+  if (!ev.length) return '';
+  return `<div class="card-block"><h3>Key events</h3>${ev.map(e => `
+    <div class="ck-line"><span>${esc(e.name)}</span><span><b>${(+e.n || 0).toLocaleString('en-IN')}</b>${+e.value ? ' · ' + money(e.value) : ''}</span></div>`).join('')}</div>`;
+}
+function anaFlag(cc) {
+  if (!cc || cc.length !== 2) return '🌐';
+  return String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+
+async function adminAnalyticsLive() {
+  const r = await adminApi('analytics_live', {});
+  const now = document.getElementById('anaLiveNow');
+  if (now) now.textContent = (r && r.ok ? (r.now || 0) : 0) + '';
+  const el = document.getElementById('anaMap'); if (!el) return;
+  if (!r || !r.ok) return;
+  const pts = (r.people || []).filter(p => p.lat != null && p.lng != null);
+  try {
+    if (!_anaMap && typeof L !== 'undefined') {
+      _anaMap = L.map(el, { zoomControl: false, attributionControl: false }).setView([22.6, 82], 4);
+      L.tileLayer((window.CONFIG && CONFIG.map && CONFIG.map.tileUrls && CONFIG.map.tileUrls[0]) || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(_anaMap);
+      _anaLayer = L.layerGroup().addTo(_anaMap);
+    }
+    if (_anaLayer) {
+      _anaLayer.clearLayers();
+      const latlngs = [];
+      pts.forEach(p => {
+        const fresh = (p.ago || 999) < 75;
+        const m = L.circleMarker([p.lat, p.lng], { radius: fresh ? 7 : 5, color: '#fff', weight: 1.5,
+          fillColor: fresh ? '#1fb268' : '#E8A020', fillOpacity: fresh ? .95 : .6 });
+        m.bindPopup(`<b>${esc(p.city || '—')}${p.country ? ', ' + esc(p.country) : ''}</b><br/>on <b>${esc(p.page || 'home')}</b> · ${esc(p.role || 'guest')} · ${esc(p.uad || '')}<br/>${p.ago}s ago`);
+        m.addTo(_anaLayer); latlngs.push([p.lat, p.lng]);
+      });
+      if (latlngs.length === 1) _anaMap.setView(latlngs[0], 9);
+      else if (latlngs.length > 1) { try { _anaMap.fitBounds(latlngs, { padding: [30, 30], maxZoom: 11 }); } catch (e) {} }
+    }
+  } catch (e) {}
 }
 
 function exportState() {

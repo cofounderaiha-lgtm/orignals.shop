@@ -133,6 +133,7 @@ function route() {
   requestAnimationFrame(() => { main.className = 'view-in'; });
   window.scrollTo(0, 0);
   refreshChrome(name);
+  if (typeof trackPage === 'function') trackPage(name);   // first-party analytics
 }
 
 /* ---------- mode toggle (Buy ⇄ Earn) ---------- */
@@ -314,6 +315,7 @@ function createOrder(o) {
   if (!o.partner && o.flow !== 'shop_self') o.partner = Object.assign({ otp: rnd(1000, 9999) }, pick(DB.partners));
   S.orders.unshift(o); save();
   notify('Order ' + o.id + ' placed', o.title, '🧾');
+  if (typeof trackEvent === 'function') trackEvent('order', o.total || 0);   // analytics: conversion + GMV
   return o;
 }
 function orderTimes(o) { return o.flowT || FLOW_T[o.flow]; }

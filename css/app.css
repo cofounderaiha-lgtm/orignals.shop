@@ -459,6 +459,25 @@ body.sheet-open .leaflet-container{visibility:hidden!important}
 @media(min-width:1024px){.call-overlay .call-stage{max-width:520px;height:78vh;margin:auto;border-radius:26px;overflow:hidden}
   .call-overlay{background:rgba(6,10,9,.75)}}
 
+/* ---------- admin analytics ---------- */
+.ana-live-bar{display:flex;align-items:center;gap:8px;font-size:.92rem;margin:2px 0 6px}
+.ana-live-bar b{color:var(--primary,#1A5632)}
+.ana-dot{width:9px;height:9px;border-radius:50%;background:#1fb268;box-shadow:0 0 0 0 rgba(31,178,104,.6);animation:anaPulse 1.8s infinite}
+@keyframes anaPulse{0%{box-shadow:0 0 0 0 rgba(31,178,104,.55)}70%{box-shadow:0 0 0 9px rgba(31,178,104,0)}100%{box-shadow:0 0 0 0 rgba(31,178,104,0)}}
+.ana-map-wrap{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:12px}
+.ana-map{height:260px;width:100%;background:#e8eef0}
+.ana-map-cap{position:absolute;left:10px;bottom:10px;z-index:500;background:rgba(255,255,255,.9);color:#333;border-radius:20px;padding:4px 10px;font-size:.72rem;display:flex;align-items:center;gap:4px}
+.ana-bar{display:grid;grid-template-columns:38% 1fr auto;align-items:center;gap:10px;padding:5px 0;font-size:.86rem}
+.ana-bl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ana-bt{height:8px;background:var(--line,#eee);border-radius:6px;overflow:hidden}
+.ana-bt>i{display:block;height:100%;background:linear-gradient(90deg,#1A5632,#2e9d63);border-radius:6px;min-width:2px}
+.ana-bar b{font-weight:700;white-space:nowrap}
+.ana-trend{display:flex;align-items:flex-end;gap:3px;height:96px;padding:6px 0}
+.ana-trend .ana-col{flex:1;height:100%;display:flex;align-items:flex-end}
+.ana-trend .ana-col>i{width:100%;background:linear-gradient(180deg,#2e9d63,#1A5632);border-radius:3px 3px 0 0;min-height:2px;transition:height .3s}
+.ana-trend-x{display:flex;justify-content:space-between;color:var(--dim,#888);margin-top:2px}
+.empty.sm{padding:22px 12px}.empty.sm span{opacity:.5}
+
 @media(min-width:1024px){
   .frame{max-width:min(96vw,1440px);border:none;box-shadow:0 0 80px rgba(19,20,43,.06)}
   .app-header{padding:12px 32px;display:flex;align-items:center;gap:18px}
