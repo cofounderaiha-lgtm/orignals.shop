@@ -30,21 +30,81 @@ function adminSeed() {
 
 /* ---------- admin control levels ---------- */
 const ADMIN_ROLES = [
-  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments.', perms: ['overview', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'data', 'mitra'] },
-  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: KYC, fraud, all orders, database read.', perms: ['overview', 'kyc', 'fraud', 'orders', 'roles', 'data', 'mitra'] },
+  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments and the Test console.', perms: ['overview', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'data', 'mitra', 'test'] },
+  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: KYC, fraud, all orders, database read, onboard staff up to L3.', perms: ['overview', 'kyc', 'fraud', 'orders', 'roles', 'data', 'mitra'] },
   { id: 'l3', name: 'L3 · Purity Inspector', desc: 'Field & lab team. Seals or delists batches. Nothing else.', perms: ['overview', 'purity', 'roles'] },
   { id: 'l2', name: 'L2 · City Manager', desc: 'Onboards shops & partners in their city, watches local orders.', perms: ['overview', 'kyc', 'orders', 'roles'] },
   { id: 'l1', name: 'L1 · Support Agent', desc: 'Sees order status to help customers. Read-only.', perms: ['overview', 'orders', 'roles'] }
 ];
-function adminRole() { return ADMIN_ROLES.find(r => r.id === (S.adminRole || 'l5')) || ADMIN_ROLES[0]; }
+/* server-verified level (from admin_whoami); falls back to l5 only for
+   pure-local/offline demo mode where there is no cloud to check against */
+let ADMIN_LEVEL = null, ADMIN_WHO = null;
+function adminRole() {
+  const lvl = ADMIN_LEVEL || ((typeof CLOUD === 'undefined' || !CLOUD.on) ? 'l5' : null);
+  return ADMIN_ROLES.find(r => r.id === lvl) || ADMIN_ROLES[ADMIN_ROLES.length - 1];
+}
+function adminApi(fn, body) {
+  const a = (typeof authState === 'function') ? authState() : null;
+  if (!a || !a.token) return Promise.resolve({ ok: false, signed_in: false });
+  return cloudFetch('rpc/' + fn, { method: 'POST', body: JSON.stringify(Object.assign({ p_token: a.token }, body || {})) }).catch(() => ({ ok: false }));
+}
+function adminRank(l) { return { l5: 5, l4: 4, l3: 3, l2: 2, l1: 1 }[l] || 0; }
 
-view('admin', args => {
+/* gated entry: verify the admin level on the server before rendering */
+view('admin', async args => {
+  const a = (typeof authState === 'function') ? authState() : null;
+  const cloudOn = typeof CLOUD !== 'undefined' && CLOUD.on;
+  if (cloudOn) {
+    $('#view').innerHTML = `<div class="page-head"><button class="back" onclick="go('account')">${ic('chevl', 16)}</button><div><h1>Admin</h1><small>Verifying access…</small></div></div><div class="empty"><span>${ic('shield', 40)}</span><b>Checking your access…</b></div>`;
+    let who = { admin: false, signed_in: false, bootstrap: false };
+    if (a && a.token) who = await adminApi('admin_whoami', {}) || who;
+    ADMIN_WHO = who;
+    if (!who.admin) { renderAdminGate(who); return; }
+    ADMIN_LEVEL = who.level;
+  } else {
+    ADMIN_LEVEL = 'l5';   // offline/local demo: full access on-device only
+  }
   adminSeed();
+  renderAdminPanel(args);
+});
+
+function renderAdminGate(who) {
+  const signedIn = who && who.signed_in;
+  $('#view').innerHTML = `
+  <div class="page-head"><button class="back" onclick="go('account')">${ic('chevl', 16)}</button>
+    <div><h1>Admin access</h1><small>Restricted — staff only</small></div></div>
+  <div class="auth-card" style="text-align:center">
+    <span class="svc-ic" style="margin:4px auto 10px;width:56px;height:56px">${ic('shield', 26)}</span>
+    ${!signedIn ? `
+      <h3>Sign in to continue</h3>
+      <p class="movie-about">The admin panel needs a verified staff account. Sign in with your Orignals account.</p>
+      <button class="btn-main wide" onclick="go('login')">Sign in / Register</button>`
+    : who.bootstrap ? `
+      <h3>Set up the first Super Admin</h3>
+      <p class="movie-about">No admins exist yet. Enter the one-time setup code to claim <b>${esc(who.ident || 'this account')}</b> as Super Admin (L5).</p>
+      <label class="fld"><span>Setup code</span><input class="txt" id="admCode" placeholder="Setup code" autocomplete="off"/></label>
+      <button class="btn-main wide" onclick="adminClaim()">Claim Super Admin</button>`
+    : `
+      <h3>You don't have admin access</h3>
+      <p class="movie-about">${esc(who.ident || 'This account')} is not a staff member. Ask a Super Admin to add you, then sign in again.</p>
+      <button class="btn-main wide ghost" onclick="go('account')">Back</button>`}
+  </div>`;
+}
+async function adminClaim() {
+  const code = ($('#admCode') && $('#admCode').value.trim()) || '';
+  if (!code) { toast('Enter the setup code'); return; }
+  const a = authState();
+  const r = await adminApi('admin_claim', { p_code: code, p_name: (a && a.name) || S.user.name || '' });
+  if (r && r.ok) { confettiBurst(); toast('You are now Super Admin'); go('admin'); }
+  else toast(r && r.reason === 'bad_code' ? 'Wrong setup code' : r && r.reason === 'already_setup' ? 'A Super Admin already exists' : 'Could not claim — try again');
+}
+
+function renderAdminPanel(args) {
   const role = adminRole();
   let tab = args[0] || 'overview';
   if (!role.perms.includes(tab)) tab = 'overview';
   const A = S.admin;
-  const tabs = [['overview', 'Overview'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Control levels'], ['data', 'Database'], ['mitra', 'Mitra AI']];
+  const tabs = [['overview', 'Overview'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
   const gmv = S.orders.reduce((a, o) => a + o.total, 0) + (S.myShop ? S.myShop.revenue : 0);
   let body = '';
 
@@ -129,16 +189,33 @@ view('admin', args => {
       <div class="ck-line"><span>Car / Van</span><span><b>7 CHF</b></span></div>
       <div class="ck-line"><span>Truck</span><span><b>10 CHF</b></span></div></div>`;
 
-  if (tab === 'roles') body = `
-    <div class="tip-strip">${ic('shield', 13)} Five control levels — each admin sees only what their level permits. You are acting as <b>${role.name}</b>.</div>
+  if (tab === 'roles') {
+    const canManage = ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 4;
+    body = `
+    <div class="tip-strip">${ic('shield', 13)} Five control levels — each staff member sees only what their level permits. You are <b>${role.name}</b>${ADMIN_WHO && ADMIN_WHO.ident ? ' · ' + esc(ADMIN_WHO.ident) : ''}.</div>
     ${ADMIN_ROLES.map(r => `
-    <div class="job-card ${r.id === role.id ? 'active' : ''}">
+    <div class="job-card ${r.id === (ADMIN_LEVEL || role.id) ? 'active' : ''}">
       <div class="job-top"><span class="job-emoji">${ic(r.id === 'l5' ? 'shield' : r.id === 'l3' ? 'leaf' : 'user', 20)}</span>
         <div><b>${r.name}</b><small>${r.desc}</small></div>
-        ${r.id === role.id ? '<em class="job-pay">Acting</em>' : ''}</div>
-      <div class="job-note">Access: ${r.perms.filter(p => !['roles'].includes(p)).map(p => tabs.find(t => t[0] === p)[1]).join(' · ')}</div>
-      ${r.id !== role.id ? `<button class="btn-main wide sm ghost" onclick="S.adminRole='${r.id}';save();toast('Now acting as ${r.name}');VIEWS.admin(['roles'])">Act as this level</button>` : ''}
-    </div>`).join('')}`;
+        ${r.id === (ADMIN_LEVEL || role.id) ? '<em class="job-pay">You</em>' : ''}</div>
+      <div class="job-note">Access: ${r.perms.filter(p => !['roles'].includes(p)).map(p => (tabs.find(t => t[0] === p) || [p, p])[1]).join(' · ')}</div>
+    </div>`).join('')}
+    ${canManage ? `
+    <div class="sec-head"><h2>Team &amp; employees</h2><small class="dim" id="teamCounts">—</small></div>
+    <div class="card-block">
+      <h3>${ic('plus', 14)} Add / promote a staff member</h3>
+      <label class="fld"><span>Email or mobile</span><input class="txt" id="empId" placeholder="employee@orignals.shop or 98765 43210"/></label>
+      <label class="fld"><span>Name</span><input class="txt" id="empName" placeholder="Full name"/></label>
+      <div class="fld"><span>Level</span><div class="chip-wrap" id="empLevelWrap">
+        ${ADMIN_ROLES.filter(r => adminRank(r.id) < adminRank(ADMIN_LEVEL) || ADMIN_LEVEL === 'l5').map(r => `<button class="chip ${r.id === 'l1' ? 'on' : ''}" data-lvl="${r.id}" onclick="admPickLvl('${r.id}')">${r.name.split(' · ')[1]}</button>`).join('')}
+      </div></div>
+      <button class="btn-main wide" onclick="adminAddEmployee()">Add to team</button>
+      <div class="foot-note sm">They sign in with this email/mobile + their own password, then get exactly this level's access. You can promote or revoke anytime.</div>
+    </div>
+    <div class="search-row"><input id="teamSearch" placeholder="Search team by name or email…" oninput="adminLoadTeam(this.value)"/></div>
+    <div id="teamList"><div class="foot-note sm">Loading team…</div></div>`
+    : `<div class="foot-note">Only Operations Admin (L4) and Super Admin (L5) can manage staff.</div>`}`;
+  }
 
   if (tab === 'data') {
     const dbTable = (title, rows) => `
@@ -208,6 +285,39 @@ view('admin', args => {
     <div class="foot-note sm">The JSONL export is exactly what you'll use to fine-tune a full open-weights model later — see docs/MITRA-AI.md for the roadmap.</div>`;
   }
 
+  if (tab === 'test') {
+    const routes = [
+      ['home', 'Home', 'store'], ['shops', 'Shops', 'store'], ['send', 'Send', 'package'], ['ride', 'Rides', 'bike'],
+      ['tickets', 'Movies', 'star'], ['tickets/dining', 'Dining', 'bowl'], ['estate', 'Property', 'home'], ['estate/hotels', 'Stays', 'home'],
+      ['earn', 'Earn', 'users'], ['myshop', 'Your Shop', 'chart'], ['papers', 'Papers', 'shield'], ['wallet', 'Wallet', 'wallet'],
+      ['orders', 'Orders', 'receipt'], ['mitra', 'Mitra', 'spark'], ['login', 'Login', 'shield'], ['facelock', 'Security', 'camera'],
+      ['legal', 'Legal', 'shield'], ['promise', 'Promise', 'check'], ['categories', 'Categories', 'grid'], ['notifs', 'Alerts', 'bell']
+    ];
+    body = `
+    <div class="tip-strip">${ic('spark', 13)} <b>Test console</b> — Super Admin only. Exercise every feature &amp; backend directly. Actions run for real on this account/device.</div>
+
+    <div class="sec-head"><h2>Backend health</h2></div>
+    <div class="card-block"><div id="testHealth"><button class="btn-main sm" onclick="adminTestHealth()">${ic('spark', 14)} Run health check</button></div></div>
+
+    <div class="sec-head"><h2>Open any screen</h2></div>
+    <div class="mega-grid">
+      ${routes.map(r => `<button class="mega" onclick="go('${r[0]}')"><span>${ic(r[2], 18)}</span><b>${esc(r[1])}</b><small>/${esc(r[0])}</small></button>`).join('')}
+    </div>
+
+    <div class="sec-head"><h2>Feature tests</h2></div>
+    <div class="card-block test-grid">
+      <button class="btn-main sm ghost" onclick="adminTestWallet()">${ic('wallet', 13)} Add ₹500 to wallet</button>
+      <button class="btn-main sm ghost" onclick="adminTestOrder()">${ic('receipt', 13)} Place a test order + track</button>
+      <button class="btn-main sm ghost" onclick="adminTestPayment()">${ic('card', 13)} Test payment (create order)</button>
+      <button class="btn-main sm ghost" onclick="adminTestPush()">${ic('bell', 13)} Send a test push to me</button>
+      <button class="btn-main sm ghost" onclick="adminTestOtp()">${ic('shield', 13)} Test OTP (show code)</button>
+      <button class="btn-main sm ghost" onclick="adminTestSeedShop()">${ic('store', 13)} Seed a demo shop</button>
+      <button class="btn-main sm ghost" onclick="adminTestSeedPartner()">${ic('users', 13)} Become a verified partner</button>
+      <button class="btn-main sm ghost" onclick="adminTestNotify()">${ic('bell', 13)} Fire an in-app notification</button>
+    </div>
+    <div class="foot-note">Every button performs the real action so you can confirm the flow behaves correctly end-to-end.</div>`;
+  }
+
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="go('account')">${ic('chevl', 16)}</button>
     <div><h1>Admin panel</h1><small>${role.name} · precise everything · strictly anti-fraud</small></div></div>
@@ -222,7 +332,8 @@ view('admin', args => {
   if (tab === 'data' && typeof opsAdminHTML === 'function') {
     opsAdminHTML().then(h => { const el = document.getElementById('opsPanel'); if (el) el.innerHTML = h; });
   }
-});
+  if (tab === 'roles' && ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 4) adminLoadTeam();
+}
 
 function exportState() {
   const a = document.createElement('a');
@@ -245,4 +356,100 @@ function adminFlag(id, act) {
   S.admin.resolved += 1; save();
   toast(act === 'block' ? 'Blocked & sent to investigation' : 'Flag cleared');
   VIEWS.admin(['fraud']);
+}
+
+/* ============================================================
+   EMPLOYEE / TEAM MANAGEMENT (server-verified, scales to lakhs)
+   ============================================================ */
+let _empLvl = 'l1';
+function admPickLvl(l) {
+  _empLvl = l;
+  document.querySelectorAll('#empLevelWrap .chip').forEach(c => c.classList.toggle('on', c.dataset.lvl === l));
+}
+async function adminAddEmployee() {
+  const id = ($('#empId') && $('#empId').value.trim()) || '';
+  const name = ($('#empName') && $('#empName').value.trim()) || '';
+  if (id.length < 5) { toast('Enter the employee\'s email or mobile'); return; }
+  const r = await adminApi('admin_grant', { p_ident: id, p_level: _empLvl, p_name: name });
+  if (r && r.ok) { toast('Added to team as ' + _empLvl.toUpperCase()); if ($('#empId')) $('#empId').value = ''; if ($('#empName')) $('#empName').value = ''; adminLoadTeam(); }
+  else toast({ forbidden: 'Your level can\'t add staff', cannot_grant_at_or_above: 'You can only add levels below yours', only_l5_makes_l5: 'Only a Super Admin can add another Super Admin', bad_ident: 'Invalid email/mobile' }[r && r.reason] || 'Could not add — try again');
+}
+async function adminLoadTeam(q) {
+  const box = document.getElementById('teamList'); if (!box) return;
+  const rows = await adminApi('admin_list', { p_q: q || '', p_limit: 100, p_offset: 0 });
+  const counts = await adminApi('admin_counts', {});
+  const cEl = document.getElementById('teamCounts');
+  if (cEl && counts && typeof counts === 'object') cEl.textContent = ADMIN_ROLES.map(r => (counts[r.id] ? counts[r.id] + ' ' + r.id.toUpperCase() : '')).filter(Boolean).join(' · ') || '—';
+  if (!Array.isArray(rows)) { box.innerHTML = `<div class="foot-note sm">Could not load team.</div>`; return; }
+  box.innerHTML = rows.length ? rows.map(r => `
+    <div class="order-row static">
+      <span class="or-emoji">${ic(r.level === 'l5' ? 'shield' : r.level === 'l3' ? 'leaf' : 'user', 16)}</span>
+      <div class="or-info"><b>${esc(r.name || r.ident)}</b><small>${esc(r.ident)} · <b>${r.level.toUpperCase()}</b> · added ${new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</small></div>
+      ${(ADMIN_LEVEL === 'l5' && r.ident !== (ADMIN_WHO && ADMIN_WHO.ident)) ? `<button class="lnk red" onclick="adminRevokeEmployee('${esc(r.ident)}')">Remove</button>` : ''}
+    </div>`).join('') : `<div class="foot-note sm">No staff yet. Add your first team member above.</div>`;
+}
+async function adminRevokeEmployee(ident) {
+  if (!confirm('Remove ' + ident + ' from the team? They lose all admin access.')) return;
+  const r = await adminApi('admin_revoke', { p_ident: ident });
+  if (r && r.ok) { toast('Removed from team'); adminLoadTeam(); }
+  else toast(r && r.reason === 'last_super_admin' ? 'Cannot remove the last Super Admin' : 'Could not remove');
+}
+
+/* ============================================================
+   SUPER ADMIN TEST CONSOLE — exercise every feature for real
+   ============================================================ */
+async function adminTestHealth() {
+  const box = document.getElementById('testHealth');
+  if (box) box.innerHTML = `<div class="foot-note sm">Pinging services…</div>`;
+  const base = (typeof CLOUD !== 'undefined' && CLOUD.url) || '';
+  const H = (typeof cloudHeaders === 'function') ? cloudHeaders() : {};
+  const checks = [
+    ['REST · shops', () => fetch(base + '/rest/v1/shops?select=id&limit=1', { headers: H })],
+    ['Mitra model (RPC)', () => fetch(base + '/rest/v1/rpc/mitra_predict', { method: 'POST', headers: H, body: '{"txt":"order milk"}' })],
+    ['Auth engine (RPC)', () => fetch(base + '/rest/v1/rpc/otp_request', { method: 'POST', headers: H, body: '{"p_phone":"9999999999","p_device":"health"}' })],
+    ['Payments fn', () => fetch(base + '/functions/v1/razorpay-order', { method: 'POST', headers: H, body: '{"amount":100}' })],
+    ['Push fn', () => fetch(base + '/functions/v1/push-send', { method: 'POST', headers: H, body: '{"device_key":"health","title":"t","body":"b"}' })]
+  ];
+  const results = [];
+  for (const [label, fn] of checks) {
+    try { const r = await fn(); results.push([label, r.ok, r.status]); }
+    catch (e) { results.push([label, false, 'ERR']); }
+  }
+  if (box) box.innerHTML = results.map(([l, ok, s]) => `<div class="ck-line"><span>${esc(l)}</span><span class="${ok ? 'ok' : 'bad'}">${ok ? '✓ ' + s : '✕ ' + s}</span></div>`).join('') +
+    `<button class="btn-main sm ghost" style="margin-top:10px" onclick="adminTestHealth()">Re-run</button>`;
+}
+function adminTestWallet() { walletAdd(500, 'Test top-up (admin)'); toast('₹500 added to your wallet'); }
+function adminTestNotify() { notify('Test notification', 'This is a test alert from the admin console.', 'spark'); toast('In-app notification fired — check the bell'); }
+function adminTestOrder() {
+  const shop = DB.shops[0];
+  const o = createOrder({ kind: 'shop', flow: 'shop_partner', km: shop.km, title: 'TEST · ' + shop.name, shopId: shop.id, items: [{ name: 'Test item', q: 1, price: 100 }], total: 100, addr: S.user.addr });
+  toast('Test order placed — opening live tracking'); go('track/' + o.id);
+}
+async function adminTestPayment() {
+  if (typeof CLOUD === 'undefined' || !CLOUD.on) { toast('Cloud off'); return; }
+  toast('Creating a live Razorpay order…');
+  try {
+    const r = await fetch(CLOUD.url + '/functions/v1/razorpay-order', { method: 'POST', headers: cloudHeaders(), body: JSON.stringify({ amount: 100, purpose: 'order', ref: 'ADMIN-TEST', device: S.deviceKey }) });
+    const d = await r.json();
+    toast(d.orderId ? 'Order created: ' + d.orderId + ' (no charge)' : (d.error || 'Payment not configured'));
+  } catch (e) { toast('Payment test failed'); }
+}
+async function adminTestPush() {
+  if (typeof pushEnable === 'function' && !S.pushOn) { await pushEnable(); }
+  if (typeof cloudPushTo === 'function') { cloudPushTo({ device_key: S.deviceKey, title: 'Orignals test', body: 'Push is working ✓', url: '#/admin/test' }); toast('Test push sent to this device'); }
+}
+async function adminTestOtp() {
+  if (typeof CLOUD === 'undefined' || !CLOUD.on) { toast('Cloud off'); return; }
+  try {
+    const r = await cloudFetch('rpc/otp_request', { method: 'POST', body: JSON.stringify({ p_phone: '9876543210', p_device: S.deviceKey }) });
+    toast(r && r.ok ? 'OTP for 9876543210: ' + (r.dev_code || '(delivery not set)') : 'OTP request failed');
+  } catch (e) { toast('OTP test failed'); }
+}
+function adminTestSeedShop() {
+  S.myShop = { name: 'Test Kirana (admin)', cat: 'grocery', phone: '9876543210', addr: S.user.addr, open: '8 am', close: '9 pm', veg: true, delivery: 'both', online: true, created: Date.now(), items: [{ id: 'ti1', name: 'Test Milk', qty: '500 ml', price: 29, emoji: '' }, { id: 'ti2', name: 'Test Bread', qty: '400 g', price: 45, emoji: '' }], orders: [], revenue: 0, lastGen: Date.now() };
+  save(); toast('Demo shop created — opening Your Shop'); go('myshop');
+}
+function adminTestSeedPartner() {
+  S.partner = { name: S.user.name || 'Test Partner', veh: 'bike', status: 'verified', rating: 4.9, jobs: 0, seva: 0, online: true };
+  save(); toast('You are now a verified partner — opening Earn'); setMode('earn');
 }

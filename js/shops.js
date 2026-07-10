@@ -23,7 +23,7 @@ function inspectorLine(s) {
 }
 
 function shopTile(s, big) {
-  const img = DB.shopImgs[s.id];
+  const img = DB.shopImgs[s.id] || s.img;
   return `<div class="shop-tile ${big ? 'big' : ''}">
     <span class="tile-ic">${typeIcon(s.type, big ? 40 : 28)}</span>
     ${img ? `<img src="${img}" alt="" loading="lazy" onerror="this.remove()"/>` : ''}
@@ -138,7 +138,7 @@ view('shop', args => {
 
   const itemRow = i => `
     <div class="item-row">
-      <div class="item-emoji">${typeIcon(s.type, 22)}</div>
+      <div class="item-emoji">${i.photo ? `<img src="${esc(i.photo)}" alt="" loading="lazy"/>` : typeIcon(s.type, 22)}</div>
       <div class="item-info">
         ${i.veg !== undefined ? `<span class="veg-dot ${i.veg ? 'v' : 'nv'}"></span>` : ''}
         <b>${esc(i.name)}</b>
@@ -151,7 +151,7 @@ view('shop', args => {
 
   $('#view').innerHTML = `
   <div class="shop-hero">
-    ${DB.shopImgs[s.id] ? `<img src="${DB.shopImgs[s.id]}" alt="" onerror="this.remove()"/>` : ''}
+    ${(DB.shopImgs[s.id] || s.img) ? `<img src="${DB.shopImgs[s.id] || s.img}" alt="" onerror="this.remove()"/>` : ''}
     <button class="back glass" onclick="go('shops')">${ic('chevl', 16)}</button>
     <span class="shop-hero-ic">${typeIcon(s.type, 42)}</span>
   </div>
@@ -173,8 +173,15 @@ view('shop', args => {
     ${s.type === 'food' ? `<label class="veg-toggle"><input type="checkbox" ${vegOnly ? 'checked' : ''} onchange="window._vegOnly=this.checked;VIEWS.shop(['${s.id}'])"/><span></span> Veg only</label>` : ''}
 
     ${best.length ? `<div class="sec-head"><h2>Bestsellers</h2></div>${best.map(itemRow).join('')}` : ''}
-    <div class="sec-head"><h2>All items <small>(${items.length})</small></h2></div>
-    ${items.map(itemRow).join('')}
+    ${(() => {
+      const sections = [...new Set(items.map(i => i.section).filter(Boolean))];
+      if (sections.length > 1) {
+        /* sectioned menu (restaurants): group by section */
+        return sections.map(sec => `<div class="sec-head"><h2>${esc(sec)}</h2></div>${items.filter(i => i.section === sec).map(itemRow).join('')}`).join('') +
+          (items.some(i => !i.section) ? `<div class="sec-head"><h2>More</h2></div>${items.filter(i => !i.section).map(itemRow).join('')}` : '');
+      }
+      return `<div class="sec-head"><h2>All items <small>(${items.length})</small></h2></div>${items.map(itemRow).join('')}`;
+    })()}
     <div class="shop-foot">Shop ID ${s.id.toUpperCase()} · ${s.delivery === 'self' ? 'Delivers with own staff' : s.delivery === 'both' ? 'Own staff + Orignals partners' : 'Delivered by nearby Orignals partners'}</div>
   </div>`;
 });

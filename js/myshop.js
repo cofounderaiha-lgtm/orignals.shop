@@ -253,8 +253,9 @@ function renderShopDash() {
     </div>`;
 
   $('#view').innerHTML = `
+  ${M.photo ? `<div class="shop-cover"><img src="${M.photo}" alt=""/></div>` : ''}
   <div class="shopdash-head">
-    <span class="pc-ava big">${typeIcon(M.cat, 24)}</span>
+    <span class="pc-ava big">${M.photo ? `<img src="${M.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"/>` : typeIcon(M.cat, 24)}</span>
     <div><h1>${esc(M.name)}</h1><small>${cat ? cat.name : ''} · ${esc(M.addr.name)} · ${M.open}–${M.close} ${M.veg ? '· Pure veg' : ''}</small>
       <small>${M.delivery === 'self' ? 'Self delivery' : M.delivery === 'partner' ? 'Partner delivery' : '🏪+Both'} ${M.gst ? '· GST ✓' : ''} ${M.fssai ? '· FSSAI ✓' : ''}</small></div>
     <label class="switch ${M.online ? 'on' : ''}" onclick="S.myShop.online=!S.myShop.online;save();renderShopDash()"><i></i>${M.online ? 'Online' : 'Offline'}</label>
@@ -276,8 +277,25 @@ function renderShopDash() {
 
   ${M.offer ? `<div class="offer-strip">${ic('gift', 13)} Live offer: <b>${esc(M.offer.label)}</b> — shown to nearby customers <button class="lnk red" onclick="S.myShop.offer=null;save();renderShopDash()">End</button></div>` : ''}
 
+  ${(() => {
+    const needGps = !(M.addr && M.addr.lat != null);
+    const needItems = !M.items.length;
+    const live = M.online && !needGps && !needItems;
+    if (live) return `<div class="golive ok">${ic('check', 15)} <b>You're LIVE</b> — buyers near ${esc(M.addr.name)} can find and order from you now.</div>`;
+    return `<div class="golive todo"><b>${ic('shield', 14)} To go live to buyers:</b>
+      <div class="golive-steps">
+        <span class="${!needItems ? 'done' : ''}">${ic(!needItems ? 'check' : 'plus', 12)} Add at least 1 item ${needItems ? '' : '✓'}</span>
+        <span class="${!needGps ? 'done' : ''}">${ic(!needGps ? 'check' : 'pin', 12)} Pin your exact location ${needGps ? `<button class="lnk" onclick="shopFixLocation()">Set now</button>` : '✓'}</span>
+        <span class="${M.online ? 'done' : ''}">${ic(M.online ? 'check' : 'clock', 12)} Be online ${M.online ? '✓' : `<button class="lnk" onclick="S.myShop.online=true;save();renderShopDash()">Go online</button>`}</span>
+      </div></div>`;
+  })()}
+
   <div class="btn-pair">
-    <button class="btn-main sm alt" onclick="shopItemSheet()">+ Add item</button>
+    <button class="btn-main sm" onclick="bulkMenuSheet()">${ic('camera', 13)} Import / scan menu</button>
+    <button class="btn-main sm alt" onclick="shopItemSheet()">+ Add one item</button>
+  </div>
+  <div class="btn-pair">
+    <button class="btn-main sm ghost" onclick="shopSetCover()">${ic('camera', 13)} ${M.photo ? 'Change' : 'Add'} shop photo</button>
     <button class="btn-main sm ghost" onclick="go('storefront')">Preview my shop</button>
   </div>
   <div class="btn-pair">
@@ -285,7 +303,7 @@ function renderShopDash() {
     <button class="btn-main sm ghost" onclick="shareShop()">Share shop link</button>
   </div>
 
-  ${!M.items.length ? `<div class="tip-strip">Add your first items — orders start coming once your shelf isn't empty!</div>` : ''}
+  ${!M.items.length ? `<div class="tip-strip">${ic('spark', 13)} Restaurant with a big menu? Tap <b>Import / scan menu</b> — paste it or photograph it, and every dish is added at once.</div>` : ''}
 
   ${(M.reservations && M.reservations.length) ? `<div class="sec-head"><h2>Table reservations ${ic('bowl', 14)}</h2></div>
     ${M.reservations.map(r => `<div class="job-card"><div class="job-top"><span class="job-emoji">${ic('bowl', 20)}</span>
@@ -295,10 +313,10 @@ function renderShopDash() {
   ${pend.length ? `<div class="sec-head"><h2>Orders <span class="live-dot"></span></h2></div>${pend.map(orderCard).join('')}` :
     M.items.length ? `<div class="tip-strip"> You're online — orders from nearby customers pop up here the moment they're placed.</div>` : ''}
 
-  ${M.items.length ? `<div class="sec-head"><h2>Your shelf (${M.items.length})</h2></div>
+  ${M.items.length ? `<div class="sec-head"><h2>Your menu (${M.items.length})</h2><small class="dim">tap Edit to add a photo</small></div>
   ${M.items.map((it, i) => `<div class="item-row slim">
-      <div class="item-emoji">${icOr(it.emoji, 20)}</div>
-      <div class="item-info"><b>${esc(it.name)}</b>${it.out ? ' <em class="out-tag">Out of stock</em>' : ''}<small>${esc(it.qty)}</small><div class="item-price">${money(it.price)}</div></div>
+      <div class="item-emoji">${it.photo ? `<img src="${esc(it.photo)}" alt="" loading="lazy"/>` : icOr(it.emoji, 20)}</div>
+      <div class="item-info"><b>${esc(it.name)}</b>${it.section ? ` <em class="sec-tag">${esc(it.section)}</em>` : ''}${it.out ? ' <em class="out-tag">Out of stock</em>' : ''}${it.flag ? ` <em class="out-tag amber">price ${it.flag}</em>` : ''}<small>${esc(it.qty)}</small><div class="item-price">${money(it.price)}</div></div>
       <div class="item-act"><button class="lnk" onclick="S.myShop.items[${i}].out=!S.myShop.items[${i}].out;save();renderShopDash()">${it.out ? 'Restock' : 'Mark out'}</button>
         <button class="lnk" onclick="shopItemSheet(${i})">Edit</button>
         <button class="lnk red" onclick="if(confirm('Remove ${esc(it.name)}?')){S.myShop.items.splice(${i},1);save();renderShopDash()}">Delete</button></div></div>`).join('')}` : ''}
@@ -368,30 +386,199 @@ function shopOrderAct(oid, act) {
 
 /* ---------- add / edit item ---------- */
 function shopItemSheet(idx) {
-  const it = idx != null ? S.myShop.items[idx] : { name: '', price: '', qty: '', emoji: '🛒' };
+  const it = idx != null ? S.myShop.items[idx] : { name: '', price: '', qty: '', emoji: '🛒', section: '', photo: '' };
   window._itEdit = idx;
   window._itEmoji = it.emoji;
+  window._itPhoto = it.photo || '';
+  const sections = [...new Set(S.myShop.items.map(x => x.section).filter(Boolean))];
   sheet(`
-    <div class="sheet-grab"></div><h3 class="sheet-title">${idx != null ? 'Edit item' : 'Add item to your shelf'}</h3>
-    <label class="fld"><span>Item name</span><input class="txt" id="itName" placeholder="e.g. Fresh Paneer" value="${esc(it.name)}"/></label>
-    <div class="fld-pair">
-      <label class="fld"><span>Price (₹)</span><input class="txt" id="itPrice" inputmode="numeric" placeholder="99" value="${it.price}"/></label>
-      <label class="fld"><span>Quantity / unit</span><input class="txt" id="itQty" placeholder="500 g / 1 pc" value="${esc(it.qty)}"/></label>
+    <div class="sheet-grab"></div><h3 class="sheet-title">${idx != null ? 'Edit item' : 'Add item'}</h3>
+    <div class="item-photo-row">
+      <div class="item-photo-thumb" id="itPhotoThumb">${window._itPhoto ? `<img src="${window._itPhoto}"/>` : ic('camera', 22)}</div>
+      <div><button class="btn-main sm ghost" onclick="pickPhoto(d=>setItemPhoto(d))">${ic('camera', 13)} Add photo</button>
+        ${window._itPhoto ? `<button class="lnk red" onclick="setItemPhoto('')">Remove</button>` : ''}<div class="foot-note sm" style="margin:4px 0 0">A real photo sells 3× better.</div></div>
     </div>
-    <div class="fld"><span>Icon</span><div class="chip-wrap">
+    <label class="fld"><span>Item name</span><input class="txt" id="itName" placeholder="e.g. Paneer Butter Masala" value="${esc(it.name)}" oninput="itPriceHint()"/></label>
+    <div class="fld-pair">
+      <label class="fld"><span>Price (₹)</span><input class="txt" id="itPrice" inputmode="numeric" placeholder="99" value="${it.price}" oninput="itPriceHint()"/></label>
+      <label class="fld"><span>Quantity / unit</span><input class="txt" id="itQty" placeholder="1 plate / 500 g" value="${esc(it.qty)}"/></label>
+    </div>
+    <div id="itPriceHint" class="price-hint"></div>
+    <label class="fld"><span>Section <small class="dim">(optional — e.g. Starters, Mains)</small></span>
+      <input class="txt" id="itSection" placeholder="Section" value="${esc(it.section || '')}" list="secList"/>
+      <datalist id="secList">${sections.map(s => `<option value="${esc(s)}">`).join('')}</datalist></label>
+    <div class="fld"><span>Icon (used if no photo)</span><div class="chip-wrap">
       ${SHOP_ICONS.map(e => `<button class="chip emoji ${e === it.emoji ? 'on' : ''}" data-ic="${e}" onclick="window._itEmoji='${e}';$$('.chip.emoji').forEach(c=>c.classList.toggle('on',c.dataset.ic==='${e}'))">${ic(e, 17)}</button>`).join('')}</div></div>
     <button class="btn-main wide" onclick="shopItemSave()">Save item</button>`);
 }
-function shopItemSave() {
+function setItemPhoto(d) { window._itPhoto = d; const t = document.getElementById('itPhotoThumb'); if (t) t.innerHTML = d ? `<img src="${d}"/>` : ic('camera', 22); }
+function shopFixLocation() {
+  placePickerSheet('Your shop location — search or use GPS', (p) => {
+    S.myShop.addr = { name: p.name, sub: p.sub, lat: p.lat, lng: p.lng };
+    if (p.lat != null && typeof geoLog === 'function') geoLog(p, 'shop');
+    save(); toast('Location pinned'); renderShopDash();
+  });
+}
+function shopSetCover() {
+  pickPhoto(async (d) => {
+    toast('Uploading photo…');
+    let url = d;
+    if (typeof cloudUploadImage === 'function') { const up = await cloudUploadImage(d, 'shop'); if (up) url = up; }
+    S.myShop.photo = url; save(); toast('Shop photo set'); renderShopDash();
+  });
+}
+let _priceHintDeb;
+function itPriceHint() {
+  clearTimeout(_priceHintDeb);
+  _priceHintDeb = setTimeout(async () => {
+    const el = document.getElementById('itPriceHint'); if (!el) return;
+    const name = ($('#itName') && $('#itName').value.trim()) || '';
+    const price = parseInt($('#itPrice') && $('#itPrice').value, 10);
+    if (!price || !name) { el.innerHTML = ''; return; }
+    const v = await cloudPriceCheck(S.myShop.cat, name, price);
+    el.innerHTML = priceVerdictHTML(v);
+  }, 400);
+}
+function priceVerdictHTML(v) {
+  if (!v || v.verdict === 'ok' || v.verdict === 'invalid') return v && v.verdict === 'ok' ? `<span class="ok">${ic('check', 11)} Fair price</span>` : '';
+  const range = (v.min != null) ? ` (typical ${money(v.min)}–${money(v.max)})` : '';
+  if (v.verdict === 'block') return `<span class="bad">${ic('shield', 11)} This price is way outside the accepted range${range}. Please correct it.</span>`;
+  if (v.verdict === 'high') return `<span class="amber">${ic('shield', 11)} Looks high${range} — buyers may skip it.</span>`;
+  if (v.verdict === 'low') return `<span class="amber">${ic('shield', 11)} Looks low${range} — double-check.</span>`;
+  return '';
+}
+async function shopItemSave() {
   const name = $('#itName').value.trim();
   const price = parseInt($('#itPrice').value, 10);
   const qty = $('#itQty').value.trim() || '1 pc';
+  const section = ($('#itSection') && $('#itSection').value.trim()) || '';
   if (name.length < 2) { toast('Name the item', ''); return; }
   if (!price || price < 1) { toast('Enter a valid price', '💰'); return; }
-  const item = { id: 'my' + uid(), name, price, qty, emoji: window._itEmoji || '🛒' };
+  /* price moderation — block absurd prices */
+  const v = await cloudPriceCheck(S.myShop.cat, name, price);
+  if (v.verdict === 'block') { toast('Price not accepted — typical range ' + money(v.min) + '–' + money(v.max)); return; }
+  toast('Saving…');
+  let photoUrl = window._itPhoto;
+  if (photoUrl && photoUrl.startsWith('data:') && typeof cloudUploadImage === 'function') {
+    const up = await cloudUploadImage(photoUrl, 'dish'); if (up) photoUrl = up;
+  }
+  const item = { id: 'my' + uid(), name, price, qty, section, photo: photoUrl || '', emoji: window._itEmoji || '🛒', flag: (v.verdict === 'high' || v.verdict === 'low') ? v.verdict : null };
   if (window._itEdit != null) S.myShop.items[window._itEdit] = Object.assign(S.myShop.items[window._itEdit], item, { id: S.myShop.items[window._itEdit].id });
   else S.myShop.items.push(item);
   save(); closeSheet(); toast('Shelf updated', '🧺'); renderShopDash();
+}
+
+/* ============================================================
+   PHOTOS — pick from gallery or camera, compressed on-device
+   ============================================================ */
+function pickPhoto(onData) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => compressImage(r.result, 1000, onData);
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+function compressImage(dataUrl, maxDim, cb) {
+  const img = new Image();
+  img.onload = () => {
+    const s = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    cb(c.toDataURL('image/jpeg', 0.72));
+  };
+  img.onerror = () => cb(dataUrl);
+  img.src = dataUrl;
+}
+
+/* ============================================================
+   BULK MENU IMPORT + SCANNER — paste or photograph a whole menu
+   ============================================================ */
+function bulkMenuSheet() {
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Import your whole menu</h3>
+    <div class="foot-note sm" style="text-align:left;margin:0 0 8px">Paste your menu, or scan a photo of it. One dish per line — write the price at the end. Lines with no price become a <b>section</b> heading.</div>
+    <div class="btn-pair">
+      <button class="btn-main sm ghost" onclick="scanMenu()">${ic('camera', 13)} Scan menu photo</button>
+      <button class="btn-main sm ghost" onclick="document.getElementById('bulkText').value=bulkSample();bulkPreview()">Paste example</button>
+    </div>
+    <textarea class="txt" id="bulkText" rows="9" placeholder="STARTERS\nPaneer Tikka - 220\nChicken 65  240\n\nMAIN COURSE\nDal Makhani 210\nButter Naan 45" oninput="bulkPreview()" style="resize:vertical;font-family:monospace;font-size:.82rem"></textarea>
+    <div id="bulkPrev"></div>
+    <button class="btn-main wide" id="bulkGo" onclick="bulkImport()" disabled>Add items</button>`);
+}
+function bulkSample() {
+  return 'STARTERS\nPaneer Tikka - 220\nChicken 65 - 240\nVeg Spring Roll 180\n\nMAIN COURSE\nDal Makhani - 210\nPaneer Butter Masala 250\nButter Chicken 320\n\nBREADS\nButter Naan - 45\nTandoori Roti 25\n\nDESSERTS\nGulab Jamun (2 pc) - 90';
+}
+function parseMenu(text) {
+  const items = []; let section = '';
+  String(text || '').split(/\n/).forEach(raw => {
+    const line = raw.trim();
+    if (!line) return;
+    const nums = line.match(/\d[\d,]*(?:\.\d+)?/g);
+    if (!nums) { section = line.replace(/[:•\-–—]+\s*$/, '').replace(/^[•\-–—]\s*/, '').trim().slice(0, 40); return; }
+    const priceStr = nums[nums.length - 1];
+    const price = Math.round(parseFloat(priceStr.replace(/,/g, '')));
+    const at = line.lastIndexOf(priceStr);
+    let name = line.slice(0, at).replace(/(?:₹|rs\.?|inr|\bfor\b)/ig, '').replace(/[₹\-–—.:•\s]+$/, '').trim();
+    if (!name) name = line.replace(priceStr, '').replace(/[₹\-–—.:•]/g, '').trim();
+    if (name && price > 0 && price < 1000000) items.push({ name: name.slice(0, 60), price, section });
+  });
+  return items;
+}
+let _bulkItems = [];
+function bulkPreview() {
+  const ta = document.getElementById('bulkText'); if (!ta) return;
+  _bulkItems = parseMenu(ta.value);
+  const box = document.getElementById('bulkPrev');
+  const go = document.getElementById('bulkGo');
+  if (!_bulkItems.length) { box.innerHTML = `<div class="foot-note sm">Nothing detected yet — one dish per line, price at the end.</div>`; if (go) go.disabled = true; return; }
+  const bySec = {};
+  _bulkItems.forEach(i => { (bySec[i.section || 'Menu'] = bySec[i.section || 'Menu'] || []).push(i); });
+  box.innerHTML = `<div class="bulk-count">${ic('check', 12)} <b>${_bulkItems.length}</b> items detected${Object.keys(bySec).length > 1 ? ' · ' + Object.keys(bySec).length + ' sections' : ''}</div>` +
+    Object.entries(bySec).map(([s, arr]) => `<div class="bulk-sec"><small class="dim">${esc(s)}</small>${arr.map(i => `<div class="bulk-line"><span>${esc(i.name)}</span><b>${money(i.price)}</b></div>`).join('')}</div>`).join('');
+  if (go) go.disabled = false;
+}
+async function bulkImport() {
+  if (!_bulkItems.length) return;
+  toast('Checking prices & adding ' + _bulkItems.length + ' items…');
+  let added = 0, blocked = [];
+  for (const it of _bulkItems) {
+    const v = await cloudPriceCheck(S.myShop.cat, it.name, it.price);
+    if (v.verdict === 'block') { blocked.push(it.name); continue; }
+    S.myShop.items.push({ id: 'my' + uid(), name: it.name, price: it.price, qty: it.qty || '1 plate', section: it.section || '', emoji: '🍽', flag: (v.verdict === 'high' || v.verdict === 'low') ? v.verdict : null });
+    added++;
+  }
+  save(); closeSheet();
+  toast(added + ' items added' + (blocked.length ? ' · ' + blocked.length + ' skipped (price out of range)' : ''));
+  renderShopDash();
+}
+
+/* menu scanner: photograph the physical menu → OCR → fill the textarea */
+let _tessLoad;
+function ensureTesseract() {
+  if (window.Tesseract) return Promise.resolve();
+  if (_tessLoad) return _tessLoad;
+  _tessLoad = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload = res; s.onerror = () => { _tessLoad = null; rej(new Error('ocr load failed')); };
+    document.head.appendChild(s);
+  });
+  return _tessLoad;
+}
+function scanMenu() { pickPhoto(d => runMenuOCR(d)); }
+async function runMenuOCR(dataUrl) {
+  toast('Reading the menu… first scan downloads the reader (~few sec)');
+  try {
+    await ensureTesseract();
+    const res = await Tesseract.recognize(dataUrl, 'eng');
+    const ta = document.getElementById('bulkText');
+    if (ta) { ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + (res.data.text || '').trim(); bulkPreview(); }
+    toast('Menu read — review & fix the lines, then Add items');
+  } catch (e) { toast('Could not read the photo — please type or paste the menu'); }
 }
 
 /* ---------- public storefront preview ---------- */

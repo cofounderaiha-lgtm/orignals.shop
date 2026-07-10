@@ -123,7 +123,7 @@ async function cloudPush() {
           id: shopId, name: S.myShop.name, category: S.myShop.cat,
           tagline: 'Seller on Orignals', delivery: S.myShop.delivery || 'both',
           pure_veg: !!S.myShop.veg, gst: S.myShop.gst || null, fssai: S.myShop.fssai || null,
-          is_open: !!S.myShop.online,
+          is_open: !!S.myShop.online, photo_url: (S.myShop.photo && S.myShop.photo.startsWith('http')) ? S.myShop.photo : null,
           lat: (S.myShop.addr && S.myShop.addr.lat != null) ? +S.myShop.addr.lat : null,
           lng: (S.myShop.addr && S.myShop.addr.lng != null) ? +S.myShop.addr.lng : null,
           addr: S.myShop.addr ? (S.myShop.addr.name + (S.myShop.addr.sub ? ', ' + S.myShop.addr.sub : '')) : null,
@@ -139,7 +139,8 @@ async function cloudPush() {
           headers: { 'Prefer': 'resolution=merge-duplicates' },
           body: JSON.stringify(S.myShop.items.map((it, i) => ({
             id: shopId + '_i' + i, shop_id: shopId, name: it.name,
-            qty_label: it.qty, price: it.price, in_stock: !it.out, icon: it.emoji || null
+            qty_label: it.qty, price: it.price, in_stock: !it.out, icon: it.emoji || null,
+            photo_url: (it.photo && it.photo.startsWith('http')) ? it.photo : null, section: it.section || null
           })))
         });
       }
@@ -269,13 +270,14 @@ async function cloudShopsRefresh(onDone) {
     shops.forEach(cs => {
       const its = (byShop[cs.id] || []).map(it => ({
         id: it.id, name: it.name, qty: it.qty_label || '', price: +it.price,
-        mrp: it.mrp ? +it.mrp : undefined, bestseller: !!it.bestseller
+        mrp: it.mrp ? +it.mrp : undefined, bestseller: !!it.bestseller,
+        photo: it.photo_url || '', section: it.section || ''
       }));
       if (!its.length) return;
       const km = (cs.lat != null && here.lat != null)
         ? +geoKm({ lat: +cs.lat, lng: +cs.lng }, { lat: +here.lat, lng: +here.lng }).toFixed(1) : 2.0;
       const mapped = {
-        id: cs.id, name: cs.name, community: true,
+        id: cs.id, name: cs.name, community: true, img: cs.photo_url || undefined,
         type: DB.shopTypes.some(t => t.id === cs.category) ? cs.category : 'grocery',
         rating: cs.rating != null ? +cs.rating : 5.0, ratings: cs.ratings_count || 'New',
         km, time: Math.max(9, Math.round(km * 4 + 8)),
@@ -401,6 +403,27 @@ function cloudSeatsFree(showKey, seats) {
 function cloudSeatsFreeTicket(ticketId) {
   if (!CLOUD.on) return Promise.resolve();
   return cloudFetch('rpc/seats_free_ticket', { method: 'POST', body: JSON.stringify({ p_ticket: ticketId, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
+}
+
+/* ---------- image upload to Supabase Storage (shop/dish photos) ---------- */
+async function cloudUploadImage(dataUrl, prefix) {
+  if (!CLOUD.on || !dataUrl) return null;
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    const path = (prefix || 'img') + '/' + (S.deviceKey || 'd').slice(0, 10) + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '.jpg';
+    const r = await fetch(CLOUD.url + '/storage/v1/object/shopimg/' + path, {
+      method: 'POST', headers: { apikey: CLOUD.key, Authorization: 'Bearer ' + CLOUD.key, 'Content-Type': 'image/jpeg' }, body: blob
+    });
+    if (!r.ok) return null;
+    return CLOUD.url + '/storage/v1/object/public/shopimg/' + path;
+  } catch (e) { return null; }
+}
+
+/* ---------- server-side price sanity (moderation) ---------- */
+async function cloudPriceCheck(cat, name, price) {
+  if (!CLOUD.on) return { verdict: 'ok' };
+  try { return await cloudFetch('rpc/price_check', { method: 'POST', body: JSON.stringify({ p_cat: cat, p_name: name, p_price: price }) }) || { verdict: 'ok' }; }
+  catch (e) { return { verdict: 'ok' }; }
 }
 
 /* ============================================================

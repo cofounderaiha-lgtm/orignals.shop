@@ -52,8 +52,19 @@ const VIEWS = {};
 function view(name, fn) { VIEWS[name] = fn; }
 function go(path) { location.hash = '#/' + path; }
 
+/* route source: the hash wins for in-app nav, but a direct visit to a
+   real path (e.g. orignals.shop/admin) is honoured too — so clean URLs
+   without a #/ work. */
+function currentRoute() {
+  const h = location.hash.replace(/^#\/?/, '');
+  if (h) return h;
+  const p = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (p) return decodeURIComponent(p);
+  return S.mode === 'earn' ? 'earn' : 'home';
+}
+
 function route() {
-  const parts = (location.hash.replace(/^#\/?/, '') || (S.mode === 'earn' ? 'earn' : 'home')).split('/');
+  const parts = currentRoute().split('/');
   const name = parts[0];
   const fn = VIEWS[name] || VIEWS.home;
   const main = $('#view');
