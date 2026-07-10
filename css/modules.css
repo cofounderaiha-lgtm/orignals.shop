@@ -1003,3 +1003,16 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-of
 .install-bar .ib-act{display:flex;align-items:center;gap:8px;flex:none}
 .install-bar .inst-x{background:transparent;border:none;color:var(--mut);font-size:1rem;cursor:pointer;padding:0 2px}
 @media(min-width:1024px){ .install-bar{bottom:24px;left:auto;right:24px;max-width:380px} }
+
+/* ---------- delivery navigation + gamified job HUD ---------- */
+.track-map.real{position:relative}
+.nav-fab{position:absolute;right:12px;bottom:12px;z-index:600;display:inline-flex;align-items:center;gap:6px;
+  background:var(--primary);color:#fff;font-weight:800;font-size:.82rem;padding:10px 15px;border-radius:50px;
+  box-shadow:0 6px 18px rgba(26,86,50,.4);cursor:pointer}
+.nav-fab:active{transform:scale(.96)}
+.nav-fab svg{color:#fff}
+.job-hud{display:flex;gap:9px;margin:10px 0}
+.job-hud .hud-cell{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 8px;text-align:center;box-shadow:var(--shadow)}
+.job-hud .hud-cell b{display:block;font-size:1.15rem;color:var(--ink);font-family:var(--disp)}
+.job-hud .hud-cell:first-child b{color:var(--primary)}
+.job-hud .hud-cell small{font-size:.66rem;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}

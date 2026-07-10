@@ -231,7 +231,37 @@ function omTileLayer(map) {
   return layer;
 }
 
-/* real interactive route map: two markers + line, auto-fit */
+/* real road-routing via open-source OSRM — returns the actual driving
+   path geometry [[lat,lng]...] + distance(km) + duration(min). Cached. */
+const _routeCache = {};
+async function roadRoute(from, to) {
+  if (!from || !to || from.lat == null || to.lat == null) return null;
+  const key = [from.lat.toFixed(4), from.lng.toFixed(4), to.lat.toFixed(4), to.lng.toFixed(4)].join(',');
+  if (_routeCache[key]) return _routeCache[key];
+  try {
+    const url = 'https://router.project-osrm.org/route/v1/driving/' +
+      from.lng + ',' + from.lat + ';' + to.lng + ',' + to.lat + '?overview=full&geometries=geojson';
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const d = await r.json();
+    const rt = d.routes && d.routes[0];
+    if (!rt) return null;
+    const out = { path: rt.geometry.coordinates.map(c => [c[1], c[0]]), km: rt.distance / 1000, min: Math.round(rt.duration / 60) };
+    _routeCache[key] = out;
+    return out;
+  } catch (e) { return null; }
+}
+
+/* open turn-by-turn navigation in the device's map app (Google Maps →
+   geo: fallback). Works on phone (partner navigating) and desktop. */
+function navTo(lat, lng, label) {
+  if (lat == null) { toast('No location to navigate to'); return; }
+  const g = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng + '&travelmode=driving';
+  try { window.open(g, '_blank'); } catch (e) { location.href = 'geo:' + lat + ',' + lng + '?q=' + lat + ',' + lng + '(' + encodeURIComponent(label || 'Destination') + ')'; }
+}
+
+/* real interactive route map: markers + ACTUAL ROAD PATH (OSRM), auto-fit.
+   Draws a straight line instantly, then swaps in the real road route. */
 function routeMap(elId, from, to) {
   const el = document.getElementById(elId);
   if (!el || typeof L === 'undefined' || !from || from.lat == null) return;
@@ -245,8 +275,15 @@ function routeMap(elId, from, to) {
     if (to && to.lat != null) {
       const B = [to.lat, to.lng];
       L.marker(B, { icon: pin('#C84B31') }).addTo(map);
-      L.polyline([A, B], { color: '#1A5632', weight: 4, opacity: .8, dashArray: '2,8', lineCap: 'round' }).addTo(map);
+      /* instant straight hint, replaced by the real road route below */
+      let line = L.polyline([A, B], { color: '#1A5632', weight: 3, opacity: .35, dashArray: '2,8' }).addTo(map);
       map.fitBounds([A, B], { padding: [36, 36] });
+      roadRoute(from, to).then(rt => {
+        if (!rt || !el._map) return;
+        map.removeLayer(line);
+        L.polyline(rt.path, { color: '#1A5632', weight: 5, opacity: .85, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+        map.fitBounds(rt.path, { padding: [30, 30] });
+      });
     } else {
       map.setView(A, 14);
     }

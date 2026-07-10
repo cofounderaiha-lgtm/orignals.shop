@@ -381,7 +381,15 @@ function renderActiveJob() {
   <div class="page-head"><button class="back" onclick="dropJobConfirm()">${ic('x', 16)}</button>
     <div><h1>${steps[A.stage]}</h1><small>${esc(j.what)} · ${A.seva ? 'SEVA — free delivery' : '+' + money(j.pay)}</small></div></div>
 
-  <div class="track-map real"><div id="jobMap" class="route-canvas full"></div></div>
+  <div class="track-map real"><div id="jobMap" class="route-canvas full"></div>
+    <div class="nav-fab" onclick="jobNavigate()">${ic('pin', 16)} Navigate</div>
+  </div>
+
+  <div class="job-hud">
+    <div class="hud-cell"><b>${A.seva ? 'SEVA' : '+' + money(j.pay)}</b><small>${A.seva ? 'karma' : 'you earn'}</small></div>
+    <div class="hud-cell"><b>${j.km} km</b><small>${A.stage < 1 ? 'to pickup' : 'to drop'}</small></div>
+    <div class="hud-cell"><b>${(S.partner.jobs || 0) + 1}</b><small>trip today</small></div>
+  </div>
 
   <div class="job-card active">
     <div class="job-route"><i class="pin g"></i>${esc(j.from)}<span class="job-arrow">${ic('arrowr', 11)}</span><i class="pin r"></i>${esc(j.to)}<b>· ${j.km} km</b></div>
@@ -420,6 +428,13 @@ function renderActiveJob() {
   }
 }
 
+function jobNavigate() {
+  const A = S.activeJob; if (!A) return;
+  const j = A.cloudJob || allJobs().find(x => x.id === A.jobId); if (!j) return;
+  const g = jobGeo(j);
+  const target = A.stage >= 2 ? g.to : g.from;   // pickup first, then drop
+  if (typeof navTo === 'function') navTo(target.lat, target.lng, A.stage >= 2 ? j.to : j.from);
+}
 function captureCollector() {
   if (typeof captureCameraPhoto !== 'function') { toast('Camera unavailable'); return; }
   captureCameraPhoto('Verify who is collecting', 'Ask the person collecting to face the camera.', (data) => {
