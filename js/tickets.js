@@ -69,7 +69,7 @@ view('tickets', args => {
           <small class="dim">${esc(p.area)} · ${p.tags.map(esc).join(' · ')}</small></div>
         <em class="job-pay">${money(p.from)}<small>from</small></em></div>
     </div>`).join('')}
-    <button class="btn-main wide ghost" onclick="toast('List your services & verify your expertise to get onboarded');go('myshop')">${ic('spark', 14)} Are you an event professional? Get onboarded</button>`;
+    <button class="btn-main wide ghost" onclick="go('services')">${ic('spark', 14)} Are you an event professional? Get onboarded &amp; verified</button>`;
   }
 
   if (tab === 'venues') {

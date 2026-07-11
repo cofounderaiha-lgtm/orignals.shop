@@ -30,9 +30,9 @@ function adminSeed() {
 
 /* ---------- admin control levels ---------- */
 const ADMIN_ROLES = [
-  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments, org-wide HRMS, live visitor analytics and the Test console.', perms: ['overview', 'analytics', 'purity', 'kyc', 'fraud', 'orders', 'plans', 'roles', 'hrms', 'data', 'mitra', 'test'] },
-  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: live analytics, org-wide HRMS, KYC, fraud, all orders, database read, onboard staff up to L3.', perms: ['overview', 'analytics', 'kyc', 'fraud', 'orders', 'roles', 'hrms', 'data', 'mitra'] },
-  { id: 'l3', name: 'L3 · Purity Inspector', desc: 'Field & lab team. Seals or delists batches, runs their department HR. ', perms: ['overview', 'purity', 'roles', 'hrms'] },
+  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments, org-wide HRMS, live visitor analytics and the Test console.', perms: ['overview', 'analytics', 'purity', 'kyc', 'svcverify', 'fraud', 'orders', 'plans', 'roles', 'hrms', 'data', 'mitra', 'test'] },
+  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: live analytics, org-wide HRMS, KYC, service verification, fraud, all orders, database read, onboard staff up to L3.', perms: ['overview', 'analytics', 'kyc', 'svcverify', 'fraud', 'orders', 'roles', 'hrms', 'data', 'mitra'] },
+  { id: 'l3', name: 'L3 · Purity Inspector', desc: 'Field & lab team. Seals or delists batches, verifies service pros, runs their department HR. ', perms: ['overview', 'purity', 'svcverify', 'roles', 'hrms'] },
   { id: 'l2', name: 'L2 · City Manager', desc: 'Onboards shops & partners in their city, watches local orders, runs their department HR.', perms: ['overview', 'kyc', 'orders', 'roles', 'hrms'] },
   { id: 'l1', name: 'L1 · Support Agent', desc: 'Sees order status to help customers; own attendance & leave.', perms: ['overview', 'orders', 'roles', 'hrms'] }
 ];
@@ -106,7 +106,7 @@ function renderAdminPanel(args) {
   let tab = args[0] || 'overview';
   if (!role.perms.includes(tab)) tab = 'overview';
   const A = S.admin;
-  const tabs = [['overview', 'Overview'], ['analytics', 'Analytics'], ['hrms', 'HR &amp; Staff'], ['purity', 'Purity'], ['kyc', 'KYC'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
+  const tabs = [['overview', 'Overview'], ['analytics', 'Analytics'], ['hrms', 'HR &amp; Staff'], ['purity', 'Purity'], ['kyc', 'KYC'], ['svcverify', 'Verify pros'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
   const gmv = S.orders.reduce((a, o) => a + o.total, 0) + (S.myShop ? S.myShop.revenue : 0);
   let body = '';
 
@@ -145,6 +145,10 @@ function renderAdminPanel(args) {
       ${[['team', 'Employees'], ['leave', 'Leave'], ['attend', 'Attendance'], ['pay', 'Payroll'], ['depts', 'Departments']].map(t => `<button class="chip ${(_HR_SUB || 'team') === t[0] ? 'on' : ''}" onclick="adminHRSub('${t[0]}')">${t[1]}</button>`).join('')}
     </div>
     <div id="hrBody"><div class="empty sm"><span>${ic('users', 26)}</span><b>Loading your team…</b></div></div>`;
+
+  if (tab === 'svcverify') body = `
+    <div class="tip-strip">${ic('shield', 13)} Service marketplace — approve a professional only after their expertise checks out. Approved pros go live for buyers; rejected ones stay hidden.</div>
+    <div id="svcQueue"><div class="empty sm"><span>${ic('user', 26)}</span><b>Loading applications…</b></div></div>`;
 
   if (tab === 'purity') body = `
     <div class="tip-strip">${ic('leaf', 13)} Our key promise: naturally made &amp; grown food, zero adulteration. Approve only lab-passed batches.</div>
@@ -380,6 +384,30 @@ function renderAdminPanel(args) {
   if (tab === 'roles' && ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 4) adminLoadTeam();
   if (tab === 'analytics') adminAnalyticsBoot(); else adminAnalyticsStop();
   if (tab === 'hrms') adminHRLoad();
+  if (tab === 'svcverify') adminSvcLoad();
+}
+
+/* ---------- service-provider expertise verification (L3+) ---------- */
+async function adminSvcLoad() {
+  const box = document.getElementById('svcQueue'); if (!box) return;
+  const r = await adminApi('service_admin_pending', {});
+  const rows = (r && r.ok && Array.isArray(r.rows)) ? r.rows : [];
+  box.innerHTML = rows.length ? rows.map(p => `
+    <div class="job-card">
+      <div class="job-top"><span class="job-emoji">${ic('user', 18)}</span>
+        <div><b>${esc(p.name)} <small class="dim">${esc(p.kind)}</small></b>
+          <small>${esc(p.category)} · ${esc(p.sector || '')} · ${money(p.rate || 0)}/${esc(p.rate_unit || 'hour')}${p.area ? ' · ' + esc(p.area) : ''}</small>
+          <small class="dim"><b>Claims:</b> ${esc(p.credentials || '—')}</small>
+          ${p.headline ? `<small class="dim">${esc(p.headline)}</small>` : ''}</div></div>
+      <div class="btn-pair">
+        <button class="btn-main sm" onclick="adminSvcDecide(${p.id},'verified')">${ic('check', 13)} Verify &amp; list</button>
+        <button class="btn-main sm ghost" onclick="adminSvcDecide(${p.id},'rejected')">Reject</button></div>
+    </div>`).join('') : `<div class="empty sm"><span>${ic('check', 26)}</span><b>No pending applications</b><p>New service providers awaiting verification appear here.</p></div>`;
+}
+async function adminSvcDecide(id, decision) {
+  const r = await adminApi('service_verify', { p_id: id, p_decision: decision });
+  if (r && r.ok) { toast(decision === 'verified' ? 'Verified & listed' : 'Rejected'); adminSvcLoad(); }
+  else toast(r && r.reason === 'forbidden' ? 'Needs inspector (L3+) access' : 'Could not update');
 }
 
 /* ============================================================

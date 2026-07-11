@@ -1,13 +1,13 @@
 /* Orignals service worker — offline shell + on-device map tile cache.
    Tiles are cached cache-first (capped), which makes maps load instantly,
    work offline, and massively cuts traffic to the open-source tile servers. */
-const CACHE = 'orignals-v22';
+const CACHE = 'orignals-v23';
 const TILES = 'orignals-tiles-v1';
 const TILE_CAP = 900;
 const SHELL = [
   './index.html', './css/app.css', './css/modules.css',
   './js/data.js', './js/icons.js', './js/core.js', './js/home.js', './js/shops.js',
-  './js/send.js', './js/rides.js', './js/tickets.js', './js/estate.js',
+  './js/send.js', './js/rides.js', './js/tickets.js', './js/estate.js', './js/services.js',
   './js/earn.js', './js/myshop.js', './js/mitra.js', './js/account.js', './js/admin.js', './js/call.js',
   './js/cloud.js', './js/analytics.js', './js/brain.js', './js/brain_ml.js', './js/langs.js', './js/geo.js', './js/ops.js', './js/auth.js', './js/face.js', './js/legal.js',
   './manifest.json', './config.js',

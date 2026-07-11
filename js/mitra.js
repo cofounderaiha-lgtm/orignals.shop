@@ -128,6 +128,8 @@ const MITRA_HELP = [
     kw: ['ride', 'rides', 'bike', 'auto', 'cab', 'taxi', 'gaadi', 'गाड़ी'] },
   { route: 'tickets', title: 'Events', help: 'Find events near you — society melas to national summits — book a seat, hire a planner, or book a venue.', tips: ['Events this weekend', 'Book an event planner'],
     kw: ['event', 'events', 'ticket', 'concert', 'show', 'planner', 'venue', 'wedding', 'expo', 'इवेंट', 'कार्यक्रम'] },
+  { route: 'services', title: 'Services', help: 'Hire verified professionals — tuition, plumbing, electrical, healthcare, design, accounting and more, across all sectors. Or offer your own service and get expertise-verified.', tips: ['Find a tutor', 'Offer my service'],
+    kw: ['service', 'services', 'tutor', 'tuition', 'plumber', 'electrician', 'carpenter', 'freelance', 'professional', 'consultant', 'repair', 'नौकर', 'सेवा'] },
   { route: 'tickets/dining', title: 'Dining', help: 'Reserve a table at restaurants near you — 20% off the bill.', tips: ['Reserve a table'],
     kw: ['dining', 'restaurant', 'table', 'reserve', 'reservation'] },
   { route: 'estate', title: 'Property & Stays', help: 'Buy, rent or list property, and book verified stays — with real maps & documents.', tips: ['2 BHK for rent', 'Book a hotel'],
