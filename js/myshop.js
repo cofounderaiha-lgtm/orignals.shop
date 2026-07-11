@@ -125,6 +125,20 @@ function shopPickAddr() {
     renderShopReg();
   });
 }
+function shopFreshPledge() {
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${ic('leaf', 16)} Freshness pledge</h3>
+    <p class="foot-note sm" style="text-align:left">By pledging, you confirm for every order:</p>
+    <div class="ck-line"><span>🌿 Cooked / prepared <b>fresh</b>, not sold pre-made or reheated</span><span></span></div>
+    <div class="ck-line"><span>🚫 No banned colours, adulterants or unsafe additives</span><span></span></div>
+    <div class="ck-line"><span>🧼 Clean handling &amp; storage</span><span></span></div>
+    <div class="foot-note sm" style="text-align:left;margin-top:8px">Orignals may spot-check. A broken pledge delists your shop — this protects every honest seller.</div>
+    <button class="btn-main wide" onclick="shopFreshConfirm()">${ic('check', 14)} I pledge — show it to buyers</button>`);
+}
+function shopFreshConfirm() {
+  S.myShop.fresh = { made: true, noPremade: true, hygiene: true, at: Date.now() }; save();
+  closeSheet(); confettiBurst(); toast('Freshness pledge live — buyers now see 🌿 Fresh today');
+  renderShopDash();
+}
 const _poFld = 'width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;margin:6px 0;font:inherit;background:var(--card,#fff);color:inherit';
 function shopPayoutSheet() {
   const p = (S.myShop && S.myShop.payout) || {};
@@ -294,6 +308,13 @@ function renderShopDash() {
     <p class="movie-about">Order money is settled to you <b>automatically</b> — you keep <b>92%</b>, the platform's fee is just 8% (which already covers the payment-gateway charge). No invoices to chase; we pay out on a daily batch. Just add where your money should go.</p>
     ${M.payout ? `<div class="trust-row">${ic('check', 12)} Payout set — ${esc(M.payout.upi || M.payout.bank_acc || 'account on file')} <button class="lnk" onclick="shopPayoutSheet()">Change</button></div>`
       : `<button class="btn-main sm" onclick="shopPayoutSheet()">${ic('wallet', 13)} Add payout account</button>`}
+  </div>
+
+  <div class="card-block">
+    <h3>${ic('leaf', 14)} Freshness &amp; quality pledge</h3>
+    <p class="movie-about">Buyers choose Orignals for genuinely fresh, honest food. Pledge that you sell fresh — no pre-made or reheated stock, no banned additives, clean handling. Keep it: a broken pledge delists your shop.</p>
+    ${M.fresh ? `<div class="trust-row" style="background:#e9f7ee;border-color:#bfe6cd">${ic('check', 12)} Pledged — buyers see <b>🌿 Fresh today</b> on your shop. <button class="lnk red" onclick="S.myShop.fresh=false;save();renderShopDash()">Withdraw</button></div>`
+      : `<button class="btn-main sm" onclick="shopFreshPledge()">${ic('leaf', 13)} Take the freshness pledge</button>`}
   </div>
 
   ${done.length ? (() => { const days = [...Array(7)].map((_, i) => {

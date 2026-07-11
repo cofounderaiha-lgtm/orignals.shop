@@ -43,6 +43,7 @@ function shopCardHTML(s, featured) {
       <div class="shop-line3">
         <span>${ic('pin', 11)} ${s.km} km</span><span>·</span><span>${ic('clock', 11)} ${s.time >= 60 ? Math.round(s.time / 60) + ' hr' : s.time + ' min'}</span>
         ${s.b2b ? '<span>·</span><span class="b2b-tag">B2B · MOQ</span>' : ''}
+        ${s.type === 'food' && s.fresh !== false ? '<span>·</span><span style="color:#1a7f3c;font-weight:700">🌿 Fresh today</span>' : ''}
       </div>
       ${deliveryBadge(s)}
     </div></div>`;
@@ -165,6 +166,7 @@ view('shop', args => {
       ${deliveryBadge(s)}
     </div>
     <div class="trust-row">${ic('shield', 13)} Verified seller · GST registered ${s.type === 'food' ? '· FSSAI licensed' : ''} · Secure payments</div>
+    ${s.type === 'food' && s.fresh !== false ? `<div class="trust-row" style="background:#e9f7ee;border-color:#bfe6cd">${ic('leaf', 13)} <b>Freshness pledge</b> — this kitchen attests: cooked <b>fresh today</b>, <b>no pre-made or reheated</b> stock, no banned additives, hygienic handling. Orignals spot-checks &amp; any breach delists the shop.</div>` : ''}
     ${inspectorLine(s)}
     ${s.offer ? `<div class="offer-strip">${ic('gift', 13)} ${esc(s.offer)}</div>` : ''}
     ${s.b2b ? `<div class="b2b-strip">${ic('factory', 13)} Wholesale — items have minimum order quantities. GST invoice provided.
