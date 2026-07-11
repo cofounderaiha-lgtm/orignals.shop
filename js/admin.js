@@ -30,8 +30,8 @@ function adminSeed() {
 
 /* ---------- admin control levels ---------- */
 const ADMIN_ROLES = [
-  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments, org-wide HRMS, live visitor analytics and the Test console.', perms: ['overview', 'analytics', 'purity', 'kyc', 'svcverify', 'fraud', 'orders', 'plans', 'roles', 'hrms', 'data', 'mitra', 'test'] },
-  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: live analytics, org-wide HRMS, KYC, service verification, fraud, all orders, database read, onboard staff up to L3.', perms: ['overview', 'analytics', 'kyc', 'svcverify', 'fraud', 'orders', 'roles', 'hrms', 'data', 'mitra'] },
+  { id: 'l5', name: 'L5 · Super Admin', desc: 'Founder-level. Everything below plus pricing plans, payouts, admin appointments, org-wide HRMS, live visitor analytics and the Test console.', perms: ['overview', 'analytics', 'purity', 'kyc', 'svcverify', 'fraud', 'orders', 'settle', 'plans', 'roles', 'hrms', 'data', 'mitra', 'test'] },
+  { id: 'l4', name: 'L4 · Operations Admin', desc: 'Runs the platform day-to-day: live analytics, org-wide HRMS, KYC, service verification, fraud, all orders, settlements, database read, onboard staff up to L3.', perms: ['overview', 'analytics', 'kyc', 'svcverify', 'fraud', 'orders', 'settle', 'roles', 'hrms', 'data', 'mitra'] },
   { id: 'l3', name: 'L3 · Purity Inspector', desc: 'Field & lab team. Seals or delists batches, verifies service pros, runs their department HR. ', perms: ['overview', 'purity', 'svcverify', 'roles', 'hrms'] },
   { id: 'l2', name: 'L2 · City Manager', desc: 'Onboards shops & partners in their city, watches local orders, runs their department HR.', perms: ['overview', 'kyc', 'orders', 'roles', 'hrms'] },
   { id: 'l1', name: 'L1 · Support Agent', desc: 'Sees order status to help customers; own attendance & leave.', perms: ['overview', 'orders', 'roles', 'hrms'] }
@@ -106,7 +106,7 @@ function renderAdminPanel(args) {
   let tab = args[0] || 'overview';
   if (!role.perms.includes(tab)) tab = 'overview';
   const A = S.admin;
-  const tabs = [['overview', 'Overview'], ['analytics', 'Analytics'], ['hrms', 'HR &amp; Staff'], ['purity', 'Purity'], ['kyc', 'KYC'], ['svcverify', 'Verify pros'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
+  const tabs = [['overview', 'Overview'], ['analytics', 'Analytics'], ['hrms', 'HR &amp; Staff'], ['purity', 'Purity'], ['kyc', 'KYC'], ['svcverify', 'Verify pros'], ['fraud', 'Fraud'], ['orders', 'Orders'], ['settle', 'Payouts'], ['plans', 'Plans'], ['roles', 'Team &amp; levels'], ['data', 'Database'], ['mitra', 'Mitra AI'], ['test', 'Test console']];
   const gmv = S.orders.reduce((a, o) => a + o.total, 0) + (S.myShop ? S.myShop.revenue : 0);
   let body = '';
 
@@ -149,6 +149,12 @@ function renderAdminPanel(args) {
   if (tab === 'svcverify') body = `
     <div class="tip-strip">${ic('shield', 13)} Service marketplace — approve a professional only after their expertise checks out. Approved pros go live for buyers; rejected ones stay hidden.</div>
     <div id="svcQueue"><div class="empty sm"><span>${ic('user', 26)}</span><b>Loading applications…</b></div></div>`;
+
+  if (tab === 'settle') body = `
+    <div class="tip-strip">${ic('wallet', 13)} Auto-settlement — every paid order is recorded to the shop automatically (they net 92%, platform keeps 8%). No manual sending: run the batch payout and everyone is settled at once.</div>
+    <div id="settleCards" class="earn-tiles wide3"><div class="etile"><b>…</b><small>loading</small></div></div>
+    ${ADMIN_LEVEL === 'l5' ? `<button class="btn-main sm wide" onclick="adminSettleRun('')">${ic('wallet', 13)} Run batch payout — settle everyone now</button>` : '<div class="foot-note sm">Only a Super Admin can release payouts.</div>'}
+    <div id="settleBody"><div class="empty sm"><span>${ic('wallet', 26)}</span><b>Loading settlements…</b></div></div>`;
 
   if (tab === 'purity') body = `
     <div class="tip-strip">${ic('leaf', 13)} Our key promise: naturally made &amp; grown food, zero adulteration. Approve only lab-passed batches.</div>
@@ -385,6 +391,30 @@ function renderAdminPanel(args) {
   if (tab === 'analytics') adminAnalyticsBoot(); else adminAnalyticsStop();
   if (tab === 'hrms') adminHRLoad();
   if (tab === 'svcverify') adminSvcLoad();
+  if (tab === 'settle') adminSettleLoad();
+}
+
+/* ---------- auto-settlement / payouts (L4+ view, L5 pays) ---------- */
+async function adminSettleLoad() {
+  const r = await adminApi('settlement_summary', {});
+  const cards = document.getElementById('settleCards');
+  if (cards) cards.innerHTML = (r && r.ok) ? `
+    <div class="etile"><b>${money(r.due_total || 0)}</b><small>Owed to shops now</small></div>
+    <div class="etile"><b>${money(r.paid_total || 0)}</b><small>Settled to date</small></div>
+    <div class="etile"><b>${money(r.commission || 0)}</b><small>Platform earned</small></div>` : `<div class="etile"><b>—</b><small>${r && r.reason === 'forbidden' ? 'L4+ only' : 'no data'}</small></div>`;
+  const body = document.getElementById('settleBody');
+  if (!body) return;
+  const rows = (r && r.ok && Array.isArray(r.by_payee)) ? r.by_payee : [];
+  body.innerHTML = rows.length ? `<div class="card-block"><h3>Owed by shop</h3>${rows.map(p => `
+    <div class="ck-line"><span>${ic('store', 12)} <b>${esc(p.holder || p.payee)}</b>${p.upi ? ' <small class="dim">' + esc(p.upi) + '</small>' : ' <small class="dim">no payout account yet</small>'}<br/><small class="dim">${p.orders} order${p.orders === 1 ? '' : 's'} pending</small></span>
+      <span><b>${money(p.due || 0)}</b>${ADMIN_LEVEL === 'l5' ? `<br/><button class="lnk" onclick="adminSettleRun('${esc(p.payee)}')">Pay now</button>` : ''}</span></div>`).join('')}</div>`
+    : `<div class="empty sm"><span>${ic('check', 26)}</span><b>Everyone is settled</b><p>New order money to pay out will appear here automatically.</p></div>`;
+}
+async function adminSettleRun(payee) {
+  if (!confirm(payee ? 'Settle everything owed to this shop now?' : 'Run the batch payout and settle every shop that is owed money?')) return;
+  const r = await adminApi('settlement_run', { p_payee: payee || '' });
+  if (r && r.ok) { toast('Settled ' + r.settled + ' order' + (r.settled === 1 ? '' : 's') + ' · ' + money(r.amount) + ' · ' + r.payout_ref); adminSettleLoad(); }
+  else toast(r && r.reason === 'only_l5' ? 'Super Admin only' : 'Could not run payout');
 }
 
 /* ---------- service-provider expertise verification (L3+) ---------- */

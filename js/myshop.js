@@ -125,6 +125,27 @@ function shopPickAddr() {
     renderShopReg();
   });
 }
+const _poFld = 'width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;margin:6px 0;font:inherit;background:var(--card,#fff);color:inherit';
+function shopPayoutSheet() {
+  const p = (S.myShop && S.myShop.payout) || {};
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Payout account</h3>
+    <div class="trust-row">${ic('shield', 12)} Your money is settled here automatically. Bank details are stored for payout only.</div>
+    <input id="poHolder" placeholder="Account holder name" value="${esc(p.holder || (S.myShop ? S.myShop.name : '') || '')}" style="${_poFld}"/>
+    <input id="poUpi" placeholder="UPI ID — e.g. shop@upi (fastest)" value="${esc(p.upi || '')}" style="${_poFld}"/>
+    <div style="display:flex;gap:8px"><input id="poBank" placeholder="Bank account no." value="${esc(p.bank_acc || '')}" style="${_poFld}"/>
+      <input id="poIfsc" placeholder="IFSC" value="${esc(p.ifsc || '')}" style="${_poFld}"/></div>
+    <button class="btn-main wide" onclick="shopPayoutSave()">${ic('check', 14)} Save payout account</button>`);
+}
+async function shopPayoutSave() {
+  const g = id => (document.getElementById(id) || {}).value.trim();
+  const holder = g('poHolder'), upi = g('poUpi'), bank = g('poBank'), ifsc = g('poIfsc');
+  if (!upi && !bank) { toast('Add a UPI ID or bank account'); return; }
+  S.myShop.payout = { holder, upi, bank_acc: bank, ifsc }; save();
+  if (typeof CLOUD !== 'undefined' && CLOUD.on) {
+    await cloudFetch('rpc/payout_account_set', { method: 'POST', body: JSON.stringify({ p_payee: S.deviceKey || 'anon', p_kind: 'shop', p_holder: holder, p_upi: upi, p_bank: bank, p_ifsc: ifsc }) }).catch(() => {});
+  }
+  closeSheet(); toast('Payout account saved'); renderShopDash();
+}
 function submitShopReg() {
   S.myShop = {
     name: SREG.name.trim(), cat: SREG.cat, phone: SREG.phone, addr: SREG.addr,
@@ -266,6 +287,13 @@ function renderShopDash() {
     <div class="etile"><b>${money(M.revenue)}</b><small>Revenue</small></div>
     <div class="etile"><b>${done.length}</b><small>Orders done</small></div>
     <div class="etile"><b>${M.items.length}</b><small>Items listed</small></div>
+  </div>
+
+  <div class="card-block">
+    <h3>${ic('wallet', 14)} Payouts — auto-settled</h3>
+    <p class="movie-about">Order money is settled to you <b>automatically</b> — you keep <b>92%</b>, the platform's fee is just 8% (which already covers the payment-gateway charge). No invoices to chase; we pay out on a daily batch. Just add where your money should go.</p>
+    ${M.payout ? `<div class="trust-row">${ic('check', 12)} Payout set — ${esc(M.payout.upi || M.payout.bank_acc || 'account on file')} <button class="lnk" onclick="shopPayoutSheet()">Change</button></div>`
+      : `<button class="btn-main sm" onclick="shopPayoutSheet()">${ic('wallet', 13)} Add payout account</button>`}
   </div>
 
   ${done.length ? (() => { const days = [...Array(7)].map((_, i) => {
