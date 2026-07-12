@@ -119,7 +119,7 @@ function renderAdminPanel(args) {
     <div class="earn-tiles wide3">
       <div class="etile" onclick="go('admin/purity')"><b id="ovPurity">·</b><small>Purity checks due</small></div>
       <div class="etile" onclick="go('admin/kyc')"><b id="ovKyc">·</b><small>KYC pending</small></div>
-      <div class="etile" onclick="go('admin/fraud')"><b>${A.flags.length}</b><small>Fraud flags open</small></div>
+      <div class="etile" onclick="go('admin/fraud')"><b id="ovFraud">·</b><small>Fraud flags open</small></div>
     </div>
     <div class="card-block"><h3>${ic('shield', 15)} The Orignals doctrine</h3>
       <p class="movie-about">Precise everything: every item batch purity-tested by our own field people, every partner KYC-verified, every handover OTP-locked, every listing GPS-pinned. Adulterated ghee or paneer sold at premium prices is exactly what this platform exists to end.</p></div>
@@ -165,17 +165,10 @@ function renderAdminPanel(args) {
     <div id="kycQueue"><div class="empty sm"><span>${ic('user', 26)}</span><b>Loading KYC requests…</b></div></div>`;
 
   if (tab === 'fraud') body = `
-    <div class="warn-strip">${A.flags.length} open flags · ${A.resolved} resolved. Zero tolerance — precise data makes fraud visible.</div>
-    ${A.flags.map(f => `
-    <div class="job-card">
-      <div class="job-top"><span class="job-emoji">${ic('shield', 20)}</span>
-        <div><b>${esc(f.what)}</b><small>${esc(f.who)} · severity ${f.level.toUpperCase()}</small></div></div>
-      <div class="btn-pair">
-        <button class="btn-main sm alt" onclick="adminFlag('${f.id}','block')">Block &amp; investigate</button>
-        <button class="btn-main sm ghost" onclick="adminFlag('${f.id}','clear')">False alarm</button></div>
-    </div>`).join('') || `<div class="empty"><span>${ic('shield', 40)}</span><b>All clear</b><p>No open fraud flags.</p></div>`}
+    <div class="warn-strip">${ic('shield', 13)} Live risk board — signals computed in real time from actual device, payment, pricing &amp; order data. Zero tolerance.</div>
+    <div id="fraudBoard"><div class="empty sm"><span>${ic('shield', 26)}</span><b>Scanning for risk signals…</b></div></div>
     <div class="card-block"><h3>Always-on protections</h3>
-      ${['OTP at both pickup & drop', 'GPS trace on every delivery', 'Masked calls, recorded', 'Batch trace ID on food', 'Payouts held on flagged accounts', 'One identity = one account (device + ID match)'].map(s =>
+      ${['OTP at both pickup & drop', 'GPS trace on every delivery', 'In-app calls only — no numbers shared', 'Batch trace ID on food', 'Payouts held on flagged accounts', 'One identity = one account (device + ID match)'].map(s =>
         `<div class="ck-line"><span>${ic('check', 12)} ${s}</span><span></span></div>`).join('')}</div>`;
 
   if (tab === 'orders') body = S.orders.length ? S.orders.slice(0, 12).map(o => `
@@ -405,12 +398,15 @@ function renderAdminPanel(args) {
   if (tab === 'settle') adminSettleLoad();
   if (tab === 'kyc') adminVerifyLoad('kyc', 'kycQueue');
   if (tab === 'purity') adminVerifyLoad('purity', 'purityQueue');
+  if (tab === 'fraud') adminFraudLoad();
   if (tab === 'overview' && ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 3) {
     adminApi('verify_counts', {}).then(c => {
       const setc = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v || 0; };
       if (c && typeof c === 'object') { setc('ovPurity', c.purity); setc('ovKyc', c.kyc); }
       else { setc('ovPurity', 0); setc('ovKyc', 0); }
     });
+    if (adminRank(ADMIN_LEVEL) >= 4) adminApi('fraud_signals', {}).then(r => { const e = document.getElementById('ovFraud'); if (e) e.textContent = (r && r.ok && Array.isArray(r.flags)) ? r.flags.length : 0; });
+    else { const e = document.getElementById('ovFraud'); if (e) e.textContent = '—'; }
   }
 }
 
@@ -435,6 +431,26 @@ async function adminSettleRun(payee) {
   const r = await adminApi('settlement_run', { p_payee: payee || '' });
   if (r && r.ok) { toast('Settled ' + r.settled + ' order' + (r.settled === 1 ? '' : 's') + ' · ' + money(r.amount) + ' · ' + r.payout_ref); adminSettleLoad(); }
   else toast(r && r.reason === 'only_l5' ? 'Super Admin only' : 'Could not run payout');
+}
+
+/* ---------- REAL fraud detection: live risk board (L4+) ---------- */
+async function adminFraudLoad() {
+  const box = document.getElementById('fraudBoard'); if (!box) return;
+  const r = await adminApi('fraud_signals', {});
+  if (!r || !r.ok) { box.innerHTML = `<div class="empty sm"><span>${ic('lock', 26)}</span><b>${r && r.reason === 'forbidden' ? 'Fraud board is L4+ only' : 'Could not scan'}</b></div>`; return; }
+  const flags = Array.isArray(r.flags) ? r.flags : [];
+  box.innerHTML = flags.length ? flags.map(f => `
+    <div class="job-card ${f.level === 'high' ? 'pulse-border' : ''}">
+      <div class="job-top"><span class="job-emoji">${ic('shield', 20)}</span>
+        <div><b>${esc(f.what)}</b><small>${esc(f.who)} · <b class="${f.level === 'high' ? 'red' : ''}">${(f.level || '').toUpperCase()}</b> · ${esc((f.kind || '').replace(/_/g, ' '))}</small></div></div>
+      <div class="btn-pair">
+        <button class="btn-main sm ghost" onclick="adminFraudDismiss('${esc(f.sig)}')">Reviewed — dismiss</button></div>
+    </div>`).join('') : `<div class="empty"><span>${ic('check', 40)}</span><b>All clear</b><p>No risk signals in the live data right now.</p></div>`;
+}
+async function adminFraudDismiss(sig) {
+  const r = await adminApi('fraud_dismiss', { p_sig: sig });
+  if (r && r.ok) { if (typeof agentObserve === 'function') agentObserve('fraud', true); toast('Signal dismissed'); adminFraudLoad(); }
+  else toast('Could not dismiss');
 }
 
 /* ---------- REAL verification pipeline: KYC & Purity (L3+) ---------- */
