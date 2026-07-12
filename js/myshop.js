@@ -362,12 +362,15 @@ function renderShopDash() {
   ${(() => {
     const needGps = !(M.addr && M.addr.lat != null);
     const needItems = !M.items.length;
+    const needPay = !M.payout;
     const live = M.online && !needGps && !needItems;
-    if (live) return `<div class="golive ok">${ic('check', 15)} <b>You're LIVE</b> — buyers near ${esc(M.addr.name)} can find and order from you now.</div>`;
-    return `<div class="golive todo"><b>${ic('shield', 14)} To go live to buyers:</b>
+    const doneN = [!needItems, !needGps, !needPay, M.online].filter(Boolean).length;
+    if (live) return `<div class="golive ok">${ic('check', 15)} <b>You're LIVE</b> — buyers near ${esc(M.addr.name)} can find and order from you now.${needPay ? `<br/><button class="lnk" onclick="shopPayoutSheet()" style="color:#b45309">${ic('wallet', 11)} Add a payout account so your order money can reach you</button>` : ''}</div>`;
+    return `<div class="golive todo"><b>${ic('shield', 14)} Go live to buyers — ${doneN}/4 done:</b>
       <div class="golive-steps">
-        <span class="${!needItems ? 'done' : ''}">${ic(!needItems ? 'check' : 'plus', 12)} Add at least 1 item ${needItems ? '' : '✓'}</span>
+        <span class="${!needItems ? 'done' : ''}">${ic(!needItems ? 'check' : 'plus', 12)} Add at least 1 item ${needItems ? '✓' : ''}</span>
         <span class="${!needGps ? 'done' : ''}">${ic(!needGps ? 'check' : 'pin', 12)} Pin your exact location ${needGps ? `<button class="lnk" onclick="shopFixLocation()">Set now</button>` : '✓'}</span>
+        <span class="${!needPay ? 'done' : ''}">${ic(!needPay ? 'check' : 'wallet', 12)} Add payout account ${needPay ? `<button class="lnk" onclick="shopPayoutSheet()">Add now</button>` : '✓'}</span>
         <span class="${M.online ? 'done' : ''}">${ic(M.online ? 'check' : 'clock', 12)} Be online ${M.online ? '✓' : `<button class="lnk" onclick="S.myShop.online=true;save();renderShopDash()">Go online</button>`}</span>
       </div></div>`;
   })()}

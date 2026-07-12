@@ -758,6 +758,7 @@ function adminAct(queue, id, status) {
   const q = (queue === 'purity' ? S.admin.purityQueue : S.admin.kycQueue).find(x => x.id === id);
   if (!q) return;
   q.status = status; save();
+  if (typeof agentObserve === 'function') agentObserve(queue === 'purity' ? 'purity' : 'kyc', status === 'ok');
   toast(queue === 'purity'
     ? (status === 'ok' ? 'Batch sealed with Purity ✓' : 'Item delisted — seller notified')
     : (status === 'ok' ? 'Verified — they can start now' : 'Rejected — docs requested again'));
