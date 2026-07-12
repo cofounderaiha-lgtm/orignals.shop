@@ -60,7 +60,7 @@ view('estate', args => {
   if (tab === 'hotels') {
     window._staySort = window._staySort || 'reco';
     const ss = window._staySort;
-    let hotels = [...DB.hotels];
+    let hotels = [...(S.myStays || []), ...DB.hotels];
     const sorters = { reco: (a, b) => b.rating - a.rating, price: (a, b) => a.price - b.price, priceHi: (a, b) => b.price - a.price, rating: (a, b) => b.rating - a.rating };
     hotels.sort(sorters[ss] || sorters.reco);
     const sOpts = [['reco', 'Recommended'], ['price', 'Price: low'], ['priceHi', 'Price: high'], ['rating', 'Top rated']];
@@ -74,7 +74,7 @@ view('estate', args => {
       <div class="prop-card">
         <div class="prop-img">
           ${h.img ? `<img src="${h.img}" alt="" loading="lazy" onerror="this.remove()"/>` : `<span class="tile-ic">${ic('home', 34)}</span>`}
-          <em class="prop-verified">${ic('shield', 10)} VERIFIED HOST</em>
+          <em class="prop-verified"${h.mine ? ' style="background:#b45309"' : ''}>${ic('shield', 10)} ${h.mine ? 'YOUR LISTING' : 'VERIFIED HOST'}</em>
         </div>
         <div class="prop-body">
           <div class="prop-price">${money(h.price)}<small>/night</small></div>
@@ -82,11 +82,12 @@ view('estate', args => {
           <small>${ic('pin', 11)} ${esc(h.loc)}</small>
           ${h.host ? `<small class="host-line">${ic('user', 11)} Hosted by <b>${esc(h.host.name)}</b> · Verified · joined ${h.host.since} · ★ ${h.rating} (${h.ratings})</small>` : ''}
           <div class="prop-tags">${h.amen.map(a => `<i>${esc(a)}</i>`).join('')}</div>
-          <button class="btn-main sm wide" onclick="staySheet('${h.id}')">Book this stay</button>
+          ${h.mine ? `<div class="trust-row" style="margin-top:4px">${ic('clock', 11)} Pending photo &amp; document verification, then live to travellers. <button class="lnk red" onclick="stayUnlist('${h.id}')">Remove</button></div>`
+            : `<button class="btn-main sm wide" onclick="staySheet('${h.id}')">Book this stay</button>`}
         </div>
       </div>`).join('')}
     </div>
-    <div class="join-strip" onclick="toast('Host onboarding: verified photos + GST + property docs. First month free, then tiered 25–100 CHF/yr.')">${ic('plus', 13)} <b>List your hotel or homestay</b> ${ic('arrowr', 12)}</div>`;
+    <div class="join-strip" onclick="stayListSheet()">${ic('plus', 13)} <b>List your hotel or homestay</b> ${ic('arrowr', 12)}</div>`;
   }
 
   if (tab === 'mine') {
@@ -194,6 +195,49 @@ function propSubmit() {
   notify('Listing is live', t + ' — buyers across Orignals can see it now.');
   toast('Your property is live on Orignals');
   go('estate/' + PROP.kind);
+}
+
+/* ---------- REAL host onboarding: list a hotel / homestay ---------- */
+const _slFld = 'width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;margin:6px 0;font:inherit;background:var(--card,#fff);color:inherit';
+function stayListSheet() { window._SL = { type: 'Homestay', amen: {} }; stayListRender(); }
+function slCapture() { const g = id => (document.getElementById(id) || {}).value; const SL = window._SL; if (!SL) return; SL.name = g('slName'); SL.loc = g('slLoc'); SL.price = g('slPrice'); SL.rooms = g('slRooms'); }
+function stayListRender() {
+  const SL = window._SL;
+  const types = ['Hotel', 'Homestay', 'Guest house', 'Service apartment', 'Hostel pod'];
+  const amens = ['WiFi', 'AC', 'Breakfast', 'Parking', 'Hot water', 'Kitchen', 'TV', 'Power backup'];
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">List your stay</h3>
+    <div class="trust-row">${ic('shield', 12)} First month free. We verify your photos &amp; documents before it goes live — clean, fraud-safe stays only.</div>
+    <input id="slName" placeholder="Property name — e.g. Lakeview Homestay" value="${esc(SL.name || '')}" style="${_slFld}"/>
+    <div class="chip-wrap" style="margin:6px 0">${types.map(t => `<button class="chip ${SL.type === t ? 'on' : ''}" onclick="slCapture();window._SL.type='${t}';stayListRender()">${t}</button>`).join('')}</div>
+    <input id="slLoc" placeholder="Locality / landmark" value="${esc(SL.loc || '')}" style="${_slFld}"/>
+    <div style="display:flex;gap:8px">
+      <input id="slPrice" type="number" inputmode="numeric" placeholder="Price / night ₹" value="${esc(SL.price || '')}" style="${_slFld}"/>
+      <input id="slRooms" type="number" inputmode="numeric" placeholder="Rooms" value="${esc(SL.rooms || '')}" style="${_slFld}"/>
+    </div>
+    <div class="fld"><span style="font-size:.8rem;color:var(--mut)">Amenities</span><div class="chip-wrap">${amens.map(a => `<button class="chip ${SL.amen[a] ? 'on' : ''}" onclick="slCapture();window._SL.amen['${a}']=!window._SL.amen['${a}'];stayListRender()">${a}</button>`).join('')}</div></div>
+    <button class="btn-main wide" onclick="stayListSubmit()">Go live — free</button>
+    <div class="foot-note sm">Hosts list free the first month, then a tiered plan. You're paid to your account after each stay.</div>`);
+}
+function stayListSubmit() {
+  slCapture(); const SL = window._SL;
+  if (!(SL.name && SL.name.trim().length > 2)) { toast('Add the property name'); return; }
+  if (!(SL.loc && SL.loc.trim())) { toast('Add the locality'); return; }
+  const price = parseInt(SL.price, 10); if (!price) { toast('Add the price per night'); return; }
+  const amen = Object.keys(SL.amen).filter(k => SL.amen[k]);
+  const stay = { id: 'ms' + uid(), name: SL.name.trim(), loc: SL.loc.trim(), price, rating: 5.0, ratings: 0,
+    rooms: parseInt(SL.rooms, 10) || 1, type: SL.type, amen: amen.length ? amen : ['Verified host'],
+    host: { name: (typeof displayName === 'function' ? displayName() : 'You'), since: new Date().getFullYear() }, mine: true, ts: Date.now() };
+  if (!S.myStays) S.myStays = [];
+  S.myStays.unshift(stay); save(); closeSheet(); confettiBurst();
+  if (typeof cloudPostListing === 'function') cloudPostListing(Object.assign({ kind: 'stay' }, stay));
+  notify('Stay listed', stay.name + ' — pending photo/doc verification, then live to travellers.');
+  toast('Your stay is listed — we\'ll verify & publish it');
+  VIEWS.estate(['hotels']);
+}
+function stayUnlist(id) {
+  if (!confirm('Remove this stay listing?')) return;
+  S.myStays = (S.myStays || []).filter(x => x.id !== id); save();
+  toast('Listing removed'); VIEWS.estate(['hotels']);
 }
 
 /* ---------- hotel stay booking — real calendar dates ---------- */
