@@ -193,6 +193,8 @@ function submitShopReg() {
     gst: SREG.gst, fssai: SREG.fssai, online: true, created: Date.now(),
     items: [], orders: [], revenue: 0, lastGen: Date.now()
   };
+  /* file a REAL shop verification request for staff review */
+  if (typeof cloudVerifySubmit === 'function') cloudVerifySubmit('shop', SREG.name.trim(), { category: SREG.cat, phone: SREG.phone, gst: SREG.gst || '', fssai: SREG.fssai || '' });
   save(); confettiBurst();
   notify('Your shop is LIVE!', SREG.name + ' is now visible to everyone nearby.', '🎉');
   toast('Your shop is live on Orignals!', '🏪');

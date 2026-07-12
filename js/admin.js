@@ -117,9 +117,9 @@ function renderAdminPanel(args) {
       <div class="etile"><b>${money(gmv)}</b><small>GMV (you)</small></div>
     </div>
     <div class="earn-tiles wide3">
-      <div class="etile"><b>${A.purityQueue.filter(x => x.status === 'pending').length}</b><small>Purity checks due</small></div>
-      <div class="etile"><b>${A.kycQueue.filter(x => x.status === 'pending').length}</b><small>KYC pending</small></div>
-      <div class="etile"><b>${A.flags.length}</b><small>Fraud flags open</small></div>
+      <div class="etile" onclick="go('admin/purity')"><b id="ovPurity">·</b><small>Purity checks due</small></div>
+      <div class="etile" onclick="go('admin/kyc')"><b id="ovKyc">·</b><small>KYC pending</small></div>
+      <div class="etile" onclick="go('admin/fraud')"><b>${A.flags.length}</b><small>Fraud flags open</small></div>
     </div>
     <div class="card-block"><h3>${ic('shield', 15)} The Orignals doctrine</h3>
       <p class="movie-about">Precise everything: every item batch purity-tested by our own field people, every partner KYC-verified, every handover OTP-locked, every listing GPS-pinned. Adulterated ghee or paneer sold at premium prices is exactly what this platform exists to end.</p></div>
@@ -157,28 +157,12 @@ function renderAdminPanel(args) {
     <div id="settleBody"><div class="empty sm"><span>${ic('wallet', 26)}</span><b>Loading settlements…</b></div></div>`;
 
   if (tab === 'purity') body = `
-    <div class="tip-strip">${ic('leaf', 13)} Our key promise: naturally made &amp; grown food, zero adulteration. Approve only lab-passed batches.</div>
-    ${A.purityQueue.map(q => `
-    <div class="job-card ${q.status === 'pending' ? 'pulse-border' : ''}">
-      <div class="job-top"><span class="job-emoji">${ic(q.status === 'ok' ? 'check' : 'leaf', 20)}</span>
-        <div><b>${esc(q.item)}</b><small>${esc(q.shop)} · ${esc(q.test)}</small></div>
-        ${q.status === 'ok' ? '<em class="job-pay">Purity ✓</em>' : q.status === 'fail' ? '<em class="job-pay" style="color:var(--red)">Delisted</em>' : ''}</div>
-      ${q.status === 'pending' ? `<div class="btn-pair">
-        <button class="btn-main sm" onclick="adminAct('purity','${q.id}','ok')">${ic('check', 13)} Lab passed — seal batch</button>
-        <button class="btn-main sm ghost" onclick="adminAct('purity','${q.id}','fail')">Failed — delist</button></div>` : ''}
-    </div>`).join('')}`;
+    <div class="tip-strip">${ic('leaf', 13)} Our key promise: naturally made &amp; grown food, zero adulteration. Real requests from sellers — approve only lab-passed batches.</div>
+    <div id="purityQueue"><div class="empty sm"><span>${ic('leaf', 26)}</span><b>Loading purity requests…</b></div></div>`;
 
   if (tab === 'kyc') body = `
-    <div class="tip-strip">${ic('shield', 13)} No unverified human touches an order. ID + vehicle + bank + live selfie, all matched.</div>
-    ${A.kycQueue.map(q => `
-    <div class="job-card">
-      <div class="job-top"><span class="job-emoji">${ic('user', 20)}</span>
-        <div><b>${esc(q.name)}</b><small>${esc(q.docs)}</small></div>
-        ${q.status !== 'pending' ? `<em class="job-pay" ${q.status === 'no' ? 'style="color:var(--red)"' : ''}>${q.status === 'ok' ? 'Verified' : 'Rejected'}</em>` : ''}</div>
-      ${q.status === 'pending' ? `<div class="btn-pair">
-        <button class="btn-main sm" onclick="adminAct('kyc','${q.id}','ok')">${ic('check', 13)} Verify</button>
-        <button class="btn-main sm ghost" onclick="adminAct('kyc','${q.id}','no')">Reject</button></div>` : ''}
-    </div>`).join('')}`;
+    <div class="tip-strip">${ic('shield', 13)} No unverified human touches an order. Real KYC submissions from partners &amp; shops — ID, vehicle, bank & live selfie.</div>
+    <div id="kycQueue"><div class="empty sm"><span>${ic('user', 26)}</span><b>Loading KYC requests…</b></div></div>`;
 
   if (tab === 'fraud') body = `
     <div class="warn-strip">${A.flags.length} open flags · ${A.resolved} resolved. Zero tolerance — precise data makes fraud visible.</div>
@@ -419,6 +403,15 @@ function renderAdminPanel(args) {
   if (tab === 'hrms') adminHRLoad();
   if (tab === 'svcverify') adminSvcLoad();
   if (tab === 'settle') adminSettleLoad();
+  if (tab === 'kyc') adminVerifyLoad('kyc', 'kycQueue');
+  if (tab === 'purity') adminVerifyLoad('purity', 'purityQueue');
+  if (tab === 'overview' && ADMIN_LEVEL && adminRank(ADMIN_LEVEL) >= 3) {
+    adminApi('verify_counts', {}).then(c => {
+      const setc = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v || 0; };
+      if (c && typeof c === 'object') { setc('ovPurity', c.purity); setc('ovKyc', c.kyc); }
+      else { setc('ovPurity', 0); setc('ovKyc', 0); }
+    });
+  }
 }
 
 /* ---------- auto-settlement / payouts (L4+ view, L5 pays) ---------- */
@@ -442,6 +435,35 @@ async function adminSettleRun(payee) {
   const r = await adminApi('settlement_run', { p_payee: payee || '' });
   if (r && r.ok) { toast('Settled ' + r.settled + ' order' + (r.settled === 1 ? '' : 's') + ' · ' + money(r.amount) + ' · ' + r.payout_ref); adminSettleLoad(); }
   else toast(r && r.reason === 'only_l5' ? 'Super Admin only' : 'Could not run payout');
+}
+
+/* ---------- REAL verification pipeline: KYC & Purity (L3+) ---------- */
+async function adminVerifyLoad(kind, containerId) {
+  const box = document.getElementById(containerId); if (!box) return;
+  const r = await adminApi('verify_pending', { p_kind: kind });
+  const rows = (r && r.ok && Array.isArray(r.rows)) ? r.rows : [];
+  const emptyMsg = kind === 'kyc'
+    ? { i: 'user', t: 'No KYC requests pending', p: 'When a partner or shop registers, their verification lands here — with ID, vehicle and selfie to match.' }
+    : { i: 'leaf', t: 'No purity requests pending', p: 'When a seller requests a purity check on a batch, it appears here for your lab decision.' };
+  box.innerHTML = rows.length ? rows.map(q => {
+    const d = q.details || {};
+    const sub = Object.entries(d).slice(0, 4).map(([k, v]) => esc(k) + ': ' + esc(String(v))).join(' · ');
+    return `<div class="job-card pulse-border">
+      <div class="job-top"><span class="job-emoji">${ic(kind === 'kyc' ? 'user' : 'leaf', 20)}</span>
+        <div><b>${esc(q.subject)}</b><small>${sub || (kind === 'kyc' ? 'ID + vehicle + selfie' : 'batch sample for lab test')} · ${new Date(q.created_at).toLocaleDateString('en-IN')}</small></div></div>
+      <div class="btn-pair">
+        <button class="btn-main sm" onclick="adminVerifyDecide(${q.id},'verified','${kind}','${containerId}')">${ic('check', 13)} ${kind === 'kyc' ? 'Verify' : 'Lab passed — seal'}</button>
+        <button class="btn-main sm ghost" onclick="adminVerifyDecide(${q.id},'rejected','${kind}','${containerId}')">${kind === 'kyc' ? 'Reject' : 'Failed — delist'}</button></div>
+    </div>`;
+  }).join('') : `<div class="empty"><span>${ic(emptyMsg.i, 40)}</span><b>${emptyMsg.t}</b><p>${emptyMsg.p}</p></div>`;
+}
+async function adminVerifyDecide(id, decision, kind, containerId) {
+  const r = await adminApi('verify_decide', { p_id: id, p_decision: decision });
+  if (r && r.ok) {
+    if (typeof agentObserve === 'function') agentObserve(kind === 'kyc' ? 'kyc' : 'purity', decision === 'verified');
+    toast(decision === 'verified' ? (kind === 'kyc' ? 'Verified ✓' : 'Batch sealed with Purity ✓') : (kind === 'kyc' ? 'Rejected — docs requested again' : 'Failed — delisted'));
+    adminVerifyLoad(kind, containerId);
+  } else toast(r && r.reason === 'forbidden' ? 'Needs inspector (L3+) access' : 'Could not update');
 }
 
 /* ---------- service-provider expertise verification (L3+) ---------- */

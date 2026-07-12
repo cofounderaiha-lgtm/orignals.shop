@@ -404,6 +404,15 @@ async function cloudChatRead(orderRef) {
   catch (e) { return []; }
 }
 
+/* real verification: files a genuine KYC/shop/purity request into the admin queue */
+function cloudVerifySubmit(kind, subject, details) {
+  if (typeof CLOUD === 'undefined' || !CLOUD.on) return Promise.resolve(null);
+  const a = (typeof authState === 'function') ? authState() : null;
+  return cloudFetch('rpc/verify_submit', { method: 'POST', body: JSON.stringify({
+    p_kind: kind, p_subject: subject, p_device: S.deviceKey || 'anon', p_ident: (a && a.ident) || '', p_details: details || {}
+  }) }).catch(() => null);
+}
+
 /* real rating: recomputes the shop's average for everyone */
 function cloudRateShop(shopId, stars, orderRef) {
   if (!CLOUD.on) return Promise.resolve(null);

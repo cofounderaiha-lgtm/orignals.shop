@@ -221,6 +221,8 @@ function regNext1() {
 function submitPartnerReg() {
   S.partner = { name: REG.name.trim(), phone: REG.phone, veh: REG.veh, upi: REG.upi, status: 'verifying', since: Date.now(), rating: 5.0, jobs: 0, seva: 0, streak: 0 };
   S.user.name = REG.name.trim().split(' ')[0];
+  /* file a REAL KYC request so staff can review this genuine registration */
+  if (typeof cloudVerifySubmit === 'function') cloudVerifySubmit('kyc', REG.name.trim() + ' · ' + REG.veh, { vehicle: REG.veh, phone: REG.phone, upi: REG.upi || '' });
   save(); renderVerifying();
   setTimeout(() => {
     if (S.partner && S.partner.status === 'verifying') {
