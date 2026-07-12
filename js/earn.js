@@ -75,12 +75,16 @@ function renderEarnSell(kind) {
   <div class="earn-stats">
     <div><span class="st-ic t1">${ic('cash', 16)}</span><b>100%</b><small>of item price is yours</small></div>
     <div><span class="st-ic t2">${ic('truck', 16)}</span><b>You choose</b><small>self or partner delivery</small></div>
-    <div><span class="st-ic t3">${ic('shield', 16)}</span><b>First month free</b><small>then tiered by turnover</small></div>
+    <div><span class="st-ic t3">${ic('shield', 16)}</span><b>1st month free</b><small>then tiered by size</small></div>
   </div>
 
-  <div class="sec-head"><h2>Seller tiers</h2><small class="dim">no signup fee</small></div>
-  <div class="card-block">
-    ${tiers.map((t, i) => `<div class="ck-line"><span><b>${i + 1} · ${t[0]}</b> — ${t[1]}</span><span>${t[2]}</span></div>`).join('')}
+  <div class="sec-head"><h2>Seller tiers</h2><small class="dim">no signup fee · first month free</small></div>
+  <div class="tier-list">
+    ${tiers.map((t, i) => `<div class="tier-row${i === 1 ? ' pop' : ''}">
+      <span class="tier-rank">${i + 1}</span>
+      <div class="tier-info"><b>${esc(t[0])}${i === 1 ? ' <em class="tier-tag">popular</em>' : ''}</b><small>${esc(t[1])}</small></div>
+      <span class="tier-price">${esc(t[2])}</span>
+    </div>`).join('')}
   </div>
 
   <div class="how-grid tinted">

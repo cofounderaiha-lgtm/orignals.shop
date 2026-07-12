@@ -244,6 +244,16 @@
 .earn-stats div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 14px;min-width:96px}
 .earn-stats b{display:block;font-size:.95rem}
 .earn-stats small{color:var(--mut);font-size:.62rem;line-height:1.3;display:block;margin-top:2px}
+/* seller tier cards — clean, scannable, one highlighted */
+.tier-list{display:flex;flex-direction:column;gap:8px;margin:4px 0 16px}
+.tier-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:14px;transition:transform .12s ease}
+.tier-row.pop{border-color:var(--primary);box-shadow:0 6px 20px rgba(26,86,50,.12)}
+.tier-rank{width:26px;height:26px;border-radius:50%;background:var(--grad,var(--primary));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;flex-shrink:0}
+.tier-info{flex:1;min-width:0}
+.tier-info b{display:block;font-size:.92rem;display:flex;align-items:center;gap:6px}
+.tier-info small{color:var(--mut);font-size:.76rem}
+.tier-tag{font-style:normal;font-size:.6rem;font-weight:700;background:var(--primary);color:#fff;padding:1px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px}
+.tier-price{font-weight:800;color:var(--primary);white-space:nowrap;font-size:.9rem}
 .verify-bar{height:8px;background:var(--line);border-radius:8px;max-width:280px;margin:18px auto;overflow:hidden}
 .verify-bar i{display:block;height:100%;width:40%;border-radius:8px;background:var(--grad);animation:vslide 1.2s ease-in-out infinite alternate}
 @keyframes vslide{from{margin-left:0}to{margin-left:60%}}

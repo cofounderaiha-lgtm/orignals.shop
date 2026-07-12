@@ -1,6 +1,8 @@
 /* ============================================================
-   ACCOUNT — every user type in one identity:
-   Buyer · Partner · Seller · Host · Property · Super Admin
+   ACCOUNT / PROFILE — one clean identity for a buyer, with optional
+   "earn & sell" roles below. Staff/super-admin access is NEVER part of
+   this screen for normal users — it is injected only after the server
+   confirms the signed-in account is staff (see the end of the view).
    ============================================================ */
 
 /* ---------- WALLET ---------- */
@@ -62,14 +64,18 @@ view('notifs', () => {
   S.notifs.forEach(n => n.read = true); save(); refreshChrome('notifs');
 });
 
-/* ---------- ACCOUNT ---------- */
+/* ---------- ACCOUNT / PROFILE ---------- */
 view('account', () => {
   const v = S.partner ? DB.vehicles.find(x => x.id === S.partner.veh) : null;
-  const memberTill = S.memberTill && S.memberTill > Date.now();
+  const isBusiness = !!(S.myShop || S.partner || (S.myListings || []).length);
+  /* one-time: ensure a referral code exists & is registered */
+  if (!S.refCode) { S.refCode = 'ORIG-' + uid().slice(0, 5).toUpperCase(); save(); }
+  if (!S.refRegistered && typeof cloudRefRegister === 'function' && typeof CLOUD !== 'undefined' && CLOUD.on) { cloudRefRegister(S.refCode); S.refRegistered = true; save(); }
+
   $('#view').innerHTML = `
   <div class="acct-head">
-    <span class="acct-ava">${displayName()[0].toUpperCase()}</span>
-    <div><h1>${esc(displayName())}</h1><small>${isGuest() ? 'Not signed in — sign in to secure your account' : esc(S.user.addr.name) + ' · ' + esc(S.user.addr.sub)}</small></div>
+    <span class="acct-ava">${esc((displayName()[0] || 'G').toUpperCase())}</span>
+    <div><h1>${esc(displayName())}</h1><small>${isGuest() ? 'Guest — sign in to secure your account' : esc(S.user.addr.name)}</small></div>
     <button class="lnk" onclick="${isGuest() ? "go('login')" : 'editProfile()'}">${isGuest() ? 'Sign in' : 'Edit'}</button>
   </div>
 
@@ -79,77 +85,74 @@ view('account', () => {
     <div class="etile" onclick="go('notifs')"><b>${notifUnread()}</b><small>Updates</small></div>
   </div>
 
-  <div class="card-block">
-    <h3>${ic('shield', 15)} Membership — 1 CHF/year</h3>
-    <p class="movie-about">First month complimentary for everyone, no signup fees. Buyers 1 CHF/yr. Sellers, 5 tiers: Individual 1 · Retail 10 · Large retail 25 · Wholesaler 50 · Manufacturer 100 CHF/yr. Delivery partners by vehicle: on foot 1 up to truck 10 CHF/yr.</p>
-    ${memberTill
-      ? `<div class="trust-row">${ic('check', 13)} Active till ${new Date(S.memberTill).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>`
-      : `<button class="btn-main sm" onclick="buyMembership()">Activate — ₹99 (≈1 CHF)</button>`}
-  </div>
+  ${isGuest()
+    ? `<button class="role-row highlight" onclick="go('login')"><span>${ic('shield', 20)}</span><div><b>Sign in / Create account</b><small>Secure your wallet, orders &amp; data across devices</small></div><em>Go</em></button>`
+    : `<div class="sec-head"><h2>Account &amp; security</h2></div>${typeof authBadgeHTML === 'function' ? authBadgeHTML() : ''}`}
 
-  ${(() => { if (!S.refCode) { S.refCode = 'ORIG-' + uid().slice(0, 5).toUpperCase(); save(); }
-    if (!S.refRegistered && typeof cloudRefRegister === 'function' && typeof CLOUD !== 'undefined' && CLOUD.on) { cloudRefRegister(S.refCode); S.refRegistered = true; save(); }
-    return `<div class="card-block">
+  <div class="sec-head"><h2>Settings</h2></div>
+  <button class="role-row" onclick="pickAddress(()=>VIEWS.account([]))">
+    <span>${ic('pin', 20)}</span><div><b>Delivery location</b><small>${esc(S.user.addr.name)}</small></div><em>Change</em></button>
+  <button class="role-row" onclick="currencySheet()">
+    <span>${ic('cash', 20)}</span><div><b>Currency</b><small>${CURRENCIES[CUR.code] ? CURRENCIES[CUR.code].name : 'Your currency'} (${CUR.code})</small></div><em>${CUR.code}</em></button>
+  <button class="role-row" onclick="toggleTheme();VIEWS.account([])">
+    <span>${ic(S.theme === 'light' ? 'moon' : 'sun', 20)}</span><div><b>Appearance</b><small>${S.theme === 'light' ? 'Light' : 'Dark'} mode</small></div><em>Switch</em></button>
+  <button class="role-row" onclick="go('notifs')">
+    <span>${ic('bell', 20)}</span><div><b>Notifications</b><small>${notifUnread()} unread</small></div><em>Open</em></button>
+  <button class="role-row" onclick="installApp()">
+    <span>${ic('upload', 20)}</span><div><b>Install the app</b><small>Add to home screen — works offline</small></div><em>Install</em></button>
+  <button class="role-row" onclick="go('mitra')">
+    <span>${ic('spark', 20)}</span><div><b>Talk to Mitra</b><small>Your in-app assistant — voice or text</small></div><em>Chat</em></button>
+
+  <div class="card-block">
     <h3>${ic('gift', 15)} Refer &amp; earn — ₹50 each</h3>
     <p class="movie-about">Share your code. When a friend joins and places their first order, you both get ₹50 in wallet.</p>
     <div class="ck-coupon"><input value="${S.refCode}" readonly id="refCodeBox"/><button onclick="copyRef()">Copy</button></div>
     ${S.refRedeemed ? `<div class="trust-row">${ic('check', 13)} Friend's code applied — ₹50 credited</div>`
       : `<div class="ck-coupon" style="margin-top:8px"><input id="refIn" placeholder="Have a friend's code? ORIG-XXXXX"/><button onclick="redeemRef()">Apply</button></div>`}
-  </div>`; })()}
+  </div>
 
-  <div class="sec-head"><h2>Account &amp; security</h2></div>
-  ${typeof authBadgeHTML === 'function' ? authBadgeHTML() : ''}
-
-  <div class="sec-head"><h2>Your roles — one identity, every side</h2></div>
-  <button class="role-row" onclick="setMode('buy')">
-    <span>${ic('cart', 20)}</span><div><b>Buyer</b><small>Purity-verified food &amp; every shop nearby</small></div><em>Active</em></button>
+  <div class="sec-head"><h2>Earn &amp; sell with Orignals</h2></div>
   <button class="role-row" onclick="setMode('earn')">
-    <span>${ic('users', 20)}</span><div><b>Partner — rides &amp; delivery</b><small>${S.partner ? (S.partner.status === 'verified' ? `CV-verified · ${v.name} · ${S.partner.jobs} trips · ${S.partner.seva || 0} seva` : 'Verification in progress…') : 'Face + vehicle verified · earn or do seva'}</small></div>
-    <em>${S.partner ? 'Open' : 'Join'}</em></button>
+    <span>${ic('users', 20)}</span><div><b>Deliver &amp; earn</b><small>${S.partner ? (S.partner.status === 'verified' ? `Verified${v ? ' · ' + v.name : ''} · ${S.partner.jobs} trips` : 'Verification in progress…') : 'Face + vehicle verified · earn or do seva'}</small></div>
+    <em>${S.partner ? 'Open' : 'Start'}</em></button>
   <button class="role-row" onclick="go('myshop')">
-    <span>${ic('store', 20)}</span><div><b>Seller — shop owner</b><small>${S.myShop ? esc(S.myShop.name) + ' · ' + money(S.myShop.revenue) + ' revenue' : 'List your dukaan · first month free, then tiered from 1 CHF/yr'}</small></div>
-    <em>${S.myShop ? 'Open' : 'Join'}</em></button>
-  <button class="role-row" onclick="go('estate/hotels')">
-    <span>${ic('home', 20)}</span><div><b>Host — hotel &amp; stays</b><small>List rooms, homestays, hourly pods</small></div><em>Open</em></button>
-  <button class="role-row" onclick="go('estate/buy')">
-    <span>${ic('pin', 20)}</span><div><b>Property lister</b><small>${(S.myListings || []).length ? (S.myListings.length + ' live listing(s)') : 'Sell/rent property — GPS-pinned, fraud-proof'}</small></div><em>Open</em></button>
+    <span>${ic('store', 20)}</span><div><b>Sell — open your shop</b><small>${S.myShop ? esc(S.myShop.name) + ' · ' + money(S.myShop.revenue) : 'List your dukaan · free for the first month'}</small></div>
+    <em>${S.myShop ? 'Open' : 'Start'}</em></button>
+  <button class="role-row" onclick="go('services')">
+    <span>${ic('user', 20)}</span><div><b>Offer a service</b><small>Any profession — get expertise-verified</small></div><em>Open</em></button>
+  <button class="role-row" onclick="go('estate')">
+    <span>${ic('home', 20)}</span><div><b>Host a stay / list property</b><small>${(S.myListings || []).length ? S.myListings.length + ' live listing(s)' : 'Rooms, homestays, sell or rent'}</small></div><em>Open</em></button>
+  ${isBusiness ? `<button class="role-row" onclick="go('papers')">
+    <span>${ic('shield', 20)}</span><div><b>Papers &amp; licences</b><small>Get GST, FSSAI, trade licences made${(S.docRequests || []).some(r => r.status !== 'cancelled' && r.status !== 'issued') ? ' · <b class="ok">in progress</b>' : ''}</small></div><em>Open</em></button>` : ''}
+
   <div id="staffEntry"></div>
 
-  <div class="sec-head"><h2>Settings</h2></div>
-  <button class="role-row" onclick="installApp()">
-    <span>${ic('upload', 20)}</span><div><b>Install the app</b><small>Add to home screen — works offline</small></div><em>Install</em></button>
-  <button class="role-row" onclick="toggleTheme();VIEWS.account([])">
-    <span>${ic(S.theme === 'light' ? 'moon' : 'sun', 20)}</span><div><b>${S.theme === 'light' ? 'Dark' : 'Light'} mode</b><small>Easy on the eyes</small></div><em>Switch</em></button>
-  <button class="role-row" onclick="pickAddress(()=>VIEWS.account([]))">
-    <span>${ic('pin', 20)}</span><div><b>Location</b><small>${esc(S.user.addr.name)} — use GPS for instant delivery</small></div><em>Change</em></button>
-  <button class="role-row" onclick="currencySheet()">
-    <span>${ic('cash', 20)}</span><div><b>Currency</b><small>Show prices in ${CURRENCIES[CUR.code] ? CURRENCIES[CUR.code].name : 'your currency'} (${CUR.code})</small></div><em>${CUR.code}</em></button>
-  <button class="role-row" onclick="go('mitra')">
-    <span>${ic('spark', 20)}</span><div><b>Talk to Mitra</b><small>The platform's own intelligence — voice or text</small></div><em>Chat</em></button>
-  <button class="role-row" onclick="go('papers')">
-    <span>${ic('shield', 20)}</span><div><b>Papers &amp; verification</b><small>List without papers · get GST, FSSAI, licences made${(S.docRequests || []).some(r => r.status !== 'cancelled' && r.status !== 'issued') ? ' · <b class="ok">in progress</b>' : ''}</small></div><em>Open</em></button>
+  <div class="sec-head"><h2>Help, legal &amp; data</h2></div>
   <button class="role-row" onclick="go('legal')">
-    <span>${ic('shield', 20)}</span><div><b>Legal &amp; policies</b><small>Privacy, terms, refunds, grievance officer</small></div><em>View</em></button>
+    <span>${ic('shield', 20)}</span><div><b>Legal &amp; policies</b><small>Privacy, terms, refunds, grievance</small></div><em>View</em></button>
   <button class="role-row" onclick="go('legal/data')">
     <span>${ic('lock', 20)}</span><div><b>Your data</b><small>Export everything or erase it — your right</small></div><em>Manage</em></button>
   <button class="role-row" onclick="resetDemo()">
-    <span>${ic('trash', 20)}</span><div><b>Reset app data</b><small>Fresh start on this device — clears orders, wallet, roles</small></div><em>Reset</em></button>
+    <span>${ic('trash', 20)}</span><div><b>Reset app data</b><small>Clear this device — orders, wallet, roles</small></div><em>Reset</em></button>
+  ${isGuest() ? '' : `<button class="btn-main wide ghost red" style="margin-top:10px" onclick="if(typeof authLogout==='function')authLogout()">Sign out</button>`}
 
-  <div class="foot-note">Orignals · Safety · Purity · Sustainability — for all<br/>
-  <span class="dim">People-first: small shops thrive, neighbours earn, no one loses their job to a machine.</span><br/>
+  <div class="foot-note">Orignals — a product of EdurankAI · Safety · Purity · Sustainability<br/>
   <span class="dim"><a onclick="go('legal/privacy')">Privacy</a> · <a onclick="go('legal/terms')">Terms</a> · <a onclick="go('legal/refund')">Refunds</a> · <a onclick="go('legal/grievance')">Grievance</a></span></div>`;
 
-  /* staff/admin entry appears ONLY for verified staff (server-checked) —
-     it is NEVER shown to regular users */
+  /* STAFF / SUPER-ADMIN entry — injected ONLY after the SERVER confirms this
+     signed-in account is staff (admin_whoami.admin === true). A normal user,
+     and every guest, never sees it: the placeholder stays empty and the /admin
+     route itself is server-gated too. */
+  window.__isStaff = false; window.__staffLevel = null;
   if (typeof adminApi === 'function' && typeof CLOUD !== 'undefined' && CLOUD.on && typeof authState === 'function' && authState() && authState().token) {
     adminApi('admin_whoami', {}).then(w => {
-      window.__isStaff = !!(w && w.admin);           /* unlocks staff-only Mitra help; cleared for regular users */
-      window.__staffLevel = (w && w.level) || null;
+      if (!w || !w.admin) { window.__isStaff = false; window.__staffLevel = null; return; }
+      window.__isStaff = true; window.__staffLevel = w.level || null;
       const box = document.getElementById('staffEntry');
-      if (!box || !w || !w.admin) return;
-      box.innerHTML = `<button class="role-row admin" onclick="go('admin')">
+      if (!box) return;
+      box.innerHTML = `<div class="sec-head"><h2>Staff</h2></div><button class="role-row admin" onclick="go('admin')">
         <span>${ic('shield', 20)}</span><div><b>${esc((w.level || 'l1').toUpperCase())} · Staff console</b><small>Your department controls${w.ident ? ' · ' + esc(w.ident) : ''}</small></div><em>Enter</em></button>`;
-    });
+    }).catch(() => {});
   }
 });
 
