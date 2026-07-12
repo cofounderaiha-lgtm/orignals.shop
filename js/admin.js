@@ -302,6 +302,31 @@ function renderAdminPanel(args) {
       <button class="btn-main sm wide" onclick="mitraTeach()">${ic('check', 13)} Teach Mitra this</button>
       <div id="teachLog" class="foot-note sm" style="text-align:left"></div>
     </div>
+
+    ${(() => {
+      const core = (typeof cortexTelemetry === 'function') ? cortexTelemetry() : { thoughts: 0, cacheHitRate: 0, avgMs: 0, lanes: {} };
+      const mem = (typeof memTelemetry === 'function') ? memTelemetry() : { top: [], avgSpend: 0, orders: 0 };
+      const rz = (typeof reasonTelemetry === 'function') ? reasonTelemetry() : { decisions: 0, passRate: 0 };
+      const ags = (typeof agentsTelemetry === 'function') ? agentsTelemetry() : [];
+      const lanes = Object.entries(core.lanes || {}).map(([k, v]) => k + ' ' + v).join(' · ') || '—';
+      const usual = (mem.top || []).map(u => esc(u.name)).join(', ') || 'learning…';
+      return `<div class="card-block">
+      <h3>${ic('spark', 14)} Cognitive Core — live runtime</h3>
+      <p class="movie-about">The grounded OCOS runtime, running on-device: a priority-scored <b>thought scheduler</b> with a <b>reasoning cache</b>, layered <b>cognitive memory</b>, explainable <b>decisions</b>, and a persistent <b>agent registry</b> whose confidence grows with observation. Every Mitra message flows through it.</p>
+      <div class="earn-tiles wide3">
+        <div class="etile"><b>${(core.thoughts || 0).toLocaleString('en-IN')}</b><small>Thoughts processed</small></div>
+        <div class="etile"><b>${core.cacheHitRate || 0}%</b><small>Reasoning-cache hits</small></div>
+        <div class="etile"><b>${core.avgMs || 0}ms</b><small>Avg resolve time</small></div>
+      </div>
+      <div class="ck-line"><span>Compute lanes (cheapest-capable routing)</span><span>${esc(lanes)}</span></div>
+      <div class="ck-line"><span>Memory — your usual basket</span><span>${usual}</span></div>
+      <div class="ck-line"><span>Decisions logged (explainable)</span><span><b>${rz.decisions}</b> · ${rz.passRate}% passed constraint checks</span></div>
+      <div class="sec-head"><h2>Agent runtime (MARK)</h2><small class="dim">confidence grows with observation → learning · active · autonomous</small></div>
+      ${ags.map(a => `<div class="ck-line"><span>${ic('spark', 11)} <b>${esc(a.role)}</b> <small class="dim">${esc(a.dept)} · ${esc(a.work)}</small></span>
+        <span><b>${Math.round(a.confidence * 100)}%</b> conf · <b class="ok">${Math.round(a.trust * 100)}%</b> trust · <small class="dim">${esc(a.stage)}</small></span></div>`).join('')}
+      <div class="foot-note sm" style="text-align:left;margin-top:6px">${ic('shield', 11)} Honest scope: this is a real on-device cognitive runtime for Mitra + a live registry over the platform's real subsystems. The full distributed "world model / millions of agents" remains the research roadmap — this is the working foundation of it.</div>
+    </div>`;
+    })()}
     <div class="earn-tiles wide3">
       <div class="etile"><b>${st.utterances}</b><small>Utterances collected</small></div>
       <div class="etile"><b>${st.labeled}</b><small>Training labels</small></div>

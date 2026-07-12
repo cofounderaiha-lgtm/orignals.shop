@@ -177,9 +177,12 @@ function mitraThink(raw) {
   const t = norm(raw);
   const has = (...ws) => ws.some(w => t.includes(w));
 
-  /* — Mitra Brain: every utterance observed; rule matches become
-     training labels (the flywheel). Skipped on internal re-dispatch. — */
-  const _pred = brainPredict(raw);
+  /* — Cognitive Core: the utterance becomes a Thought, scored + routed
+     through the reasoning cache (cortex), and the assistant agent observes
+     the outcome (MARK). Falls back to the raw brain if the core isn't loaded. — */
+  const _pred = (typeof cortexPredict === 'function') ? cortexPredict(raw) : brainPredict(raw);
+  window._mitraLastIntent = _pred.intent;
+  if (typeof agentObserve === 'function') agentObserve('mitra', _pred.conf >= 0.55);
   if (!window._brainHop) brainObserve(raw, _pred, ruleIntent(t), 'rules');
 
   /* — UNIVERSAL NAVIGATOR / HELP: nobody is ever lost. If they ask
@@ -190,6 +193,19 @@ function mitraThink(raw) {
     const a = regAction(() => go(nav.route));
     mitraReply(`<b>${esc(nav.title)}</b> — ${esc(nav.help)}<br/><button class="mbtn" onclick="runMitraAction(${a})">Open ${esc(nav.title)}</button>`,
       nav.tips || ['What else can you do?'], nav.help);
+    return;
+  }
+
+  /* — "order my usual" — retrieves the compressed basket from Cognitive Memory — */
+  if (has('usual', 'same as before', 'same as always', 'my regular', 'roz wala', 'hamesha wala', 'wahi', 'the usual')) {
+    const usual = (typeof memUsual === 'function') ? memUsual() : [];
+    if (usual.length) {
+      const list = usual.slice(0, 5).map(u => esc(u.name)).join(', ');
+      const a = regAction(() => { const last = (S.orders || []).find(o => o.kind === 'shop' && !o.cancelled); if (last && typeof reorder === 'function') reorder(last.id); else go('shops'); });
+      mitraReply(`I remember your usual 🧠 — <b>${list}</b>.<br/><button class="mbtn" onclick="runMitraAction(${a})">Reorder my usual</button>`, ['Reorder my usual', 'Something else'], 'Your usual is ' + list);
+    } else {
+      mitraReply(`I don't know your usual yet — order a few times and I'll compress it into memory and reorder it in one tap. 🧠`, ['Order milk 🥛', 'Browse shops']);
+    }
     return;
   }
 
