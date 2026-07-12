@@ -54,6 +54,16 @@ window.ORIGNALS_CONFIG = {
       'https://tile.openstreetmap.de/{z}/{x}/{y}.png'
     ]
   },
+  /* In-app voice/video calls (WebRTC, no phone numbers). STUN is free and
+     connects most calls; for reliable connection across strict mobile NAT,
+     add TURN credentials (e.g. from Twilio, Metered, or your own coturn):
+       turn: [{ urls:'turn:your.turn.server:3478', username:'u', credential:'p' }]
+     Leave empty to run STUN-only (works on same/good networks). */
+  call: {
+    turn: []
+  },
   supabaseUrl: 'https://wvprqdfhjcammghjwoqj.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2cHJxZGZoamNhbW1naGp3b3FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyOTU4MDksImV4cCI6MjA5ODg3MTgwOX0.kPSSYOde8j_G5pQ-8vOQvn5NnGjAOjXsTpsMXkqhMW4'
 };
+/* alias — several modules (calls, analytics map) read `CONFIG`; keep them in sync */
+window.CONFIG = window.ORIGNALS_CONFIG;
