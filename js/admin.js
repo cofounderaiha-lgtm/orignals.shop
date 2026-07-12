@@ -324,6 +324,8 @@ function renderAdminPanel(args) {
       <div class="sec-head"><h2>Agent runtime (MARK)</h2><small class="dim">confidence grows with observation → learning · active · autonomous</small></div>
       ${ags.map(a => `<div class="ck-line"><span>${ic('spark', 11)} <b>${esc(a.role)}</b> <small class="dim">${esc(a.dept)} · ${esc(a.work)}</small></span>
         <span><b>${Math.round(a.confidence * 100)}%</b> conf · <b class="ok">${Math.round(a.trust * 100)}%</b> trust · <small class="dim">${esc(a.stage)}</small></span></div>`).join('')}
+      ${(core.recent && core.recent.length) ? `<div class="sec-head"><h2>Live reasoning trace</h2><small class="dim">last thoughts</small></div>
+      ${core.recent.slice(0, 8).map(th => `<div class="ck-line"><span>${ic('spark', 10)} "${esc(th.text)}"</span><span><small class="dim">${esc(th.intent)} · ${esc(th.lane)} · ${th.prio}</small> · <b>${th.ms}ms</b></span></div>`).join('')}` : ''}
       <div class="foot-note sm" style="text-align:left;margin-top:6px">${ic('shield', 11)} Honest scope: this is a real on-device cognitive runtime for Mitra + a live registry over the platform's real subsystems. The full distributed "world model / millions of agents" remains the research roadmap — this is the working foundation of it.</div>
     </div>`;
     })()}
