@@ -65,6 +65,21 @@ function memRetrieve() {
   return { registers: memRegisters(), semantic: memSemantic(), recent: memEpisodes(3) };
 }
 
+/* ---- pattern discovery: turn episodes into insights (Vol VII) ---- */
+function memInsights() {
+  const orders = (S.orders || []).filter(o => !o.cancelled);
+  const s = memSemantic();
+  const out = [];
+  if (s.usual && s.usual.length) out.push(`You most often order <b>${esc(s.usual[0].name)}</b> (${s.usual[0].count}×).`);
+  const dow = [0, 0, 0, 0, 0, 0, 0];
+  orders.forEach(o => { const d = new Date(o.ts || o.placed_at || Date.now()).getDay(); dow[d]++; });
+  const maxD = dow.indexOf(Math.max.apply(null, dow));
+  if (orders.length >= 3 && dow[maxD] >= 2) { const nm = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']; out.push(`You order most on <b>${nm[maxD]}s</b>.`); }
+  if (s.avgSpend) out.push(`Your typical order is about <b>${money(s.avgSpend)}</b>.`);
+  out.push(`<b>${s.orders}</b> order${s.orders === 1 ? '' : 's'} remembered — the more you use Orignals, the smarter I get. 🧠`);
+  return out;
+}
+
 /* ---- telemetry for the super-admin cognitive panel ---- */
 function memTelemetry() {
   const s = memSemantic();

@@ -209,6 +209,13 @@ function mitraThink(raw) {
     return;
   }
 
+  /* — pattern discovery: "what do you know about me" (Cognitive Memory) — */
+  if (has('what do you know about me', 'my pattern', 'insight', 'remember about me', 'mere baare', 'my habits', 'about me')) {
+    const ins = (typeof memInsights === 'function') ? memInsights() : [];
+    mitraReply(`Here's what I've learned from your orders 🧠<br/>${ins.map(i => '· ' + i).join('<br/>')}`, ['Order my usual', 'What can you do?'], 'Here is what I know about you.');
+    return;
+  }
+
   /* — wallet — */
   if (has('wallet', 'balance', 'paisa', 'paise', 'money')) {
     const addM = t.match(/(?:add|dal|put|load)[^\d]*(\d+)/);
