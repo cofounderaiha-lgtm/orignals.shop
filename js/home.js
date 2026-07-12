@@ -67,7 +67,7 @@ view('home', () => {
     <button class="svc t-com" onclick="go('shops')"><span class="svc-ic">${ic('store', 21)}</span><b>Shops Nearby</b><small>Buy from any shop</small></button>
     <button class="svc t-move" onclick="go('send')"><span class="svc-ic">${ic('package', 21)}</span><b>Send Anything</b><small>Tiffin to truck-load</small></button>
     <button class="svc t-move" onclick="go('ride')"><span class="svc-ic">${ic('bike', 21)}</span><b>Rides</b><small>Bike · Auto · Car</small></button>
-    <button class="svc t-life" onclick="go('tickets')"><span class="svc-ic">${ic('star', 21)}</span><b>Events</b><small>Attend · plan · host</small></button>
+    <button class="svc t-com" onclick="go('shops/pharmacy')"><span class="svc-ic">${ic('cross', 21)}</span><b>Pharmacy</b><small>Medicines · fast</small></button>
     <button class="svc t-com" onclick="go('tickets/dining')"><span class="svc-ic">${ic('bowl', 21)}</span><b>Dining</b><small>Reserve a table</small></button>
     <button class="svc t-life" onclick="go('estate')"><span class="svc-ic">${ic('home', 21)}</span><b>Property & Stays</b><small>Buy · rent · hotels</small></button>
     <button class="svc t-com" onclick="go('services')"><span class="svc-ic">${ic('users', 21)}</span><b>Services</b><small>Verified pros · all trades</small></button>
@@ -83,7 +83,7 @@ view('home', () => {
 
   <div class="promo-scroll">
     <div class="promo p1" onclick="go('shops/organic')"><div><small>PURE &amp; LOCAL</small><b>All organic food,<br/>from farms near you</b><em>Shop organic</em></div><span>${ic('leaf', 52)}</span></div>
-    <div class="promo p5" onclick="go('tickets')"><div><small>THIS WEEKEND</small><b>Events near you —<br/>attend, plan or host</b><em>Explore events</em></div><span>${ic('star', 52)}</span></div>
+    <div class="promo p5" onclick="go('services')"><div><small>VERIFIED PROS</small><b>Hire trusted help —<br/>tuition to plumbing</b><em>Browse services</em></div><span>${ic('users', 52)}</span></div>
     <div class="promo p2" onclick="go('send')"><div><small>THE NEIGHBOUR WAY</small><b>"Take this tiffin<br/>to grandma" — done.</b><em>Send anything</em></div><span>${ic('package', 52)}</span></div>
     <div class="promo p3" onclick="setMode('earn')"><div><small>PASSING BY? EARN.</small><b>Every trip you make<br/>can pay you back</b><em>Start earning</em></div><span>${ic('cash', 52)}</span></div>
     <div class="promo p4" onclick="go('myshop')"><div><small>FOR EVERY DUKAAN</small><b>Your shop online<br/>in 2 minutes</b><em>Register shop</em></div><span>${ic('store', 52)}</span></div>

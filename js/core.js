@@ -449,7 +449,7 @@ function buildChrome() {
   const nav = $('#hdNav');
   if (nav) nav.innerHTML = [
     ['shops', 'store', 'Nearby'], ['send', 'package', 'Send'], ['ride', 'bike', 'Rides'],
-    ['tickets', 'star', 'Events'], ['orders', 'receipt', 'Orders'], ['mitra', 'spark', 'Mitra']
+    ['services', 'users', 'Services'], ['orders', 'receipt', 'Orders'], ['mitra', 'spark', 'Mitra']
   ].map(l => `<button class="hd-link" data-v="${l[0]}" onclick="go('${l[0]}')">${ic(l[1], 15)}<span>${l[2]}</span></button>`).join('');
   const mt = $('#modeToggle');
   if (mt) mt.innerHTML = `<button onclick="setMode('buy')">${ic('cart', 14)} Buy</button><button onclick="setMode('earn')">${ic('users', 14)} Earn</button>`;
