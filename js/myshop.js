@@ -139,6 +139,32 @@ function shopFreshConfirm() {
   closeSheet(); confettiBurst(); toast('Freshness pledge live — buyers now see 🌿 Fresh today');
   renderShopDash();
 }
+
+/* ---- Commerce World Model: what-if price simulation (grounded, real) ---- */
+function shopSimulate() {
+  sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">${ic('chart', 15)} What-if price simulation</h3>
+    <p class="foot-note sm" style="text-align:left">Enter one item's price and how many you sell per day. Mitra simulates raising, keeping, and discounting it — projecting units &amp; revenue with a demand-elasticity model.</p>
+    <div style="display:flex;gap:8px">
+      <label style="flex:1;font-size:.8rem;color:var(--mut)">Price ₹<input id="simP" type="number" inputmode="numeric" value="40" style="${_poFld}" oninput="shopSimCalc()"/></label>
+      <label style="flex:1;font-size:.8rem;color:var(--mut)">Units / day<input id="simU" type="number" inputmode="numeric" value="30" style="${_poFld}" oninput="shopSimCalc()"/></label>
+    </div>
+    <div id="simResults"></div>`);
+  shopSimCalc();
+}
+function shopSimCalc() {
+  const box = document.getElementById('simResults'); if (!box) return;
+  const price = +((document.getElementById('simP') || {}).value) || 0;
+  const units = +((document.getElementById('simU') || {}).value) || 0;
+  const e = 1.2;   // demand elasticity (groceries ≈ 1.2: a 10% rise ≈ 12% fewer units)
+  const base = price * units;
+  const rows = [['Raise +15%', 0.15], ['Keep price', 0], ['Discount −15%', -0.15]].map(([label, dp]) => {
+    const np = price * (1 + dp), nu = Math.max(0, units * (1 - e * dp)), rev = np * nu;
+    return { label, np, nu, rev, delta: Math.round(rev - base) };
+  });
+  const best = rows.reduce((a, b) => b.rev > a.rev ? b : a);
+  box.innerHTML = rows.map(r => `<div class="ck-line ${r === best ? 'grand' : ''}"><span>${esc(r.label)} → ₹${r.np.toFixed(0)} · ~${r.nu.toFixed(0)} units</span><span>${money(Math.round(r.rev))} <small class="${r.delta >= 0 ? 'ok' : 'red'}">${r.delta >= 0 ? '+' : ''}${money(r.delta)}</small></span></div>`).join('')
+    + `<div class="foot-note sm" style="text-align:left;margin-top:6px">${ic('spark', 11)} Best projected revenue: <b>${esc(best.label)}</b>. Model elasticity ≈ ${e}. Decision support — validate against real sales.</div>`;
+}
 const _poFld = 'width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;margin:6px 0;font:inherit;background:var(--card,#fff);color:inherit';
 function shopPayoutSheet() {
   const p = (S.myShop && S.myShop.payout) || {};
@@ -315,6 +341,12 @@ function renderShopDash() {
     <p class="movie-about">Buyers choose Orignals for genuinely fresh, honest food. Pledge that you sell fresh — no pre-made or reheated stock, no banned additives, clean handling. Keep it: a broken pledge delists your shop.</p>
     ${M.fresh ? `<div class="trust-row" style="background:#e9f7ee;border-color:#bfe6cd">${ic('check', 12)} Pledged — buyers see <b>🌿 Fresh today</b> on your shop. <button class="lnk red" onclick="S.myShop.fresh=false;save();renderShopDash()">Withdraw</button></div>`
       : `<button class="btn-main sm" onclick="shopFreshPledge()">${ic('leaf', 13)} Take the freshness pledge</button>`}
+  </div>
+
+  <div class="card-block">
+    <h3>${ic('chart', 14)} What-if simulator</h3>
+    <p class="movie-about">Before you change a price, simulate it. Mitra projects demand &amp; revenue across scenarios with a price-elasticity model — decision support, not a guess. (This is the Commerce World Model, running on your own numbers.)</p>
+    <button class="btn-main sm" onclick="shopSimulate()">${ic('spark', 13)} Run a price simulation</button>
   </div>
 
   ${done.length ? (() => { const days = [...Array(7)].map((_, i) => {

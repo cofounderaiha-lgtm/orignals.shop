@@ -505,6 +505,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof authBoot === 'function') setTimeout(authBoot, 500);      // validate session (fail-open)
   if (typeof cloudClaimRefCredits === 'function') setTimeout(cloudClaimRefCredits, 3000);  // referral rewards
   if (typeof maybeShowConsent === 'function') setTimeout(maybeShowConsent, 700);  // first-run consent (DPDP)
+  /* Cognitive Core "sleep" cycle: during idle, consolidate memory (compress
+     order history into patterns) and persist agent trust/confidence. */
+  const cortexSleep = () => { try { if (typeof memConsolidate === 'function') memConsolidate(); if (typeof agentSave === 'function') agentSave(); if (typeof cortexSave === 'function') cortexSave(); } catch (e) {} };
+  setTimeout(cortexSleep, 5000);
+  setInterval(cortexSleep, 120000);
   /* one-time cleanup: purge the old infra "Cloud sync active" notification spam
      that earlier builds left piled up in local storage */
   if (Array.isArray(S.notifs) && S.notifs.length) {

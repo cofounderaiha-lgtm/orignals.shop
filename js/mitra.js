@@ -419,12 +419,16 @@ function mitraThink(raw) {
     const a = regAction(() => mitraPlaceOrder(shop.id, item.id, q));
     const b = regAction(() => { S.cart = { shopId: shop.id, items: { [item.id]: q } }; save(); refreshChrome(); go('cart'); });
     const alt = hits.slice(1, 3).filter(h => h.item.id !== item.id);
+    /* CRE: record the explainable decision behind this recommendation */
+    const dec = (typeof reasonOrder === 'function') ? reasonOrder(shop, item, q, total) : null;
+    const whyId = 'why_' + (dec ? dec.id : uid());
     mitraReply(
       `Found it! <b>${esc(item.name)}</b> (${esc(item.qty)})<br/>
        from <b>${esc(shop.name)}</b> — ${shop.km} km away, ★ ${shop.rating}, purity-verified<br/>
        <span class="mprice">${q} × ${money(item.price)} + ${fee ? money(fee) + ' delivery' : 'FREE delivery'} = <b>${money(total)}</b></span><br/>
        <button class="mbtn" onclick="runMitraAction(${a})">Confirm — pay ${money(total)} from wallet</button>
        <button class="mbtn ghost" onclick="runMitraAction(${b})">Put in basket instead</button>
+       ${dec ? `<button class="mbtn ghost" onclick="var e=document.getElementById('${whyId}');if(e)e.style.display=e.style.display==='none'?'block':'none'">Why this? 🧠</button><div id="${whyId}" style="display:none;margin-top:6px">${reasonExplainHTML(dec)}</div>` : ''}
        ${alt.length ? `<small class="malt">Also found: ${alt.map(h => esc(h.item.name) + ' @ ' + esc(h.shop.name)).join(' · ')}</small>` : ''}`,
       ['Confirm', 'Order something else'],
       `Found ${item.name} from ${shop.name}, total ${total} rupees. Confirm to order.`);
