@@ -80,9 +80,6 @@ b,strong{font-weight:700}
   -webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--line);padding:10px 16px 10px}
 .hd-row{display:flex;align-items:center;gap:10px}
 .logo{display:flex;align-items:center;gap:7px;font-weight:800;font-size:1.15rem;letter-spacing:-.02em;cursor:pointer}
-/* wordmark + byline stack — the byline must sit BELOW "Orignals", not run into it */
-.logo-txt{display:inline-flex;flex-direction:column;line-height:1.02}
-.logo-sub{font-size:.5rem;font-weight:600;letter-spacing:.01em;opacity:.55;margin-top:1px;white-space:nowrap;font-family:'Inter',system-ui,sans-serif}
 .logo-mark{flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(26,86,50,.45))}
 .logo span b{color:var(--primary)}
 .logo-txt{display:inline-flex;flex-direction:column;line-height:1}
