@@ -82,14 +82,19 @@ function cloudQueue() {
 async function cloudPush() {
   if (!CLOUD.on) return;
   try {
-    /* 1 — full snapshot (source of truth for restore) */
-    await cloudFetch('state_snapshots', {
+    /* 1 — full snapshot (source of truth for restore)
+       SECURITY: via snapshot_save RPC. Previously POSTed straight to
+       state_snapshots under `UPDATE using(true)`, which let a single bulk
+       PATCH overwrite EVERY user's snapshot. See migrations/0003. */
+    await cloudFetch('rpc/snapshot_save', {
       method: 'POST',
-      headers: { 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify([{ device_key: S.deviceKey, state: S, app_ver: 'v1' }])
+      body: JSON.stringify({ p_device: S.deviceKey, p_state: S })
     });
 
-    /* 2 — mirror orders into normalized rows (idempotent upsert) */
+    /* 2 — mirror orders into normalized rows (idempotent upsert)
+       SECURITY: via orders_sync RPC, which stamps device_key server-side and
+       only updates rows this device owns (or unclaimed ones). Previously a
+       bulk PATCH could rewrite every order's total. See migrations/0003. */
     if (S.orders.length) {
       const rows = S.orders.slice(0, 50).map(o => ({
         id: o.id, kind: o.kind || 'shop', flow: o.flow || null,
@@ -103,10 +108,9 @@ async function cloudPush() {
         cancelled_at: o.cancelled ? new Date(o.cancelled).toISOString() : null,
         placed_at: new Date(o.placedAt).toISOString()
       }));
-      await cloudFetch('orders?on_conflict=id', {
+      await cloudFetch('rpc/orders_sync', {
         method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify(rows)
+        body: JSON.stringify({ p_device: S.deviceKey, p_orders: rows })
       });
     }
 
