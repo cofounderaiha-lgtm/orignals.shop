@@ -113,35 +113,37 @@ async function cloudPush() {
     /* 3 — mirror the user's own shop + items (with real GPS location so
        buyers on every other device can find and order from it) */
     if (S.myShop) {
-      const shopId = 'my_' + S.deviceKey.slice(0, 12);
-      await cloudFetch('shops?on_conflict=id', {
+      /* SECURITY: shop + items now go through the shop_upsert RPC, which DERIVES
+         the shop id from the device key server-side. Previously this POSTed
+         directly to `shops?on_conflict=id` under an `UPDATE using(true)` policy —
+         and because every shop id is publicly readable, anyone with the public
+         anon key could overwrite any merchant's shop. The id is no longer sent.
+         See supabase/migrations/0002_shop_upsert_rpc.sql */
+      await cloudFetch('rpc/shop_upsert', {
         method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify([{
-          id: shopId, name: S.myShop.name, category: S.myShop.cat,
-          tagline: 'Seller on Orignals', delivery: S.myShop.delivery || 'both',
-          pure_veg: !!S.myShop.veg, gst: S.myShop.gst || null, fssai: S.myShop.fssai || null,
-          is_open: !!S.myShop.online, photo_url: (S.myShop.photo && S.myShop.photo.startsWith('http')) ? S.myShop.photo : null,
-          lat: (S.myShop.addr && S.myShop.addr.lat != null) ? +S.myShop.addr.lat : null,
-          lng: (S.myShop.addr && S.myShop.addr.lng != null) ? +S.myShop.addr.lng : null,
-          addr: S.myShop.addr ? (S.myShop.addr.name + (S.myShop.addr.sub ? ', ' + S.myShop.addr.sub : '')) : null,
-          phone: S.myShop.phone || null,
-          open_from: S.myShop.open || null, open_till: S.myShop.close || null,
-          offer_label: S.myShop.offer ? S.myShop.offer.label : null,
-          offer_pct: S.myShop.offer ? S.myShop.offer.pct : null
-        }])
+        body: JSON.stringify({
+          p_device: S.deviceKey,
+          p_shop: {
+            name: S.myShop.name, category: S.myShop.cat,
+            tagline: 'Seller on Orignals', delivery: S.myShop.delivery || 'both',
+            pure_veg: !!S.myShop.veg, gst: S.myShop.gst || null, fssai: S.myShop.fssai || null,
+            is_open: !!S.myShop.online, photo_url: (S.myShop.photo && S.myShop.photo.startsWith('http')) ? S.myShop.photo : null,
+            lat: (S.myShop.addr && S.myShop.addr.lat != null) ? +S.myShop.addr.lat : null,
+            lng: (S.myShop.addr && S.myShop.addr.lng != null) ? +S.myShop.addr.lng : null,
+            addr: S.myShop.addr ? (S.myShop.addr.name + (S.myShop.addr.sub ? ', ' + S.myShop.addr.sub : '')) : null,
+            phone: S.myShop.phone || null,
+            open_from: S.myShop.open || null, open_till: S.myShop.close || null,
+            offer_label: S.myShop.offer ? S.myShop.offer.label : null,
+            offer_pct: S.myShop.offer ? S.myShop.offer.pct : null
+          },
+          p_items: (S.myShop.items || []).map(it => ({
+            name: it.name, qty_label: it.qty, price: it.price, in_stock: !it.out,
+            icon: it.emoji || null,
+            photo_url: (it.photo && it.photo.startsWith('http')) ? it.photo : null,
+            section: it.section || null
+          }))
+        })
       });
-      if (S.myShop.items.length) {
-        await cloudFetch('shop_items?on_conflict=id', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(S.myShop.items.map((it, i) => ({
-            id: shopId + '_i' + i, shop_id: shopId, name: it.name,
-            qty_label: it.qty, price: it.price, in_stock: !it.out, icon: it.emoji || null,
-            photo_url: (it.photo && it.photo.startsWith('http')) ? it.photo : null, section: it.section || null
-          })))
-        });
-      }
     }
 
     /* 4 — Mitra Brain: training data + model meta mirror to cloud */
