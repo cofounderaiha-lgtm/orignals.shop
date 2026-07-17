@@ -47,15 +47,31 @@ view('home', () => {
 
   $('#view').innerHTML = `
   <div class="home-hero">
-    <div class="home-greet">${greet}${isGuest() ? '' : ', <b>' + esc(displayName()) + '</b>'}${isGuest() ? ' — <b onclick="go(\'login\')" style="cursor:pointer;color:var(--primary)">sign in</b>' : ''}</div>
-    <h1 class="home-title">Real food. Real shops.<br/><span>Verified by our own people.</span></h1>
-    <div class="usp-strip">${ic('shield', 13)} No adulterated ghee. No fake paneer. Every batch purity-tested — Safety · Purity · Sustainability.</div>
+    <div class="hero-copy">
+      <div class="home-greet">${greet}${isGuest() ? '' : ', <b>' + esc(displayName()) + '</b>'}${isGuest() ? ' — <b onclick="go(\'login\')" style="cursor:pointer;color:var(--primary)">sign in</b>' : ''}</div>
+      <h1 class="home-title">Real food. Real shops.<br/><span>Verified by our own people.</span></h1>
+      <div class="usp-strip">${ic('shield', 13)} No adulterated ghee. No fake paneer. Every batch purity-tested — Safety · Purity · Sustainability.</div>
 
-    <button class="mitra-bar" onclick="go('mitra')">
-      <span class="mitra-orb">${ic('mic', 17)}</span>
-      <span class="mitra-hint" id="mitraHint">"Order 2 milk from the kirana…"</span>
-      <span class="mitra-go">Ask Mitra</span>
-    </button>
+      <button class="mitra-bar" onclick="go('mitra')">
+        <span class="mitra-orb">${ic('mic', 17)}</span>
+        <span class="mitra-hint" id="mitraHint">"Order 2 milk from the kirana…"</span>
+        <span class="mitra-go">Ask Mitra</span>
+      </button>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 150 150" role="img">
+        <defs><path id="heroArc" d="M75 22 a53 53 0 1 1 -0.01 0"/></defs>
+        <circle cx="75" cy="75" r="70" fill="none" stroke="currentColor" stroke-width="2.5"/>
+        <circle cx="75" cy="75" r="61" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="2 5"/>
+        <circle cx="75" cy="75" r="41" fill="none" stroke="currentColor" stroke-width="2"/>
+        <text font-size="11" font-weight="700" letter-spacing="3.4" fill="currentColor" font-family="Inter,sans-serif">
+          <textPath href="#heroArc" startOffset="0%">PURITY · VERIFIED · ORIGNALS · </textPath></text>
+        <g transform="translate(75,75)" fill="currentColor">
+          <path d="M0-21c6.8 0 13.4 5.2 13.4 12.1 0 6.1-5.2 10.5-11 10.9V8.5h-5V2C-8.2 1.5-13.4-2.9-13.4-9-13.4-15.8-6.8-21 0-21z"/>
+          <path d="M-8.6 8.5h17.2" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
   </div>
 
   <div id="activeStrip" class="active-strip">${activeStripHTML()}</div>
