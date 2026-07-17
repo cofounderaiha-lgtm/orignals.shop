@@ -482,7 +482,7 @@ body.sheet-open .leaflet-container{visibility:hidden!important}
 .empty.sm{padding:22px 12px}.empty.sm span{opacity:.5}
 
 @media(min-width:1024px){
-  .frame{max-width:min(96vw,1440px);border:none;box-shadow:0 0 80px rgba(19,20,43,.06)}
+  .frame{max-width:min(98vw,1720px);border:none;box-shadow:0 0 60px rgba(19,20,43,.08)}
   .app-header{padding:12px 32px;display:flex;align-items:center;gap:18px}
   .hd-row{flex:1;min-width:0}
   .hd-nav{display:flex;margin-left:14px}
