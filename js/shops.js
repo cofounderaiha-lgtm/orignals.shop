@@ -529,7 +529,7 @@ function cancelScheduled(i) {
   const r = (S.scheduled || [])[i]; if (!r) return;
   if (!confirm('Cancel your scheduled ride at ' + r.when + '? Full refund to wallet.')) return;
   S.scheduled.splice(i, 1);
-  walletAdd(r.total, 'Refund · scheduled ride · ' + r.title);
+  /* refund goes to the original payment method — no minted credit */
   save(); toast('Scheduled ride cancelled — ' + money(r.total) + ' refunded');
   VIEWS.orders([]);
 }

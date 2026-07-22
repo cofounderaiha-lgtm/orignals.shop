@@ -231,11 +231,11 @@ function renderAdminPanel(args) {
         ${rows.length ? rows.slice(0, 8).map(r => `<div class="ck-line"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('') : '<div class="ck-line"><span class="dim">empty</span><span></span></div>'}</div>`;
     body = `
     <div class="tip-strip">${ic('grid', 13)} Live database view — every table, exactly as stored on this device. In v2 this becomes the hosted database console.</div>
-    ${dbTable('users', [[esc(S.user.name) + ' · ' + esc(S.user.addr.name), money(S.wallet.bal) + (S.memberTill ? ' · member' : '')]])}
+    ${dbTable('users', [[esc(S.user.name) + ' · ' + esc(S.user.addr.name), (S.memberTill ? 'member' : '—')]])}
     ${dbTable('orders', S.orders.map(o => [o.id + ' · ' + esc(o.title), money(o.total) + ' · ' + orderStatus(o).t]))}
     ${dbTable('shops', [...DB.shops.map(s => [esc(s.name), s.type + ' · ★' + s.rating]), ...(S.myShop ? [[esc(S.myShop.name) + ' (yours)', money(S.myShop.revenue)]] : [])])}
     ${dbTable('partners', S.partner ? [[esc(S.partner.name), S.partner.veh + ' · ' + S.partner.jobs + ' trips · ' + (S.partner.seva || 0) + ' seva']] : [])}
-    ${dbTable('wallet_txns', S.wallet.txns.filter(t => t.label).map(t => [esc(t.label), (t.amt >= 0 ? '+' : '−') + money(Math.abs(t.amt))]))}
+    ${dbTable('earnings (owed, not spendable)', (S.earnings || []).map(t => [esc(t.label), '+' + money(t.amt)]))}
     ${dbTable('tickets', (S.tickets || []).map(t => [t.id + ' · ' + esc(t.title), money(t.total)]))}
     ${dbTable('bookings_stays', [...(S.bookings || []).map(b => ['Table · ' + esc(b.shop), b.day + ' ' + b.slot]), ...(S.stays || []).map(st => ['Stay · ' + esc(st.hotel), money(st.total)])])}
     ${dbTable('property_listings', (S.myListings || []).map(p => [esc(p.title), (p.leads || 0) + ' leads · ' + (p.views || 0) + ' views']))}
@@ -869,7 +869,7 @@ async function adminTestHealth() {
   if (box) box.innerHTML = results.map(([l, ok, s]) => `<div class="ck-line"><span>${esc(l)}</span><span class="${ok ? 'ok' : 'bad'}">${ok ? '✓ ' + s : '✕ ' + s}</span></div>`).join('') +
     `<button class="btn-main sm ghost" style="margin-top:10px" onclick="adminTestHealth()">Re-run</button>`;
 }
-function adminTestWallet() { walletAdd(500, 'Test top-up (admin)'); toast('₹500 added to your wallet'); }
+function adminTestWallet() { toast('Wallet removed — payments are UPI/card or COD only'); }
 function adminTestNotify() { notify('Test notification', 'This is a test alert from the admin console.', 'spark'); toast('In-app notification fired — check the bell'); }
 function adminTestOrder() {
   const shop = DB.shops[0];

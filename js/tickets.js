@@ -370,7 +370,7 @@ function cancelTicket(tid) {
   /* free the seats so others can book them */
   if (t.show && t.seats && typeof cloudSeatsFreeTicket === 'function') cloudSeatsFreeTicket(tid);
   S.tickets = S.tickets.filter(x => x.id !== tid);
-  walletAdd(Math.round(t.total * 0.9), 'Refund · ' + t.title);
+  /* 90% refund goes to the original payment method — no minted credit */
   save(); toast('Cancelled — ' + money(Math.round(t.total * 0.9)) + ' refunded');
   go('tickets/mine');
 }
@@ -505,7 +505,7 @@ function cancelStay(i) {
   const st = (S.stays || [])[i]; if (!st) return;
   if (!confirm('Cancel your stay at ' + st.hotel + '? Full ' + money(st.total) + ' refunds to wallet.')) return;
   S.stays.splice(i, 1);
-  walletAdd(st.total, 'Refund · stay · ' + st.hotel);
+  /* refund goes to the original payment method — no minted credit */
   toast('Stay cancelled — ' + money(st.total) + ' refunded');
   VIEWS.tickets(['mine']);
 }

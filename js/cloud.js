@@ -393,7 +393,7 @@ async function cloudClaimRefCredits() {
   try {
     const n = await cloudFetch('rpc/claim_ref_credits', { method: 'POST', body: JSON.stringify({ p_device: S.deviceKey || 'anon' }) });
     if (n && n > 0) {
-      walletAdd(n * 50, 'Referral bonus · ' + n + ' friend' + (n > 1 ? 's' : '') + ' joined');
+      earnCredit(n * 50, 'Referral bonus · ' + n + ' friend' + (n > 1 ? 's' : '') + ' joined');
       notify('Referral reward!', '₹' + (n * 50) + ' added — ' + n + ' friend' + (n > 1 ? 's' : '') + ' joined with your code.');
     }
   } catch (e) {}
@@ -541,8 +541,8 @@ async function pollCloudOrders() {
       o.cloudStatus = r.status; changed = true;
       if (r.status === 'rejected' && !o.cancelled) {
         o.cancelled = Date.now();
-        walletAdd(o.total, 'Refund · ' + o.id + ' · shop could not take the order');
-        notify('Order refunded', o.title + ' — the shop couldn\'t take it. ' + money(o.total) + ' is back in your wallet.', 'x');
+        o.refundDue = (o.payMethod === 'cod') ? 0 : o.total;   // real refund, never minted credit
+        notify('Order refunded', o.title + ' — the shop couldn\'t take it. ' + (o.refundDue ? money(o.refundDue) + ' goes back to the account you paid from (3–5 working days).' : 'Nothing was charged.'), 'x');
       } else {
         const f = FLOWS[o.flow][orderStage(o)];
         if (f) notify(f.t, o.title + ' · live update from the shop', f.e);

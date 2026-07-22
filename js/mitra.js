@@ -216,17 +216,13 @@ function mitraThink(raw) {
     return;
   }
 
-  /* — wallet — */
-  if (has('wallet', 'balance', 'paisa', 'paise', 'money')) {
-    const addM = t.match(/(?:add|dal|put|load)[^\d]*(\d+)/);
-    if (addM) {
-      const amt = Math.min(parseInt(addM[1], 10), 10000);
-      walletAdd(amt, 'Added via Mitra · UPI');
-      mitraReply(`Done! ✅ Added <b>${money(amt)}</b> to your wallet.<br/>New balance: <b>${money(S.wallet.bal)}</b> 👛`, ['Order milk 🥛', 'Book a ride 🏍️'], `Added ${amt} rupees. New balance ${S.wallet.bal} rupees`);
-    } else {
-      const a = regAction(() => go('wallet'));
-      mitraReply(`Your wallet has <b>${money(S.wallet.bal)}</b> 👛<br/><button class="mbtn" onclick="runMitraAction(${a})">Open wallet</button>`, ['Add 200 to wallet', 'Show my orders 🧾'], `Your wallet has ${S.wallet.bal} rupees`);
-    }
+  /* — money / payment questions —
+     Mitra can NEVER create balance. There is no wallet: you pay per order by
+     UPI/card or cash on delivery. (Removed 2026-07-17 — "add 500 to wallet"
+     used to mint ₹500 labelled as a UPI payment.) */
+  if (has('wallet', 'balance', 'paisa', 'paise', 'money', 'add money', 'top up')) {
+    mitraReply(`There's no wallet to top up — and that's deliberate. 👍<br/>You pay for each order directly by <b>UPI / card</b>, or <b>cash on delivery</b>. Nothing is held on the app, so there's no balance to lose.<br/>${(S.earnings || []).length ? `You've <b>earned ${money(typeof earnedTotal === 'function' ? earnedTotal() : 0)}</b> from deliveries — that's paid out to your UPI.` : ''}`,
+      ['Order milk 🥛', 'Show my orders 🧾'], 'There is no wallet — you pay per order by UPI or cash.');
     return;
   }
 
@@ -360,12 +356,11 @@ function mitraThink(raw) {
     const act = activeOrders()[0];
     if (act && orderStage(act) === 0) {
       const a = regAction(() => {
-        S.orders = S.orders.filter(x => x.id !== act.id);
-        walletAdd(act.total, 'Refund · ' + act.title);
-        save(); refreshChrome();
-        mitraReply(`Cancelled &amp; <b>${money(act.total)}</b> refunded to your wallet instantly. Balance: ${money(S.wallet.bal)}.`, ['Order something else']);
+        if (typeof cancelOrder === 'function') cancelOrder(act.id);
+        else { S.orders = S.orders.filter(x => x.id !== act.id); save(); refreshChrome(); }
+        mitraReply(`Cancelled. ${act.payMethod === 'cod' ? 'Nothing was charged.' : money(act.total) + ' goes back to the account you paid from (3–5 working days).'}`, ['Order something else']);
       });
-      mitraReply(`<b>${esc(act.title)}</b> (${act.id}) hasn't been confirmed yet — I can cancel with a full instant refund.<br/><button class="mbtn" onclick="runMitraAction(${a})">Yes, cancel &amp; refund</button>`, ['Keep the order']);
+      mitraReply(`<b>${esc(act.title)}</b> (${act.id}) hasn't been confirmed yet — I can cancel it.<br/><button class="mbtn" onclick="runMitraAction(${a})">Yes, cancel it</button>`, ['Keep the order']);
     } else if (act) {
       mitraReply(`${esc(act.title)} is already ${orderStatus(act).t.toLowerCase()} — too far to cancel now. You can refuse at the door and I'll refund.`, ['Track my order']);
     } else mitraReply(`Nothing live to cancel right now.`, ['Show my orders']);
@@ -485,21 +480,28 @@ function mitraPlaceOrder(shopId, itemId, q) {
   const sub = item.price * q;
   const fee = sub >= 199 ? 0 : (shop.delivery === 'self' ? 15 : 25);
   const total = sub + fee;
-  if (S.wallet.bal < total) {
-    mitraReply(`Your wallet has only <b>${money(S.wallet.bal)}</b> — this needs <b>${money(total)}</b>. Say <i>"add ${Math.ceil((total - S.wallet.bal) / 50) * 50} to wallet"</i> and I'll top it up. 👛`, [`Add ${Math.ceil((total - S.wallet.bal) / 50) * 50} to wallet`]);
-    return;
-  }
-  walletPay(total, 'Order · ' + shop.name + ' (via Mitra)');
-  const o = createOrder({
-    kind: 'shop', flow: shop.delivery === 'self' ? 'shop_self' : 'shop_partner',
-    km: +shop.km || undefined,
-    title: shop.name + ' · ' + item.name, emoji: shop.emoji, shopId: shop.id,
-    items: [{ name: item.name, emoji: item.emoji, q, price: item.price }],
-    total, addr: S.user.addr
+  /* MITRA PROPOSES — THE USER CONFIRMS AND PAYS.
+     Mitra never calls a payment function and never creates an order directly.
+     It hands off to the SAME checkout sheet the rest of the app uses, so the
+     user sees the bill and picks a real payment method (UPI/card or COD).
+     (Before 2026-07-17 this deducted a fake wallet balance and created the
+     order with no confirmation step.) */
+  checkoutSheet({
+    title: shop.name + ' · ' + item.name,
+    icon: 'cart',
+    meta: `${q} × ${item.name} from ${shop.name} · ${shop.km} km`,
+    lines: [[item.name + ' × ' + q, item.price * q], [fee ? 'Delivery' : 'Delivery (free)', fee]],
+    total,
+    onPay: (final, off, method) => {
+      const o = createOrder({
+        kind: 'shop', flow: shop.delivery === 'self' ? 'shop_self' : 'shop_partner',
+        km: +shop.km || undefined,
+        title: shop.name + ' · ' + item.name, emoji: shop.emoji, shopId: shop.id,
+        items: [{ name: item.name, emoji: item.emoji, q, price: item.price }],
+        total: final, addr: S.user.addr, payMethod: method
+      });
+      confettiBurst();
+      go('track/' + o.id);
+    }
   });
-  confettiBurst();
-  const a = regAction(() => go('track/' + o.id));
-  mitraReply(`🎉 Ordered! <b>${esc(item.name)} × ${q}</b> from ${esc(shop.name)}.<br/>Paid ${money(total)} from wallet · balance ${money(S.wallet.bal)}.<br/>${shop.delivery === 'self' ? 'The shop delivers it itself' : 'A nearby partner will carry it to you'}<br/><button class="mbtn" onclick="runMitraAction(${a})">📍 Track it live</button>`,
-    ['Track my order 📍', 'Order something else'],
-    `Ordered ${item.name} from ${shop.name}. ${total} rupees paid from wallet.`);
 }

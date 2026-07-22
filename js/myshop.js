@@ -258,7 +258,7 @@ async function shopCloudSync() {
       }
       if (js[0].status === 'done' && o.status !== 'done') {
         o.status = 'done'; M.revenue += o.total;
-        walletAdd(o.total, 'Sale · ' + o.id);
+        earnCredit(o.total, 'Sale · ' + o.id);
         cloudShopOrderStatus(o.id, 'done'); changed = true;
         confettiBurst(); toast('+' + money(o.total) + ' — delivered by partner, sale complete!');
       }
@@ -465,7 +465,7 @@ function shopOrderAct(oid, act) {
   if (act === 'done') {
     o.status = 'done'; pushCloud('done');
     M.revenue += o.total;
-    walletAdd(o.total, 'Sale · ' + o.id + '');
+    earnCredit(o.total, 'Sale · ' + o.id + '');
     confettiBurst(); toast('+' + money(o.total) + ' — sale complete!', '💰');
   }
   save(); renderShopDash();
@@ -842,7 +842,7 @@ function cancelDocRequest(id) {
   if (!confirm('Cancel this application? Full ' + money(r.price) + ' refunds to your wallet.')) return;
   if (typeof cloudDocCancel === 'function') cloudDocCancel(id);
   r.status = 'cancelled';
-  walletAdd(r.price, 'Refund · ' + r.name);
+  /* refund goes to the original payment method — no minted credit */
   save(); toast('Cancelled — ' + money(r.price) + ' refunded');
   go('papers');
 }

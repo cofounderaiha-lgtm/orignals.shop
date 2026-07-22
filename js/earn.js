@@ -537,9 +537,9 @@ function completeJob() {
   if (A.seva) S.partner.seva = (S.partner.seva || 0) + 1;
   S.partner.streak = (S.partner.streak || 0) + (todayEarn() === 0 && !A.seva ? 1 : S.partner.streak ? 0 : 1) || S.partner.streak || 1;
   S.activeJob = null;
-  if (pay) walletAdd(pay, 'Earning · ' + j.what);
-  notify(A.seva ? 'Seva complete — karma +1' : 'You earned ' + money(pay), j.what + (A.seva ? ' — a neighbour thanks you.' : ' — money added to wallet.'));
-  save(); confettiBurst(); toast(A.seva ? 'Seva done. Respect.' : '+' + money(pay) + ' added to your wallet');
+  if (pay) earnCredit(pay, 'Earning · ' + j.what);   // owed to you, paid out to UPI
+  notify(A.seva ? 'Seva complete — karma +1' : 'You earned ' + money(pay), j.what + (A.seva ? ' — a neighbour thanks you.' : ' — added to your payout.'));
+  save(); confettiBurst(); toast(A.seva ? 'Seva done. Respect.' : '+' + money(pay) + ' earned');
   VIEWS.earn([]);
 }
 
@@ -560,7 +560,7 @@ view('earnings', () => {
   <div class="earn-tiles wide3">
     <div class="etile"><b>${money(todayEarn())}</b><small>Today</small></div>
     <div class="etile"><b>${money(total)}</b><small>All time</small></div>
-    <div class="etile"><b>${money(S.wallet.bal)}</b><small>Wallet</small></div>
+    <div class="etile"><b>${money(earnedTotal())}</b><small>To be paid out</small></div>
   </div>
   ${(() => { const j = S.partner.jobs;
     const lv = j >= 25 ? ['Gold', 25, 50] : j >= 10 ? ['Silver', 10, 25] : ['Bronze', 0, 10];
@@ -586,22 +586,27 @@ view('earnings', () => {
 /* ---------- withdraw earnings (wallet -> bank) ---------- */
 function withdrawSheet() {
   sheet(`<div class="sheet-grab"></div><h3 class="sheet-title">Withdraw to bank</h3>
-    <div class="ck-line"><span>Wallet balance</span><span><b>${money(S.wallet.bal)}</b></span></div>
+    <div class="ck-line"><span>Earnings to be paid out</span><span><b>${money(earnedTotal())}</b></span></div>
     <label class="fld"><span>Amount (min ₹100)</span><input class="txt" id="wdAmt" type="number" inputmode="numeric" placeholder="500"/></label>
     <label class="fld"><span>UPI ID</span><input class="txt" id="wdUpi" value="${esc(S.partner.upi || '')}" placeholder="name@bank"/></label>
-    <button class="btn-main wide" onclick="doWithdraw()">Withdraw instantly</button>
-    <div class="foot-note sm">0 fees · IMPS/UPI payout · lands in your bank in seconds</div>`);
+    <button class="btn-main wide" onclick="doWithdraw()">Request payout</button>
+    <div class="foot-note sm">Payouts are released in a daily batch to the UPI ID above. You'll be notified when it's sent.</div>`);
 }
 function doWithdraw() {
   const amt = parseInt($('#wdAmt').value, 10) || 0;
   const upi = $('#wdUpi').value.trim();
   if (amt < 100) { toast('Minimum withdrawal is ₹100'); return; }
-  if (amt > S.wallet.bal) { toast('That is more than your wallet balance'); return; }
+  if (amt > earnedTotal()) { toast('That is more than you have earned'); return; }
   if (!/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) { toast('Enter a valid UPI ID like name@bank'); return; }
   S.partner.upi = upi;
-  walletPay(amt, 'Withdrawn to ' + upi);
+  /* Records a payout REQUEST. It does not move money — payouts are released
+     in a batch from the settlement ledger. Previously this decremented a fake
+     balance and claimed "Withdrawal successful" with no transfer at all. */
+  if (!S.payoutRequests) S.payoutRequests = [];
+  S.payoutRequests.unshift({ id: uid(), ts: Date.now(), amt, upi, status: 'requested' });
+  save();
   closeSheet(); confettiBurst();
-  notify('Withdrawal successful', money(amt) + ' sent to ' + upi, 'cash');
-  toast(money(amt) + ' sent to ' + upi);
+  notify('Payout requested', money(amt) + ' to ' + upi + ' — released in the next daily batch.', 'cash');
+  toast('Payout requested — ' + money(amt));
   VIEWS.earnings([]);
 }

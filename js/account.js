@@ -5,48 +5,39 @@
    confirms the signed-in account is staff (see the end of the view).
    ============================================================ */
 
-/* ---------- WALLET ---------- */
+/* ---------- EARNINGS & PAYOUTS ----------
+   This replaced the wallet on 2026-07-17. There is NO stored balance and no
+   top-up: every order is paid by UPI/card or cash on delivery. What lives here
+   is money the platform OWES you for deliveries/sales, and it is paid out to
+   your UPI — it can never be spent inside the app. */
 view('wallet', () => {
+  const owed = (typeof earnedTotal === 'function') ? earnedTotal() : 0;
+  const led = (S.earnings || []);
+  const reqs = (S.payoutRequests || []);
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="go('account')">${ic('chevl', 16)}</button>
-    <div><h1>Wallet</h1><small>One wallet for shopping, rides, tickets &amp; earnings</small></div></div>
+    <div><h1>Earnings &amp; payouts</h1><small>What you've earned — paid out to your UPI</small></div></div>
 
   <div class="wallet-card">
-    <small>AVAILABLE BALANCE</small>
-    <b>${money(S.wallet.bal)}</b>
-    <span>${esc(displayName())} · Orignals Pay</span>
+    <small>TO BE PAID OUT</small>
+    <b>${money(owed)}</b>
+    <span>${esc(displayName())} · paid to your UPI</span>
   </div>
 
-  <div class="sec-head"><h2>Add money</h2></div>
-  <div class="topup-row">
-    ${[100, 200, 500, 1000].map(a => `<button class="topup" onclick="topupWallet(${a})">+${money(a)}</button>`).join('')}
-  </div>
-  <div class="foot-note">Top-ups are instant · UPI, cards &amp; netbanking · zero fees</div>
+  <div class="trust-row">${ic('shield', 12)} Orignals holds no balance for you. You pay per order by UPI/card or cash, and money you earn is transferred to your bank — nothing is stored on the app.</div>
 
-  <div class="sec-head"><h2>History</h2></div>
-  ${S.wallet.txns.filter(t => t.label).map(t => `
+  ${reqs.length ? `<div class="sec-head"><h2>Payout requests</h2></div>
+  ${reqs.slice(0, 10).map(r => `<div class="ck-line"><span>${esc(r.upi)} · ${new Date(r.ts).toLocaleDateString('en-IN')}</span><span><b>${money(r.amt)}</b> · ${esc(r.status)}</span></div>`).join('')}` : ''}
+
+  <div class="sec-head"><h2>Earnings</h2></div>
+  ${led.length ? led.map(t => `
     <div class="order-row static">
-      <span class="or-emoji">${ic(t.amt >= 0 ? 'cash' : 'card', 17)}</span>
+      <span class="or-emoji">${ic('cash', 17)}</span>
       <div class="or-info"><b>${esc(t.label)}</b><small>${new Date(t.ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>
-      <b class="${t.amt >= 0 ? 'ok' : 'red'}">${t.amt >= 0 ? '+' : '−'}${money(Math.abs(t.amt))}</b>
-    </div>`).join('')}`;
+      <b class="ok">+${money(t.amt)}</b>
+    </div>`).join('')
+    : `<div class="empty"><span>${ic('cash', 40)}</span><b>No earnings yet</b><p>Deliver an order or sell from your shop and it appears here.</p></div>`}`;
 });
-
-/* real UPI top-up via Razorpay; before keys are configured the amount is
-   credited as clearly-labelled complimentary pre-launch balance */
-function topupWallet(a) {
-  payViaRazorpay(a, { purpose: 'wallet_topup', ref: 'wallet', desc: 'Orignals wallet top-up' },
-    (payId) => {
-      walletAdd(a, 'Added via UPI · ' + String(payId).slice(-6));
-      toast(money(a) + ' added to your wallet');
-      VIEWS.wallet([]);
-    },
-    () => {
-      walletAdd(a, 'Complimentary credit (pre-launch)');
-      toast('Payments go live shortly — ' + money(a) + ' credited as complimentary balance');
-      VIEWS.wallet([]);
-    });
-}
 
 /* ---------- NOTIFICATIONS ---------- */
 view('notifs', () => {
@@ -80,7 +71,7 @@ view('account', () => {
   </div>
 
   <div class="earn-tiles wide3">
-    <div class="etile" onclick="go('wallet')"><b>${money(S.wallet.bal)}</b><small>Wallet</small></div>
+    <div class="etile" onclick="go('wallet')"><b>${money(typeof earnedTotal === 'function' ? earnedTotal() : 0)}</b><small>Earnings</small></div>
     <div class="etile" onclick="go('orders')"><b>${S.orders.length}</b><small>Orders</small></div>
     <div class="etile" onclick="go('notifs')"><b>${notifUnread()}</b><small>Updates</small></div>
   </div>
@@ -163,11 +154,19 @@ function currencySheet() {
       <span style="font-weight:800">${c.sym.trim() || code}</span><div><b>${esc(c.name)}</b><small>${code} · e.g. ${(() => { const p = CUR; CUR = Object.assign({ code }, c); const s = money(500); CUR = p; return s; })()} for ₹500</small></div>${CUR.code === code ? '<em class="ok">✓</em>' : '<em>Select</em>'}</button>`).join('')}`);
 }
 function buyMembership() {
-  if (!walletPay(99, 'Orignals membership · 1 year')) { toast('Wallet low — add money first'); return; }
-  S.memberTill = Date.now() + 365 * 86400000; save();
-  confettiBurst(); toast('Member! Everything unlocked for a year');
-  notify('Membership active', 'Welcome to Orignals — 1 year, everything access.');
-  VIEWS.account([]);
+  /* real payment only — no wallet deduction */
+  checkoutSheet({
+    title: 'Orignals membership · 1 year', icon: 'shield',
+    meta: 'Everything unlocked for a year',
+    lines: [['Membership (1 year)', 99]], total: 99,
+    onPay: () => {
+      S.memberTill = Date.now() + 365 * 86400000; save();
+      confettiBurst(); toast('Member! Everything unlocked for a year');
+      notify('Membership active', 'Welcome to Orignals — 1 year, everything access.');
+      VIEWS.account([]);
+    }
+  });
+  return;
 }
 
 function editProfile() {
@@ -206,7 +205,7 @@ async function redeemRef() {
     }
   }
   S.refRedeemed = v;
-  walletAdd(50, 'Referral bonus · ' + v);
+  earnCredit(50, 'Referral bonus · ' + v);
   confettiBurst(); toast('₹50 added — your friend gets ₹50 too!');
   VIEWS.account([]);
 }

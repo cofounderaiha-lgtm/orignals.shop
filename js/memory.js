@@ -21,7 +21,7 @@ function memRegisters() {
   return {
     name: (typeof displayName === 'function') ? displayName() : 'Guest',
     addr: (S.user && S.user.addr) ? S.user.addr.name : '',
-    wallet: (S.wallet ? S.wallet.bal : 0),
+    earned: (typeof earnedTotal === 'function' ? earnedTotal() : 0),
     cartItems: (S.cart && S.cart.items) ? Object.keys(S.cart.items).length : 0,
     orders: (S.orders || []).length,
     lastIntent: window._mitraLastIntent || null

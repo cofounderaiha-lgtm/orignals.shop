@@ -82,7 +82,12 @@ function defaultState() {
     theme: 'light',
     mode: 'buy',                              // buy | earn
     user: { name: 'Friend', phone: '', addr: DB.places[0] },
-    wallet: { bal: 500, txns: [{ id: uid(), ts: Date.now(), label: 'Welcome gift 🎉', amt: +500 }] },
+    /* NO WALLET. There is no client-side balance and no stored value.
+       Real money moves only through UPI/Card (Razorpay) or cash on delivery.
+       Partner/shop earnings live in S.earnings as a record of what is OWED —
+       not a spendable balance. Removed 2026-07-17: the old wallet minted
+       money on the device (₹500 welcome gift, Mitra "add 500", instant
+       refunds), which made every revenue number fiction. */
     cart: { shopId: null, items: {} },        // one shop at a time
     orders: [],                               // unified orders across everything
     notifs: [],
@@ -146,7 +151,7 @@ function setMode(m) {
 
 /* ---------- chrome (header + bottom nav) ---------- */
 function refreshChrome(current) {
-  $('#walletChip').textContent = money(S.wallet.bal);
+  /* wallet chip removed — there is no balance to show (see defaultState) */
   const visualMode = current === 'home' ? S.mode : (['earn', 'earnings'].includes(current) ? 'earn' : 'buy');
   $('#modeToggle').className = 'mode-toggle ' + visualMode;
   $$('.hd-link').forEach(b => b.classList.toggle('active', b.dataset.v === current));
@@ -206,17 +211,18 @@ function notify(title, body, emoji) {
 }
 function notifUnread() { return S.notifs.filter(n => !n.read).length; }
 
-/* ---------- wallet ---------- */
-function walletAdd(amt, label) {
-  S.wallet.bal += amt;
-  S.wallet.txns.unshift({ id: uid(), ts: Date.now(), label, amt });
+/* ---------- earnings ledger (what the platform OWES a partner/shop) ----------
+   This is NOT a wallet and NOT spendable. It records money earned by
+   delivering or selling, which is paid out to the person's UPI/bank.
+   It can never be used to pay for anything inside the app. */
+function earnCredit(amt, label) {
+  if (!amt || amt <= 0) return;
+  if (!S.earnings) S.earnings = [];
+  S.earnings.unshift({ id: uid(), ts: Date.now(), label, amt, paid: false });
+  S.earnings = S.earnings.slice(0, 200);
   save(); refreshChrome();
 }
-function walletPay(amt, label) {
-  if (S.wallet.bal < amt) return false;
-  walletAdd(-amt, label);
-  return true;
-}
+function earnedTotal() { return (S.earnings || []).reduce((a, e) => a + (e.paid ? 0 : (e.amt || 0)), 0); }
 
 /* ---------- cart (single shop at a time) ---------- */
 function findShop(id) { return DB.shops.find(s => s.id === id); }
@@ -345,9 +351,17 @@ function cancelOrder(oid) {
   if (o.cloudShop && typeof CLOUD !== 'undefined' && CLOUD.on) {
     cloudFetch('rpc/shop_order_cancel', { method: 'POST', body: JSON.stringify({ p_id: o.id, p_device: S.deviceKey || 'anon' }) }).catch(() => {});
   }
-  walletAdd(o.total, 'Refund · ' + o.id + ' · ' + o.title);
-  notify('Order cancelled', money(o.total) + ' refunded to your wallet instantly', 'x');
-  toast('Cancelled — ' + money(o.total) + ' refunded to wallet');
+  /* No instant credit. A refund is a real money movement back to the original
+     payment method — handled by the refund flow, manually at pilot volume.
+     Cash-on-delivery orders were never charged, so nothing is refunded. */
+  o.refundDue = (o.payMethod === 'cod') ? 0 : o.total;
+  if (o.refundDue) {
+    notify('Order cancelled', money(o.refundDue) + ' will be refunded to the account you paid from (3–5 working days).', 'x');
+    toast('Cancelled — refund to your original payment method');
+  } else {
+    notify('Order cancelled', o.title + ' — nothing was charged.', 'x');
+    toast('Cancelled — nothing was charged');
+  }
   if (typeof renderTrack === 'function' && $('#trackWrap')) renderTrack(oid);
   refreshChrome();
 }
@@ -402,7 +416,6 @@ function renderCheckout() {
     else cpMsg = `<span class="bad">Invalid code</span>`;
   }
   const final = Math.max(cfg.total - off, 0);
-  const canWallet = S.wallet.bal >= final;
   sheet(`
     <div class="sheet-grab"></div>
     <div class="ck-head"><span class="ck-ic">${ic(cfg.icon || 'receipt', 22)}</span>
@@ -418,8 +431,6 @@ function renderCheckout() {
     </div>
     <div class="ck-cpmsg">${cpMsg}</div>
     <div class="ck-pays">
-      <button class="ck-pay ${canWallet ? '' : 'dis'}" onclick="${canWallet ? `paySelected(${final},${off},'wallet')` : `toast('Wallet balance is low — add money or pay by UPI')`}">
-        <span>${ic('wallet', 20)}</span><div><b>Orignals Wallet</b><small>Balance ${money(S.wallet.bal)}</small></div><em>${canWallet ? 'Pay ' + money(final) : 'Low balance'}</em></button>
       <button class="ck-pay" onclick="paySelected(${final},${off},'upi')">
         <span>${ic('card', 20)}</span><div><b>UPI / Card</b><small>GPay · PhonePe · Paytm · any bank app</small></div><em>Pay ${money(final)}</em></button>
       <button class="ck-pay" onclick="paySelected(${final},${off},'cod')">
@@ -428,12 +439,9 @@ function renderCheckout() {
 }
 function paySelected(final, off, method) {
   const cfg = window._ckCfg;
-  if (method === 'wallet' && !walletPay(final, cfg.title)) { toast('Wallet balance is low', '👛'); return; }
   if (method === 'upi') {
     /* real money: Razorpay order → checkout → server-side signature verify */
     payViaRazorpay(final, { purpose: 'order', ref: cfg.title, desc: cfg.title }, (payId) => {
-      S.wallet.txns.unshift({ id: uid(), ts: Date.now(), label: cfg.title + ' · UPI ·' + String(payId).slice(-6), amt: -final, ext: true });
-      save();
       closeSheet(); confettiBurst();
       cfg.onPay(final, off, 'upi');
     });

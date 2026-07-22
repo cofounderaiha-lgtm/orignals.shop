@@ -29,9 +29,8 @@ function reasonExplainHTML(rec) {
 
 /* CRE applied to an order: goal + constraints + evidence + confidence */
 function reasonOrder(shop, item, q, total) {
-  const wallet = (S.wallet ? S.wallet.bal : 0);
   const constraints = [
-    { name: 'within wallet', ok: wallet >= total },
+    { name: 'payable (UPI / card / COD)', ok: total > 0 },
     { name: 'shop verified', ok: !!(shop && (shop.verified !== false)) },
     { name: 'item available', ok: !!(item && item.open !== false) }
   ];
@@ -49,7 +48,7 @@ function planDecompose(kind) {
   const P = {
     order: [
       ['find', 'Find the item at a verified shop', []],
-      ['check', 'Check price & your wallet', ['find']],
+      ['check', 'Check price & delivery fee', ['find']],
       ['reason', 'Decide (constraints + confidence)', ['check']],
       ['pay', 'Place order & pay', ['reason']],
       ['match', 'Match a delivery partner', ['pay']],
