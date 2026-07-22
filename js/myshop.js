@@ -346,6 +346,12 @@ function renderShopDash() {
   </div>
 
   <div class="card-block">
+    <h3>${ic('package', 14)} Stock &amp; supply chain</h3>
+    <p class="movie-about">See what you hold and what's running out, order stock from wholesalers and manufacturers, and confirm deliveries — the batch number travels with the goods, so purity can be traced back up the chain.</p>
+    <button class="btn-main sm" onclick="go('supply')">${ic('package', 13)} Open stock &amp; supply</button>
+  </div>
+
+  <div class="card-block">
     <h3>${ic('chart', 14)} What-if simulator</h3>
     <p class="movie-about">Before you change a price, simulate it. Mitra projects demand &amp; revenue across scenarios with a price-elasticity model — decision support, not a guess. (This is the Commerce World Model, running on your own numbers.)</p>
     <button class="btn-main sm" onclick="shopSimulate()">${ic('spark', 13)} Run a price simulation</button>
@@ -466,6 +472,8 @@ function shopOrderAct(oid, act) {
     o.status = 'done'; pushCloud('done');
     M.revenue += o.total;
     earnCredit(o.total, 'Sale · ' + o.id + '');
+    /* the sale draws stock down — this is what keeps inventory honest */
+    if (typeof supApi === 'function') supApi('stock_sell', { p_items: (o.items || []).map(i => ({ name: i.name, qty: i.q || 1 })), p_ref: o.id });
     confettiBurst(); toast('+' + money(o.total) + ' — sale complete!', '💰');
   }
   save(); renderShopDash();

@@ -307,7 +307,7 @@ async function brainAskClaude(raw) {
       headers: {
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        /* no browser key header — the proxy holds the key server-side */
       },
       body: JSON.stringify({
         model: cfg.model || 'claude-haiku-4-5',
