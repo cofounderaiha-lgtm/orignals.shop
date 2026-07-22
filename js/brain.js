@@ -285,12 +285,26 @@ function brainExportJSONL() {
    ============================================================ */
 async function brainAskClaude(raw) {
   const cfg = (window.ORIGNALS_CONFIG || {}).llm || {};
-  if (!cfg.apiKey || cfg.apiKey.includes('YOUR-')) return null;
+  /* ⚠ DISABLED 2026-07-17 — SECURITY.
+     This used to call api.anthropic.com FROM THE BROWSER with
+     'x-api-key': cfg.apiKey and 'anthropic-dangerous-direct-browser-access'.
+     config.js is a public static asset served to every visitor, so the moment
+     anyone pasted a real key there (which config.js literally instructed them
+     to do) the key was published to the world — readable with one curl, cached
+     by the CDN and the service worker, and committed to git history. There is
+     no rotation-free recovery from that.
+     No key was ever committed, so nothing is burned — this closes the path
+     before it can be armed.
+     To enable escalation properly: create a Supabase edge function holding
+     ANTHROPIC_API_KEY in Deno.env (mirror supabase/functions/razorpay-verify/),
+     cap max_tokens + input length + rate, and call THAT from here. Until such a
+     function exists, Mitra runs on the on-device brain + rules, which is the
+     default and costs nothing. */
+  if (!cfg.proxyUrl) return null;
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(cfg.proxyUrl, {
       method: 'POST',
       headers: {
-        'x-api-key': cfg.apiKey,
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
         'anthropic-dangerous-direct-browser-access': 'true'
