@@ -259,6 +259,9 @@ async function shopCloudSync() {
       if (js[0].status === 'done' && o.status !== 'done') {
         o.status = 'done'; M.revenue += o.total;
         earnCredit(o.total, 'Sale · ' + o.id);
+        /* partner-delivered sales draw stock down too — same as counter sales.
+           Both completion paths must move inventory or the ledger lies. */
+        if (typeof supApi === 'function') supApi('stock_sell', { p_items: (o.items || []).map(i => ({ name: i.name, qty: i.q || 1 })), p_ref: o.id });
         cloudShopOrderStatus(o.id, 'done'); changed = true;
         confettiBurst(); toast('+' + money(o.total) + ' — delivered by partner, sale complete!');
       }
