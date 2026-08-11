@@ -15,7 +15,8 @@ where schemaname='public' and roles::text like '%public%'
   and tablename in ('payments','shop_orders','orders','order_events','auth_sessions',
                     'app_users','listing_leads','reservations','error_log','verify_queue',
                     'partners','state_snapshots','kyc_docs','face_enrollments','wallet_txns',
-                    'wallet_balances','purchase_orders','stock_ledger','otp_challenges')
+                    'wallet_balances','purchase_orders','stock_ledger','otp_challenges',
+                    'mitra_utterances','mitra_model','doc_requests')
 
 union all
 -- (b) no permissive UPDATE/DELETE (using true) on any core / ownable table
@@ -33,5 +34,16 @@ union all
 select 'setup_code exposed', 'platform_flags', column_name
 from information_schema.columns
 where table_schema='public' and table_name='platform_flags' and column_name='admin_setup_code'
+
+union all
+-- (d) device_key / owner_device must not be anon-SELECTable on the column-protected
+-- tables (migration 0011 revokes these). live_jobs/listings are excluded here: they
+-- keep a public row read until the client switches to open_jobs/listings_feed, at
+-- which point add them and drop their read policies.
+select 'device_key column anon-readable', table_name, column_name
+from information_schema.column_privileges
+where grantee='anon' and privilege_type='SELECT' and table_schema='public'
+  and column_name in ('device_key','owner_device','buyer_device')
+  and table_name in ('seat_bookings','geo_places','shop_ratings')
 
 order by 1,2;
