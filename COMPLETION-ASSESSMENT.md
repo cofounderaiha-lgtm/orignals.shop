@@ -151,16 +151,32 @@ passes schema/RLS/RPC/order/payment/concurrency/negative-authorization tests.**
 
 ---
 
-## Agent-drafted target migrations — UNVERIFIED, FROZEN
-During the audit, domain agents drafted target migrations for their areas. They are
-in `supabase/migrations/` and **must be treated as unreviewed drafts, not applied
-work**: `0011_inventory_reservations`, `0013_eta_engine`, `0014_search`,
-`0017_events`, `0019_shop_intelligence`, `0020_observability`. Each is marked
-NOT-YET-APPLIED. They align with the roadmap and coordinate on a shared `events`
-contract, but **none has been reviewed line-by-line or staged**. Before any of them
-is considered: full review, dependency/numbering reconciliation (gaps at 0012/0015–
-0018; two `0011`s must be renumbered — the device_key security migration should own
-an earlier number), then staging validation. Do **not** apply any of them.
+## Agent-drafted target migrations — REVIEWED (adversarial, line-by-line 2026-08-11)
+Each agent draft was reviewed by a dedicated adversarial reviewer against the real
+schema + client. Outcome:
+- **`0012_inventory_reservations` → DELETED.** Dead (zero client callers), unnecessary
+  for the current human-accept order model, and would break checkout marketplace-wide
+  if wired (community shops never credit on_hand, so reserve fails closed). Also had a
+  P1 item_name-casing double-deduct vs 0005-0007 and P1 anon RPCs with no ownership.
+  A reservation layer returns only when a real stock-gated checkout exists.
+- **`0017_events` → DELETED.** Dead; duplicated the live `analytics_events`/`track_hit`
+  subsystem; false header "contract" claim; anon `emit_event` could spoof actor.
+- **`0013_eta_engine` → KEPT + FIXED.** Removed the anon grant on `eta_record`
+  (median-poisoning), dropped a dead index, added an upper-bound sample validator.
+  Sound ETA math. Still dead until the client (core.js) and leg-completion RPCs call it.
+- **`0014_search` → KEPT + FIXED.** P0: synonym expansion AND-combined (search returned
+  nothing) → now OR-joined. Dropped the dead `shops.search_vec` generated column + 2
+  unused indexes. Dead until js/shops.js calls `rpc/search_items`.
+- **`0019_shop_intelligence` → KEPT + FIXED.** P1: self-proof inserted real `shop_orders`
+  which fired the settlement trigger and left phantom `settlement_ledger` rows — now
+  cleaned up. Read-only, device-scoped tools. Dead until a myshop insights panel calls it.
+- **`0020_observability` → KEPT + FIXED.** P1: anon `op_log_write` forced to
+  `source='client'` (was forgeable) and its jsonb detail capped; dropped 2 speculative
+  indexes; added retention. Dead until edge fns + ops.js call it.
+All KEPT drafts remain **FROZEN — NOT FOR PRODUCTION**, each with its named paired
+client change and remaining Stage-2 notes inline. Lower-priority review items (0013
+sargable band index; 0014 down-migration; 0019 revenue-basis consistency; 0020 self-
+proof isolation) are documented in each file for the staging pass.
 
 ## Biggest risks (fix-first)
 1. **`device_key` world-readable** → account takeover. (Phase 1)

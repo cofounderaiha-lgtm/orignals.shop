@@ -33,13 +33,22 @@ create table if not exists op_log (
   latency_ms int
 );
 
--- recent-first scans (op_log_recent, dashboards)
+-- recent-first scans (op_log_recent, dashboards, and op_health's windowed rollups)
 create index if not exists op_log_at_idx on op_log (at desc);
--- error-only partial index keeps op_health's hot path tiny even as
--- info volume dominates
-create index if not exists op_log_err_idx on op_log (source, at desc) where level = 'error';
--- latency percentiles are computed over rows that carry a latency
-create index if not exists op_log_lat_idx on op_log (at desc) where latency_ms is not null;
+-- (dropped op_log_err_idx + op_log_lat_idx — a brand-new zero-caller table does
+--  not justify 3 indexes; op_log_at_idx serves the time-windowed reads. Re-add a
+--  partial (source, at) where level='error' only if op_health p95 proves it needed.)
+
+-- retention: probabilistic trim (same pattern as error_log) so op_log cannot grow
+-- unbounded. ~1% of inserts prune rows older than 14 days — cheap, self-cleaning,
+-- no cron dependency at this scale.
+create or replace function _op_log_trim() returns trigger language plpgsql as $$
+begin
+  if random() < 0.01 then delete from op_log where at < now() - interval '14 days'; end if;
+  return null;
+end $$;
+drop trigger if exists t_op_log_trim on op_log;
+create trigger t_op_log_trim after insert on op_log for each statement execute function _op_log_trim();
 
 -- RLS on, ZERO policies → the public anon role can neither SELECT nor
 -- write directly. Writes flow through op_log_write (SECURITY DEFINER),
@@ -59,11 +68,20 @@ language plpgsql security definer set search_path = public as $$
 begin
   insert into op_log(source, level, event, ref, detail, latency_ms)
   values (
-    case when coalesce(p_source,'') in ('edge','rpc','webhook','client') then p_source else 'client' end,
+    -- FORCED to 'client': this RPC is granted to anon, and the public anon key is
+    -- the only key a browser holds, so it may only self-report as 'client'. Trusted
+    -- edge/rpc/webhook logging is written by the SERVICE ROLE via a DIRECT insert
+    -- into op_log (it bypasses RLS), carrying its real source. Previously p_source
+    -- was accepted from anon → op_health's by-source rollups were spoofable
+    -- (review 0020 P2). p_source is ignored on this path.
+    'client',
     case when coalesce(p_level,'')  in ('info','warn','error')          then p_level  else 'info'   end,
     left(coalesce(nullif(trim(p_event),''),'(none)'), 120),
     left(p_ref, 120),
-    p_detail,
+    -- cap caller-controlled detail: an anon caller must not be able to store an
+    -- unbounded jsonb blob (review 0020 P1). Over 2KB → replaced with a marker.
+    case when p_detail is not null and pg_column_size(p_detail) > 2048
+         then jsonb_build_object('truncated', true) else p_detail end,
     case when p_latency between 0 and 3600000 then p_latency else null end
   );
 exception when others then
@@ -176,15 +194,20 @@ begin
   insert into auth_sessions(token, ident, device_key) values (v_tok, v_admin, 'dev_optest')
     on conflict (token) do nothing;
 
-  -- exercise the real write RPC (what edge/rpc/webhook/client will call)
-  perform op_log_write('edge','error','optest_err','__optest_r1__', jsonb_build_object('k',1), 42);
-  perform op_log_write('edge','error','optest_err','__optest_r2__', null, 120);
-  perform op_log_write('rpc', 'info', 'optest_ok', '__optest_r3__', null, 8);
-  -- garbage source/level normalized, negative latency clamped to null
-  perform op_log_write('nonsense','weird','optest_norm','__optest_r4__', null, -5);
+  -- trusted edge/webhook/rpc logging = a DIRECT insert by the SERVICE ROLE
+  -- (simulated here as the migration owner); these carry their real source.
+  insert into op_log(source,level,event,ref,detail,latency_ms) values
+    ('edge','error','optest_err','__optest_r1__', jsonb_build_object('k',1), 42),
+    ('edge','error','optest_err','__optest_r2__', null, 120),
+    ('rpc', 'info', 'optest_ok', '__optest_r3__', null, 8);
+  -- the ANON write RPC must FORCE source='client' + normalize level + clamp latency,
+  -- whatever is passed.
+  perform op_log_write('edge','weird','optest_norm','__optest_r4__', null, -5);
 
   select count(*) into v_n from op_log where ref like '__optest_%';
-  assert v_n = 4, 'FAIL: op_log_write did not append all 4 rows';
+  assert v_n = 4, 'FAIL: writes did not append all 4 rows';
+  assert (select source from op_log where ref='__optest_r4__') = 'client',
+         'FAIL: op_log_write did not force source=client';
   assert (select level from op_log where ref='__optest_r4__') = 'info',
          'FAIL: invalid level not normalized';
   assert (select latency_ms from op_log where ref='__optest_r4__') is null,

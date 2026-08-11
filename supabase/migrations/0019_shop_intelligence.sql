@@ -311,6 +311,12 @@ begin
   if to_regclass('public.shop_order_events') is not null then
     delete from shop_order_events where order_id in ('INTEL_O1','INTEL_O2','INTEL_O3');
   end if;
+  -- CRITICAL (review 0019 P1): inserting shop_orders fires trg_settle_shop_order
+  -- (settlements_schema.sql:53) which writes settlement_ledger rows. Clean those
+  -- too, or the proof leaves PHANTOM FINANCIAL rows behind after it runs.
+  if to_regclass('public.settlement_ledger') is not null then
+    delete from settlement_ledger where order_ref in ('INTEL_O1','INTEL_O2','INTEL_O3');
+  end if;
 
   -- realised sales: Samosa is the clear best-seller; O3 is 'new' and must be excluded
   insert into shop_orders(id, shop_id, buyer_device, items, total, status, created_at) values
@@ -360,6 +366,12 @@ begin
   delete from stock_ledger where shop_id = v_shop;
   if to_regclass('public.shop_order_events') is not null then
     delete from shop_order_events where order_id in ('INTEL_O1','INTEL_O2','INTEL_O3');
+  end if;
+  -- CRITICAL (review 0019 P1): inserting shop_orders fires trg_settle_shop_order
+  -- (settlements_schema.sql:53) which writes settlement_ledger rows. Clean those
+  -- too, or the proof leaves PHANTOM FINANCIAL rows behind after it runs.
+  if to_regclass('public.settlement_ledger') is not null then
+    delete from settlement_ledger where order_ref in ('INTEL_O1','INTEL_O2','INTEL_O3');
   end if;
 
   raise notice 'PASS: shop intelligence verified (top item, revenue, reorder flag, twin rollup)';

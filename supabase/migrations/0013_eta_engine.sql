@@ -33,10 +33,14 @@ create table if not exists eta_samples (
   secs  int     not null check (secs >= 0),
   at    timestamptz not null default now()
 );
--- the hot read is "median secs/km for this kind in this distance band,
--- recent-first" — a (kind, km) index serves the band scan cheaply.
+-- the hot read is "median secs/km for this kind in this distance band" — a
+-- (kind, km) index serves the band scan cheaply.
+-- (STAGE-2 perf note from review: the read filters _eta_band(km)=_eta_band(v_km),
+--  a function over the column, so this index restricts by kind but not the band;
+--  when volume justifies it, add a stored `band` column and index (kind,band).)
 create index if not exists idx_eta_samples_kind_km on eta_samples(kind, km);
-create index if not exists idx_eta_samples_at      on eta_samples(at desc);
+-- (dropped idx_eta_samples_at — the median query has no time window/ORDER BY at,
+--  so a recency index earns nothing until a windowed query exists.)
 
 alter table eta_samples enable row level security;
 -- No PII, no money, no device link — pure operational telemetry. But we
@@ -167,12 +171,22 @@ begin
   if p_km >= 0.2 and p_secs::numeric / p_km < 30 then
     return json_build_object('ok', false, 'reason', 'implausible_speed');
   end if;
+  -- also reject absurdly SLOW samples (> 3600 s/km ≈ under 1 km/h) — a stuck GPS
+  -- or a forgotten open leg would otherwise drag the median up (review 0013 P2).
+  if p_km >= 0.2 and p_secs::numeric / p_km > 3600 then
+    return json_build_object('ok', false, 'reason', 'implausible_slow');
+  end if;
 
   insert into eta_samples(kind, km, secs) values (p_kind, round(p_km, 3), p_secs);
   select count(*) into v_n from eta_samples where kind = p_kind;
   return json_build_object('ok', true, 'kind', p_kind, 'samples', v_n);
 end $$;
-grant execute on function eta_record(text, numeric, int) to anon;
+-- eta_record is INTERNAL — NOT granted to anon. It is invoked by leg-completion
+-- RPCs (job_picked / job_deliver, themselves SECURITY DEFINER, so they run as
+-- owner and may call it) when this migration is staged. Granting it to anon would
+-- let the public anon key inject samples and poison the per-band median (review
+-- 0013 P2). The proof below calls it as the migration owner, which is fine.
+-- (no anon grant — deliberately)
 
 -- ---------- proof (expect PASS) ----------
 do $$

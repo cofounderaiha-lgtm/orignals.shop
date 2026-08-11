@@ -73,19 +73,19 @@ alter table shop_items
   add column if not exists search_vec tsvector
   generated always as (to_tsvector('english'::regconfig, coalesce(name,'') || ' ' || coalesce(qty_label,''))) stored;
 
-alter table shops
-  add column if not exists search_vec tsvector
-  generated always as (to_tsvector('english'::regconfig,
-    coalesce(name,'') || ' ' || coalesce(category,'') || ' ' || coalesce(tagline,''))) stored;
+-- (shops.search_vec generated column DROPPED — review 0014 P1: the ranked search
+--  is item-centric (ranks over shop_items.search_vec + shop-name trigram); a shops
+--  FTS vector was never queried, and as a GENERATED column it would be returned by
+--  every `shops?select=*` client read (cloud.js:296), bloating the payload. Shop
+--  name matching uses idx_shops_name_trgm below.)
 
--- FTS indexes
+-- FTS index (items only)
 create index if not exists idx_items_fts on shop_items using gin (search_vec);
-create index if not exists idx_shops_fts on shops     using gin (search_vec);
 
--- trigram indexes (typo tolerance + prefix autocomplete)
+-- trigram indexes — used by the % operator forms in search_suggest and shop-name
+-- matching (typo tolerance + prefix autocomplete)
 create index if not exists idx_items_name_trgm on shop_items using gin (name gin_trgm_ops);
 create index if not exists idx_shops_name_trgm on shops      using gin (name gin_trgm_ops);
-create index if not exists idx_shops_cat_trgm  on shops      using gin (category gin_trgm_ops);
 
 -- ---------- helpers ----------
 -- haversine distance in km (uniquely named to avoid clobbering any existing fn)
@@ -106,7 +106,11 @@ returns text language sql stable as $$
   with toks as (
     select t from unnest(string_to_array(lower(trim(coalesce(p_q,''))), ' ')) t where t <> ''
   )
-  select string_agg(w, ' ')
+  -- OR-join, not space-join: websearch_to_tsquery treats spaces as AND, so
+  -- expanding 'atta' -> 'atta flour' produced the tsquery `atta & flour`, which
+  -- matches NOTHING (an item named "Flour" lacks "atta"). Synonyms must BROADEN
+  -- recall, so join with ' OR ' → websearch gives `atta | flour`. (review 0014 P0)
+  select string_agg(w, ' OR ')
   from (
     select t          as w from toks
     union
