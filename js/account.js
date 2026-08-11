@@ -77,7 +77,7 @@ view('account', () => {
   </div>
 
   ${isGuest()
-    ? `<button class="role-row highlight" onclick="go('login')"><span>${ic('shield', 20)}</span><div><b>Sign in / Create account</b><small>Secure your wallet, orders &amp; data across devices</small></div><em>Go</em></button>`
+    ? `<button class="role-row highlight" onclick="go('login')"><span>${ic('shield', 20)}</span><div><b>Sign in / Create account</b><small>Secure your orders, earnings &amp; data across devices</small></div><em>Go</em></button>`
     : `<div class="sec-head"><h2>Account &amp; security</h2></div>${typeof authBadgeHTML === 'function' ? authBadgeHTML() : ''}`}
 
   <div class="sec-head"><h2>Settings</h2></div>
@@ -96,7 +96,7 @@ view('account', () => {
 
   <div class="card-block">
     <h3>${ic('gift', 15)} Refer &amp; earn — ₹50 each</h3>
-    <p class="movie-about">Share your code. When a friend joins and places their first order, you both get ₹50 in wallet.</p>
+    <p class="movie-about">Share your code. When a friend joins and places their first order, you both earn ₹50 — paid out to your UPI.</p>
     <div class="ck-coupon"><input value="${S.refCode}" readonly id="refCodeBox"/><button onclick="copyRef()">Copy</button></div>
     ${S.refRedeemed ? `<div class="trust-row">${ic('check', 13)} Friend's code applied — ₹50 credited</div>`
       : `<div class="ck-coupon" style="margin-top:8px"><input id="refIn" placeholder="Have a friend's code? ORIG-XXXXX"/><button onclick="redeemRef()">Apply</button></div>`}

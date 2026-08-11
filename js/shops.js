@@ -457,8 +457,8 @@ function renderTrack(oid) {
     <div class="ck-line grand"><span>Paid</span><span>${money(o.total)}</span></div>
   </div>
 
-  ${o.cancelled ? `<div class="warn-strip">${ic('x', 13)} Cancelled — <b>${money(o.total)} refunded</b> to your wallet. No questions asked.</div>` : ''}
-  ${!done && canCancel(o) ? `<button class="btn-main wide ghost red" onclick="if(confirm('Cancel this order? Full ${money(o.total)} refunds to wallet instantly.'))cancelOrder('${o.id}')">Cancel order — full refund</button>` : ''}
+  ${o.cancelled ? `<div class="warn-strip">${ic('x', 13)} Cancelled — ${o.refundDue ? `<b>${money(o.refundDue)}</b> refunds to your original payment method (3–5 working days)` : 'nothing was charged'}.</div>` : ''}
+  ${!done && canCancel(o) ? `<button class="btn-main wide ghost red" onclick="if(confirm('Cancel this order? Any online payment is refunded to your original method; cash-on-delivery orders are never charged.'))cancelOrder('${o.id}')">Cancel order</button>` : ''}
   ${done && !o.rated && !o.cancelled ? `
   <div class="card-block rate-block">
     <h3>Rate this ${o.kind === 'ride' ? 'ride' : 'delivery'}</h3>
@@ -527,7 +527,7 @@ async function chatSend() {
 
 function cancelScheduled(i) {
   const r = (S.scheduled || [])[i]; if (!r) return;
-  if (!confirm('Cancel your scheduled ride at ' + r.when + '? Full refund to wallet.')) return;
+  if (!confirm('Cancel your scheduled ride at ' + r.when + '? Any payment is refunded to your original method.')) return;
   S.scheduled.splice(i, 1);
   /* refund goes to the original payment method — no minted credit */
   save(); toast('Scheduled ride cancelled — ' + money(r.total) + ' refunded');

@@ -24,8 +24,17 @@ create index if not exists shop_orders_shop_idx on shop_orders (shop_id, created
 create index if not exists shop_orders_buyer_idx on shop_orders (buyer_device, created_at desc);
 
 alter table shop_orders enable row level security;
+-- ⚠ SECURITY (2026-08-11): NO blanket anon SELECT. This table carries buyer PII
+-- (name, address, GPS) and the delivery handover OTP. A `so_read using(true)`
+-- policy (previously declared here) let anyone with the PUBLIC anon key read
+-- every order's OTP + address → delivery interception at scale. Reads go through
+-- security-definer RPCs scoped to the caller: my_shop_orders() (shop reads its
+-- own), order_statuses() (buyer polls its own), order_timeline() (either party).
+-- See harden_rls.sql and migrations/0009. Do NOT reintroduce so_read.
 drop policy if exists so_read on shop_orders;
-create policy so_read on shop_orders for select using (true);
+-- INSERT stays anon: a buyer on any device must be able to place an order onto
+-- the shop's device. It is append-only (no anon UPDATE/DELETE); status moves
+-- only via shop_order_status()/shop_order_cancel() (device-scoped, audited).
 drop policy if exists so_insert on shop_orders;
 create policy so_insert on shop_orders for insert with check (true);
 

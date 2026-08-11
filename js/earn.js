@@ -65,7 +65,7 @@ function renderEarnSell(kind) {
     <div class="pitch-live"><i></i>Every shop &amp; service in India can sell here</div>
     <h1>${isSvc ? 'Your skill,<br/><span>booked online.</span>' : 'Your shop,<br/><span>selling to the street.</span>'}</h1>
     <p>${isSvc
-      ? 'Tailor, salon, tutor, electrician, plumber — list your service, take bookings from everyone nearby, get paid to your wallet instantly.'
+      ? 'Tailor, salon, tutor, electrician, plumber — list your service, take bookings from everyone nearby, get paid straight to your bank/UPI.'
       : 'Kirana, restaurant, pharmacy, wholesaler — list your products and everyone near you can order. You keep 100% of the item price. Deliver yourself or let a nearby partner carry it.'}</p>
     <div class="btn-pair hero-cta">
       <button class="btn-cta" onclick="startShopReg()">${isSvc ? 'List my service' : 'Register my shop'} — 2 min</button>
@@ -89,7 +89,7 @@ function renderEarnSell(kind) {
 
   <div class="how-grid tinted">
     <div class="how"><span>${ic('edit', 22)}</span><b>2-minute setup</b><p>Name, category, address, timings — big buttons, no confusing forms. Add GST/FSSAI if you have them.</p></div>
-    <div class="how"><span>${ic('cash', 22)}</span><b>Money instantly</b><p>Every sale lands in your wallet the moment it's delivered. Daily settlement to your bank.</p></div>
+    <div class="how"><span>${ic('cash', 22)}</span><b>Money instantly</b><p>Every sale is credited to your earnings the moment it's delivered. Daily settlement to your bank.</p></div>
     <div class="how"><span>${ic('leaf', 22)}</span><b>Purity badge</b><p>Sell natural &amp; unadulterated? Our field team verifies your batches — the Purity seal sells itself.</p></div>
     <div class="how"><span>${ic('chart', 22)}</span><b>Grow with data</b><p>Live sales chart, stock control, offers and a shareable shop link — all built in.</p></div>
   </div>
@@ -145,7 +145,7 @@ function renderEarnPitch() {
   <div class="how-grid tinted">
     <div class="how"><span>${ic('camera', 22)}</span><b>CV-verified identity</b><p>Live face scan matched to your govt ID by high-precision computer vision. The vehicle's plate &amp; model are verified too.</p></div>
     <div class="how"><span>${ic('pin', 22)}</span><b>Jobs on your path</b><p>Going somewhere? Rides and parcels along the same route stack into one trip — more earnings per kilometre.</p></div>
-    <div class="how"><span>${ic('cash', 22)}</span><b>Instant money</b><p>OTP handover, live GPS trace, money in your wallet the second you deliver. Withdraw to UPI anytime.</p></div>
+    <div class="how"><span>${ic('cash', 22)}</span><b>Instant money</b><p>OTP handover, live GPS trace, earnings added the second you deliver. Withdraw to UPI anytime.</p></div>
     <div class="how"><span>${ic('gift', 22)}</span><b>Seva mode</b><p>Help a neighbour free — toggle seva, deliver at zero charge, earn community karma instead.</p></div>
   </div>
 

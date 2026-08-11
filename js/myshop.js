@@ -28,7 +28,7 @@ function renderShopPitch() {
   <div class="how-grid">
     <div class="how"><span>${ic('edit', 22)}</span><b>Easy registration</b><p>Name, category, address, timings — big buttons, no confusing forms. Add GST/FSSAI if you have them. No signup fee. First month complimentary, then your tier: Individual 1 CHF/yr up to Manufacturer 100 CHF/yr.</p></div>
     <div class="how"><span>${ic('truck', 22)}</span><b>Delivery, your way</b><p>Deliver with your own staff, or tap once and a verified partner passing nearby picks it up.</p></div>
-    <div class="how"><span>${ic('cash', 22)}</span><b>Money, instantly</b><p>Every sale lands in your wallet the moment it's delivered. Daily settlement to your bank.</p></div>
+    <div class="how"><span>${ic('cash', 22)}</span><b>Money, instantly</b><p>Every sale is credited to your earnings the moment it's delivered. Daily settlement to your bank.</p></div>
     <div class="how"><span>${ic('leaf', 22)}</span><b>Purity badge</b><p>Sell natural &amp; unadulterated? Our field team verifies your batches — the Purity ✓ seal sells itself.</p></div>
   </div>`;
 }
@@ -439,7 +439,7 @@ function shopOrderAct(oid, act) {
   /* alert the buyer's phone even if their app is closed */
   const alertBuyer = (title, bodyTxt) => { if (o.real && o.buyer && o.buyer.device && typeof cloudPushTo === 'function') cloudPushTo({ device_key: o.buyer.device, title, body: bodyTxt, url: '#/orders' }); };
   if (act === 'accept') { o.status = 'prep'; pushCloud('prep'); alertBuyer('Order accepted', M.name + ' is preparing your order'); toast('Order accepted — pack it up!', '📦'); }
-  if (act === 'reject') { o.status = 'rejected'; pushCloud('rejected'); alertBuyer('Order refunded', M.name + ' could not take the order — money is back in your wallet'); toast('Order rejected & refunded', ''); }
+  if (act === 'reject') { o.status = 'rejected'; pushCloud('rejected'); alertBuyer('Order refunded', M.name + ' could not take the order — your money is refunded to your original payment method'); toast('Order rejected & refunded', ''); }
   if (act === 'selfout') { o.status = 'selfout'; o.deliv = 'self'; pushCloud('selfout'); toast('Marked out for delivery', '🛵'); }
   if (act === 'find') {
     o.status = 'finding'; o.deliv = 'partner'; pushCloud('finding');
@@ -850,7 +850,7 @@ function payDoc(sid) {
 }
 function cancelDocRequest(id) {
   const r = (S.docRequests || []).find(x => x.id === id); if (!r) return;
-  if (!confirm('Cancel this application? Full ' + money(r.price) + ' refunds to your wallet.')) return;
+  if (!confirm('Cancel this application? ' + money(r.price) + ' is refunded to your original payment method.')) return;
   if (typeof cloudDocCancel === 'function') cloudDocCancel(id);
   r.status = 'cancelled';
   /* refund goes to the original payment method — no minted credit */

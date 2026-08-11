@@ -365,7 +365,7 @@ function renderAdminPanel(args) {
 
     <div class="sec-head"><h2>Feature tests</h2></div>
     <div class="card-block test-grid">
-      <button class="btn-main sm ghost" onclick="adminTestWallet()">${ic('wallet', 13)} Add ₹500 to wallet</button>
+      <button class="btn-main sm ghost" onclick="adminTestWallet()">${ic('wallet', 13)} Check payment mode</button>
       <button class="btn-main sm ghost" onclick="adminTestOrder()">${ic('receipt', 13)} Place a test order + track</button>
       <button class="btn-main sm ghost" onclick="adminTestPayment()">${ic('card', 13)} Test payment (create order)</button>
       <button class="btn-main sm ghost" onclick="adminTestPush()">${ic('bell', 13)} Send a test push to me</button>

@@ -181,7 +181,7 @@ view('promise', () => {
       <div class="promise-row"><i>${ic('check', 13)}</i><div><b>Delivered by neighbours you can see</b>
         <small>Every partner is ID-, face- and vehicle-verified. You see their name, their rating, their trips — and they see yours.</small></div></div>
       <div class="promise-row"><i>${ic('check', 13)}</i><div><b>The price on the card is the price you pay</b>
-        <small>No surge, no hidden fees, no dark patterns. Cancel before pickup and every rupee returns to your wallet instantly.</small></div></div>
+        <small>No surge, no hidden fees, no dark patterns. Cancel before pickup and every rupee returns to your original payment method.</small></div></div>
     </div>
     <div class="promise-foot">One promise across every service</div>
     <button class="btn-main wide" onclick="go('shops')">Shop with the promise</button>

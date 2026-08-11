@@ -22,8 +22,27 @@ const CINEMAS = [
 view('tickets', args => {
   const tab = args[0] || 'events';
 
-  const tabs = [['events', 'Events'], ['planners', 'Planners'], ['venues', 'Venues'], ['dining', 'Dining'], ['mine', 'My bookings']];
+  const tabs = [['events', 'Events'], ['movies', 'Movies'], ['planners', 'Planners'], ['venues', 'Venues'], ['dining', 'Dining'], ['mine', 'My bookings']];
   let body = '';
+
+  if (tab === 'movies') {
+    body = `
+    <div class="tip-strip">${ic('star', 13)} Now showing near you — pick a show and choose your exact seats on a live seat map. Real inventory: a seat someone else grabs is gone for you too. Digital ticket, cancellation allowed.</div>
+    <div class="event-list">
+      ${DB.movies.map(m => `
+      <div class="event-card" onclick="go('movie/${m.id}')">
+        <div class="event-img" ${m.grad ? `style="background:linear-gradient(135deg,${m.grad[0]},${m.grad[1]})"` : ''}>
+          <em>${esc(m.tag || m.cert)}</em>
+          <span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;font-size:.65rem;padding:2px 8px;border-radius:20px">★ ${m.rating}</span></div>
+        <div class="event-body">
+          <b>${esc(m.title)}</b>
+          <small>${ic('star', 11)} ${esc(m.genre)}</small>
+          <small>${ic('clock', 11)} ${esc(m.lang)} · ${m.cert} · ${Math.floor(m.mins / 60)}h ${m.mins % 60}m</small>
+          <div class="event-foot"><b>Now showing</b><em>Book seats ${ic('arrowr', 11)}</em></div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }
 
   if (tab === 'events') {
     window._evScope = window._evScope || 'All';
@@ -362,11 +381,11 @@ view('ticket', args => {
     ${(t.fnb && t.fnb.length) ? `<div class="ticket-fnb">${ic('bowl', 12)} Snacks: ${t.fnb.map(esc).join(', ')} — collect at the counter</div>` : ''}
     <div class="ticket-foot">${ic('shield', 12)} Fraud-proof: QR is single-scan, seat-locked &amp; ID-bound</div>
   </div>
-  <button class="btn-main wide ghost" onclick="cancelTicket('${t.id}')">Cancel ticket (90% refund to wallet)</button>`;
+  <button class="btn-main wide ghost" onclick="cancelTicket('${t.id}')">Cancel ticket (90% refund)</button>`;
 });
 function cancelTicket(tid) {
   const t = S.tickets.find(x => x.id === tid); if (!t) return;
-  if (!confirm('Cancel this ticket? 90% refunds to your wallet instantly.')) return;
+  if (!confirm('Cancel this ticket? 90% is refunded to your original payment method.')) return;
   /* free the seats so others can book them */
   if (t.show && t.seats && typeof cloudSeatsFreeTicket === 'function') cloudSeatsFreeTicket(tid);
   S.tickets = S.tickets.filter(x => x.id !== tid);
@@ -503,7 +522,7 @@ function cancelDining(i) {
 }
 function cancelStay(i) {
   const st = (S.stays || [])[i]; if (!st) return;
-  if (!confirm('Cancel your stay at ' + st.hotel + '? Full ' + money(st.total) + ' refunds to wallet.')) return;
+  if (!confirm('Cancel your stay at ' + st.hotel + '? ' + money(st.total) + ' is refunded to your original payment method.')) return;
   S.stays.splice(i, 1);
   /* refund goes to the original payment method — no minted credit */
   toast('Stay cancelled — ' + money(st.total) + ' refunded');

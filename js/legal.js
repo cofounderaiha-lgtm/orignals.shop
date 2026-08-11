@@ -80,7 +80,7 @@ view('legal/terms', () => {
     <h3>3. Verification &amp; trust</h3>
     <p>Partners and sellers are identity-, and where applicable vehicle- and licence-verified. Purity claims on food are checked by our field/lab process. Providing false documents leads to removal and may be reported to authorities.</p>
     <h3>4. Payments</h3>
-    <p>Prices shown are the prices you pay — no hidden surge or fees. Online payments are processed by our RBI-regulated payment partner. The in-app wallet is stored value for use on Orignals and is not a bank deposit; it earns no interest.</p>
+    <p>Prices shown are the prices you pay — no hidden surge or fees. Online payments (UPI, card or netbanking) are processed by our RBI-regulated payment partner; you may also pay cash on delivery. Orignals holds no stored-value balance on your behalf — every payment goes directly to the order, and refunds return to the original payment method.</p>
     <h3>5. Acceptable use</h3>
     <p>Do not use Orignals for anything illegal, to sell prohibited goods, to harass others, or to game incentives. We may suspend accounts that break these rules or threaten the safety of the community.</p>
     <h3>6. Liability</h3>
@@ -93,7 +93,7 @@ view('legal/terms', () => {
 view('legal/refund', () => {
   $('#view').innerHTML = legalPage('Refund &amp; Cancellation', 'When and how you get your money back', `
     <h3>1. Cancelling an order</h3>
-    <p>You can cancel free of charge <b>before the shop hands the order to a delivery partner</b> (before pickup). The full amount is returned to your Orignals wallet <b>instantly</b>. After pickup, an order can no longer be cancelled, but see refusal below.</p>
+    <p>You can cancel free of charge <b>before the shop hands the order to a delivery partner</b> (before pickup). Any online payment is refunded to your <b>original payment method</b>; cash-on-delivery orders are never charged. After pickup, an order can no longer be cancelled, but see refusal below.</p>
     <h3>2. If the shop can't take it</h3>
     <p>If a seller rejects your order, you are refunded in full automatically, with a notification.</p>
     <h3>3. Refusal at the door</h3>
@@ -103,7 +103,7 @@ view('legal/refund', () => {
     <h3>5. Stays &amp; bookings</h3>
     <p>Free cancellation up to 24 hours before check-in unless a listing states otherwise on its page.</p>
     <h3>6. How money comes back</h3>
-    <p>Refunds land in your Orignals wallet instantly. Wallet balance can be withdrawn to your bank/UPI; bank refunds for direct payments follow your bank's timeline (typically 5–7 working days).</p>`);
+    <p>Refunds are issued to your <b>original payment method</b> — the UPI app, card or bank account you paid from. Bank/UPI refunds follow your bank's timeline (typically 5–7 working days). Cash-on-delivery orders are never charged, so there is nothing to refund.</p>`);
 });
 
 /* ---------- Shipping & Delivery ---------- */

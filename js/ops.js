@@ -31,7 +31,7 @@ function applyPlatformFlags() {
       m.innerHTML = `<div class="maint-box">
         <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#1A5632" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2 19 19M19 5l-2.8 2.8M7.8 16.2 5 19"/></svg>
         <h2>Back in a few minutes</h2>
-        <p>Orignals is being upgraded. Your orders, wallet and shop are all safe. Please check again shortly.</p></div>`;
+        <p>Orignals is being upgraded. Your orders and shop are all safe. Please check again shortly.</p></div>`;
       document.body.appendChild(m);
     }
   } else if (m) { m.remove(); }

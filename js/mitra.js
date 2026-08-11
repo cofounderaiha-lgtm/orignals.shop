@@ -37,8 +37,8 @@ view('mitra', () => {
   </div>`;
   if (!MSGS.length) {
     mitraReply(`Namaste ${esc(isGuest() ? 'there' : displayName())}! I'm <b>Mitra</b> — this platform's own intelligence, in 22 Indian languages. Tell me what you need, or ask me <b>where anything is</b> and I'll take you there.<br/><br/>
-      Try: <i>"order milk and bread"</i> · <i>"where is my wallet?"</i> · <i>"how do I register my shop?"</i> · <i>"take me to admin"</i> · <i>"doodh mangwa do"</i>`,
-      ['Order milk and bread', 'Where is my wallet?', 'How do I register my shop?', 'Book a ride', 'Get a document made']);
+      Try: <i>"order milk and bread"</i> · <i>"track my order"</i> · <i>"how do I register my shop?"</i> · <i>"take me to admin"</i> · <i>"doodh mangwa do"</i>`,
+      ['Order milk and bread', 'Track my order', 'How do I register my shop?', 'Book a ride', 'Get a document made']);
   } else renderMsgs();
 });
 
@@ -140,15 +140,15 @@ const MITRA_HELP = [
     kw: ['my shop', 'register shop', 'sell', 'list my', 'dukaan online', 'become a seller', 'add my menu'] },
   { route: 'papers', title: 'Papers & Verification', help: 'Get ANY document made — GST, FSSAI, birth, death, marriage, PAN, passport, licences, property papers.', tips: ['Get a GST number', 'Death certificate'],
     kw: ['document', 'documents', 'certificate', 'gst', 'fssai', 'licence', 'license', 'birth', 'death', 'marriage', 'passport', 'pan card', 'driving licence', 'papers', 'dastavez'] },
-  { route: 'wallet', title: 'Wallet', help: 'Your one wallet for everything — add money, see history, withdraw.', tips: ['Add 500 to wallet', 'Wallet balance'],
-    kw: ['wallet', 'balance', 'add money', 'top up', 'topup', 'paisa', 'पैसा'] },
+  { route: 'wallet', title: 'Earnings & payouts', help: 'There is no stored wallet — you pay per order by UPI/card or cash. This screen shows what you have EARNED from deliveries/sales, paid out to your UPI.', tips: ['How do I get paid?', 'Show my earnings'],
+    kw: ['wallet', 'balance', 'add money', 'top up', 'topup', 'paisa', 'पैसा', 'earnings', 'payout', 'withdraw'] },
   { route: 'orders', title: 'Orders', help: 'Track and manage every order, ride and booking in one place.', tips: ['Track my order'],
     kw: ['orders', 'my order', 'my orders', 'track', 'order status'] },
   { route: 'account', title: 'Profile & Account', help: 'Your profile, currency, language, roles and security settings.', tips: ['Change currency', 'Sign in'],
     kw: ['profile', 'account', 'settings', 'my account', 'currency', 'language', 'setting'] },
   { route: 'facelock', title: 'Security & Face lock', help: 'Sign in, set a face lock (2FA), and turn on delivery alerts.', tips: ['Enable face lock'],
     kw: ['security', 'face lock', 'face', '2fa', 'password', 'alerts', 'notifications'] },
-  { route: 'login', title: 'Sign in / Register', help: 'Create your account or sign in — secures your wallet, orders and shop.', tips: [],
+  { route: 'login', title: 'Sign in / Register', help: 'Create your account or sign in — secures your orders, earnings and shop.', tips: [],
     kw: ['sign in', 'signin', 'log in', 'login', 'register', 'create account', 'sign up'] },
   { route: 'legal', title: 'Legal & policies', help: 'Privacy, terms, refunds, and our grievance officer.', tips: [],
     kw: ['privacy', 'terms', 'refund', 'grievance', 'policy', 'legal', 'complaint'] },
@@ -232,7 +232,7 @@ function mitraThink(raw) {
     if (cand.length) {
       const o = cand[0];
       cancelOrder(o.id);
-      mitraReply(`Done — cancelled <b>${esc(o.title)}</b>.<br/>${money(o.total)} refunded to your wallet instantly. \u{1F44D}`, ['Show my orders \u{1F9FE}', 'Order something else'], 'Cancelled and refunded ' + o.total + ' rupees');
+      mitraReply(`Done — cancelled <b>${esc(o.title)}</b>.<br/>Any online payment is refunded to your original method; cash orders are never charged. \u{1F44D}`, ['Show my orders \u{1F9FE}', 'Order something else'], 'Cancelled — refunded to your original payment method');
     } else {
       mitraReply(`Nothing I can cancel right now — orders can only be cancelled <b>before pickup</b>. Rides and picked-up orders are locked.`, ['Show my orders \u{1F9FE}']);
     }
@@ -378,7 +378,7 @@ function mitraThink(raw) {
 
   /* — help — */
   if (has('hello', 'hi ', 'hey', 'namaste', 'help', 'madad', 'what can')) {
-    mitraReply(`I can do it all, friend! 🧿<br/>• <b>Order anything</b> — "order 2 milk", "doodh mangwa do"<br/>• <b>Send anything</b> — "send tiffin to grandma"<br/>• <b>Book rides</b> — "bike to the airport"<br/>• <b>Wallet</b> — "add 200 to wallet"<br/>• <b>Earn</b> — "I want to earn"<br/>• <b>Your shop</b> — "register my dukaan"`, ['Order milk 🥛', 'Send tiffin 🍱', 'Book a ride 🏍️', 'I want to earn 💸']);
+    mitraReply(`I can do it all, friend! 🧿<br/>• <b>Order anything</b> — "order 2 milk", "doodh mangwa do"<br/>• <b>Send anything</b> — "send tiffin to grandma"<br/>• <b>Book rides</b> — "bike to the airport"<br/>• <b>Earnings</b> — "how do I get paid?"<br/>• <b>Earn</b> — "I want to earn"<br/>• <b>Your shop</b> — "register my dukaan"`, ['Order milk 🥛', 'Send tiffin 🍱', 'Book a ride 🏍️', 'I want to earn 💸']);
     return;
   }
 
@@ -428,7 +428,7 @@ function mitraThink(raw) {
       `Found it! <b>${esc(item.name)}</b> (${esc(item.qty)})<br/>
        from <b>${esc(shop.name)}</b> — ${shop.km} km away, ★ ${shop.rating}, purity-verified<br/>
        <span class="mprice">${q} × ${money(item.price)} + ${fee ? money(fee) + ' delivery' : 'FREE delivery'} = <b>${money(total)}</b></span><br/>
-       <button class="mbtn" onclick="runMitraAction(${a})">Confirm — pay ${money(total)} from wallet</button>
+       <button class="mbtn" onclick="runMitraAction(${a})">Confirm &amp; pay ${money(total)}</button>
        <button class="mbtn ghost" onclick="runMitraAction(${b})">Put in basket instead</button>
        ${dec ? `<button class="mbtn ghost" onclick="var e=document.getElementById('${whyId}');if(e)e.style.display=e.style.display==='none'?'block':'none'">Why this? 🧠</button><div id="${whyId}" style="display:none;margin-top:6px">${reasonExplainHTML(dec)}</div>` : ''}
        ${alt.length ? `<small class="malt">Also found: ${alt.map(h => esc(h.item.name) + ' @ ' + esc(h.shop.name)).join(' · ')}</small>` : ''}`,

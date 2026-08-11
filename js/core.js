@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
     S.notifs = S.notifs.filter(n => !/cloud sync|mirror to the database|backed by your supabase/i.test((n.title || '') + ' ' + (n.body || '')));
     if (S.notifs.length !== before) save();
   }
-  if (!S.notifs.length) notify('Welcome to Orignals', 'Purity-verified food, every shop nearby, earn as you go. ₹500 free in your wallet.');
+  if (!S.notifs.length) notify('Welcome to Orignals', 'Purity-verified food, every shop nearby, and earn as you deliver. Real shops, real prices, real neighbours.');
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
     /* when a fresh service worker takes control, reload ONCE so the newest

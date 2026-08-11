@@ -575,7 +575,7 @@ async function cloudMarketStats() {
 let _payBusy = false;
 async function payViaRazorpay(amountRs, meta, onSuccess, onUnconfigured) {
   if (_payBusy) return;
-  if (typeof paymentsLive === 'function' && !paymentsLive()) { toast('Online payments are paused right now — pay by wallet'); return; }
+  if (typeof paymentsLive === 'function' && !paymentsLive()) { toast('Online payments are paused right now — you can pay cash on delivery'); return; }
   if (typeof Razorpay === 'undefined') { toast('Payment system loading — try again in a moment'); return; }
   _payBusy = true;
 
@@ -595,7 +595,7 @@ async function payViaRazorpay(amountRs, meta, onSuccess, onUnconfigured) {
       const d = await r.json();
       if (r.ok && !d.error) { _rzpOpenOrder(d, amountRs, meta, onSuccess); return; }
       if (!(d && d.error === 'payments not configured')) {
-        _payBusy = false; toast('Could not start payment — try wallet'); return;
+        _payBusy = false; toast('Could not start payment — try again, or choose cash on delivery'); return;
       }
       /* not configured → fall through to Lane B */
     } catch (e) { /* network issue → try Lane B */ }
@@ -607,7 +607,7 @@ async function payViaRazorpay(amountRs, meta, onSuccess, onUnconfigured) {
   if (!keyId || keyId.indexOf('rzp_') !== 0) {
     _payBusy = false;
     if (onUnconfigured) onUnconfigured();
-    else toast('Online payments activate soon — pay by wallet meanwhile');
+    else toast('Online payments activate soon — pay cash on delivery meanwhile');
     return;
   }
   _rzpOpenDirect(keyId, amountRs, meta, onSuccess);

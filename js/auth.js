@@ -35,7 +35,7 @@ view('login', () => {
   if (a && a.token) { renderAccountAuthed(); return; }
   $('#view').innerHTML = `
   <div class="page-head"><button class="back" onclick="go('account')">${ic('chevl', 16)}</button>
-    <div><h1>${_authMode === 'login' ? 'Sign in' : 'Create account'}</h1><small>Secure your orders, wallet &amp; shop across devices</small></div></div>
+    <div><h1>${_authMode === 'login' ? 'Sign in' : 'Create account'}</h1><small>Secure your orders, earnings &amp; shop across devices</small></div></div>
   <div class="auth-card">
     <div class="when-seg">
       <button class="${_authMode === 'login' ? 'on' : ''}" onclick="_authMode='login';VIEWS.login([])">Sign in</button>
@@ -102,7 +102,7 @@ function authBadgeHTML() {
       <span>${ic('shield', 20)}</span><div><b>${esc(a.name || a.ident)}</b><small>${ic('check', 10)} Signed in &amp; secured${a.face ? ' · face lock on' : ''}</small></div><em>Manage</em></button>`;
   }
   return `<button class="role-row highlight" onclick="go('login')">
-    <span>${ic('shield', 20)}</span><div><b>Sign in / Create account</b><small>Secure your wallet, orders &amp; shop across devices</small></div><em>Go</em></button>`;
+    <span>${ic('shield', 20)}</span><div><b>Sign in / Create account</b><small>Secure your orders, earnings &amp; shop across devices</small></div><em>Go</em></button>`;
 }
 
 /* ============================================================
