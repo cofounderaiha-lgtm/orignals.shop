@@ -473,6 +473,21 @@ async function cloudUploadImage(dataUrl, prefix) {
   } catch (e) { return null; }
 }
 
+/* request a REAL refund for a paid order (pairs with the razorpay-refund edge
+   function + migration 0015_finance). The SERVER decides: refund_open refuses
+   COD/unpaid orders ('nothing_to_refund') and is idempotent (one refund per
+   order), so calling this is safe even if the client's payMethod is unreliable.
+   Degrades silently (503/404) until the edge fn is deployed + 0015 is applied. */
+function cloudRequestRefund(orderId, reason) {
+  if (!CLOUD.on) return Promise.resolve({ ok: false, reason: 'offline' });
+  try {
+    return fetch(CLOUD.url + '/functions/v1/razorpay-refund', {
+      method: 'POST', headers: cloudHeaders(),
+      body: JSON.stringify({ orderRef: orderId, device: S.deviceKey || '', reason: reason || 'cancelled' })
+    }).then(r => r.json()).catch(() => ({ ok: false }));
+  } catch (e) { return Promise.resolve({ ok: false }); }
+}
+
 /* ---------- server-side price sanity (moderation) ---------- */
 async function cloudPriceCheck(cat, name, price) {
   if (!CLOUD.on) return { verdict: 'ok' };

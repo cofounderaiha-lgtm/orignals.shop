@@ -384,6 +384,10 @@ function cancelOrder(oid) {
      payment method — handled by the refund flow, manually at pilot volume.
      Cash-on-delivery orders were never charged, so nothing is refunded. */
   o.refundDue = (o.payMethod === 'cod') ? 0 : o.total;
+  /* real refund: for an online-paid order, kick off the provider refund server-side.
+     Safe before the backend is live (503/404 → caught) and safe even if payMethod is
+     wrong here, because refund_open only refunds a genuinely VERIFIED payment. */
+  if (o.refundDue && typeof cloudRequestRefund === 'function') cloudRequestRefund(oid).catch(() => {});
   if (o.refundDue) {
     notify('Order cancelled', money(o.refundDue) + ' will be refunded to the account you paid from (3–5 working days).', 'x');
     toast('Cancelled — refund to your original payment method');
