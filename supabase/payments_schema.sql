@@ -23,10 +23,13 @@ create index if not exists payments_device_idx on payments (device_key, created_
 
 alter table payments enable row level security;
 
--- devices may read their own payment rows (status checks);
--- all writes happen only through the edge functions (service role).
+-- ⚠ SECURITY (2026-07-23): payments has NO anon policy = deny-all for the public
+-- anon key. Writes happen only through the edge functions (service role); a device
+-- checks one payment's status via the security-definer RPC payment_status()
+-- (supabase/harden_rls.sql). The previous `payments_read_own for select using(true)`
+-- was misnamed and world-readable — it exposed every payment row (amount, ref,
+-- rzp ids) to anyone with the anon key, and re-running this file silently re-opened
+-- it after hardening. Do NOT recreate a permissive read policy here.
 drop policy if exists payments_read_own on payments;
-create policy payments_read_own on payments
-  for select using (true);
 
-select 'payments table ready' as status;
+select 'payments table ready (deny-all; reads via payment_status RPC)' as status;

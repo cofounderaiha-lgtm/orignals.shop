@@ -40,7 +40,10 @@ function cloudInit() {
   CLOUD.url = cfg.supabaseUrl.replace(/\/$/, '');
   CLOUD.key = cfg.supabaseAnonKey;
   CLOUD.status = 'connecting';
-  if (!S.deviceKey) { S.deviceKey = 'dev_' + uid() + uid(); save(); }
+  /* 128-bit device key (was 'dev_'+uid()+uid() ≈ 18 weak chars from Math.random).
+     Existing keys are grandfathered — only new devices get the strong key — so
+     no one's shop/orders/stock (all keyed off this) are orphaned. */
+  if (!S.deviceKey) { S.deviceKey = 'dev_' + uidStrong(); save(); }
   cloudBoot();
 }
 

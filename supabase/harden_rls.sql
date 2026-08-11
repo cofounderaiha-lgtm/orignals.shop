@@ -10,13 +10,15 @@
 -- pilot-grade hardening that closes the mass-exposure hole.
 -- ============================================================
 
--- 1 ── state_snapshots: no bulk read, no delete; writes stay (upsert) ──
+-- 1 ── state_snapshots: no anon read/write/delete at all ──
+-- ⚠ SECURITY (2026-07-23): the anon INSERT/UPDATE policies below were removed.
+-- `snap_upd for update using(true)` let anyone with the public anon key bulk-
+-- overwrite EVERY user's account state. Writes now go through snapshot_save()
+-- (supabase/migrations/0003_*), a security-definer RPC keyed on device.
 drop policy if exists p_snap_all on state_snapshots;
 drop policy if exists snap_ins on state_snapshots;
 drop policy if exists snap_upd on state_snapshots;
-create policy snap_ins on state_snapshots for insert with check (true);
-create policy snap_upd on state_snapshots for update using (true) with check (true);
--- (no SELECT, no DELETE for anon)
+-- (no anon SELECT / INSERT / UPDATE / DELETE — all access via RPC)
 
 create or replace function snapshot_restore(p_device text)
 returns json language sql security definer set search_path = public stable as $$

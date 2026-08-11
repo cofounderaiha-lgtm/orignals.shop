@@ -16,6 +16,14 @@ async function hmacHex(secret: string, msg: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/* constant-time compare — avoids the timing leak of `expected !== sig`. */
+function timingSafeEqual(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: true });
   const secret = Deno.env.get("RZP_WEBHOOK_SECRET");
@@ -24,7 +32,7 @@ Deno.serve(async (req) => {
   const body = await req.text();
   const sig = req.headers.get("x-razorpay-signature") || "";
   const expected = await hmacHex(secret, body);
-  if (expected !== sig) return json({ error: "bad signature" }, 401);
+  if (!timingSafeEqual(expected, sig)) return json({ error: "bad signature" }, 401);
 
   try {
     const evt = JSON.parse(body);

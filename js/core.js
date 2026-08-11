@@ -69,7 +69,11 @@ function displayName() {
   if (typeof S !== 'undefined' && S && S.user && S.user.name && S.user.name !== 'Friend') return S.user.name;
   return 'Guest';
 }
-const uid  = () => Math.random().toString(36).slice(2, 9);
+/* cryptographic ids — Math.random is not a CSPRNG and the device key built
+   from it is a bearer token (snapshot_restore etc. trust it as identity).
+   Falls back to Math.random only where crypto is somehow unavailable. */
+const uid  = () => { try { return crypto.randomUUID().replace(/-/g, '').slice(0, 9); } catch (e) { return Math.random().toString(36).slice(2, 9); } };
+const uidStrong = () => { try { return crypto.randomUUID().replace(/-/g, ''); } catch (e) { return uid() + uid() + uid() + uid(); } };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const rnd  = (a, b) => Math.round(a + Math.random() * (b - a));
 const kmFare = (v, km) => Math.max(v.base + v.perKm * km, 20);

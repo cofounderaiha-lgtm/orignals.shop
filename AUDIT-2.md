@@ -2,6 +2,31 @@
 
 **Date:** 2026-07-23 · **Commit:** `0e84009` · **Auditor's own prior errors corrected below.**
 
+---
+## ⟲ CORRECTION (2026-07-23, after reading migration 0004 + code)
+This audit was reconstructed from *base* `.sql` files and, exactly as its own top
+finding warns, **missed the migrations layered on top** — so three findings below
+were already fixed and are now WITHDRAWN. Fixing my own audit, as loudly as I made
+the claim:
+- **#2 `recent_errors` leak — WITHDRAWN.** Migration `0004` re-created it with a
+  `p_token` + `admin_rank(...)>=4` gate; the client passes the token (`ops.js:108`).
+  Already fixed, with its own live-verified proof block.
+- **#5 `shopimg` open upload — WITHDRAWN.** `0004` set
+  `allowed_mime_types = {image/jpeg,image/png,image/webp}` + 3 MB cap.
+- **`price_bounds` / `payments` write exposure — WITHDRAWN.** `0004` notes both are
+  already deny-all (RLS on, zero anon policies), live-verified.
+
+**Genuinely still-live after this correction:** #1 (`orders` OTP read), #6
+(`price_check` fails open), #3 (deferred write holes: `listings` / `mitra_*` /
+`push_subscriptions`), #4 (Math.random identity), #8 (HMAC timing). #7 (browser LLM
+key) was **also already fixed** 2026-07-17 (`brain.js` calls a server proxy, no
+browser key). See `AUDIT-2-STATUS.md` for what got fixed *this* turn.
+
+The meta-lesson stands and is now proven twice on myself: **without live
+`pg_policies` access I cannot audit this codebase accurately, because the truth is
+the migration-ordered overlay, not the base files.**
+---
+
 ## Verification limits — read first
 The Supabase Management-API tool (`supa_run.py` + its token) was cleared from the
 scratchpad this session, so **I could not re-query `pg_policies` live this turn.**

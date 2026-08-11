@@ -19,6 +19,15 @@ async function hmacHex(secret: string, msg: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/* constant-time string compare — `a === b` on a signature short-circuits on the
+   first differing byte, leaking timing. Length-independent, no early return. */
+function timingSafeEqual(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -29,7 +38,7 @@ Deno.serve(async (req) => {
     if (!keySecret) return json({ error: "payments not configured" }, 503);
 
     const expected = await hmacHex(keySecret, `${orderId}|${paymentId}`);
-    const ok = expected === String(signature);
+    const ok = timingSafeEqual(expected, String(signature));
 
     const sr = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     await fetch(

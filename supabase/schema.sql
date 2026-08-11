@@ -308,23 +308,24 @@ alter table custom_categories enable row level security;
 alter table state_snapshots enable row level security;
 
 do $$ begin
-  -- public read of marketplace surfaces
+  -- public READ of marketplace surfaces (buyers browse these; no PII here)
   create policy p_shops_read  on shops  for select using (deleted_at is null);
   create policy p_items_read  on shop_items for select using (true);
   create policy p_props_read  on properties for select using (deleted_at is null);
   create policy p_jobs_read   on jobs   for select using (true);
   create policy p_cats_read   on custom_categories for select using (true);
   create policy p_cats_write  on custom_categories for insert with check (true);
-  -- demo-bridge writes (anon): snapshots and mirrors are device-scoped upserts
-  create policy p_snap_all    on state_snapshots for all using (true) with check (true);
-  create policy p_orders_ins  on orders for insert with check (true);
-  create policy p_orders_read on orders for select using (true);
-  create policy p_orders_upd  on orders for update using (true) with check (true);
   create policy p_events_ins  on order_events for insert with check (true);
   create policy p_events_read on order_events for select using (true);
-  create policy p_shops_write on shops for insert with check (true);
-  create policy p_shops_upd   on shops for update using (true) with check (true);
-  create policy p_items_write on shop_items for insert with check (true);
+  -- ⚠ SECURITY (2026-07-23): shops / shop_items / orders / state_snapshots WRITES
+  -- are deliberately NOT anon policies. They go through security-definer RPCs that
+  -- derive ownership from the device key — shop_upsert, orders_sync, snapshot_save
+  -- (supabase/migrations/0002_*, 0003_*). The removed policies (p_snap_all,
+  -- p_orders_ins/read/upd, p_shops_write/upd, p_items_write — all `using(true)`)
+  -- let anyone holding the PUBLIC anon key overwrite any merchant's shop,
+  -- bulk-rewrite every order, overwrite any user's whole account state, and READ
+  -- every order's delivery OTP + address. Do NOT reintroduce them. If a fresh DB
+  -- needs the write paths, apply the migrations — that is the authoritative source.
 exception when duplicate_object then null; end $$;
 
 -- ---------- SEED: the 14 launch shops (headline rows; items sync from app) ----------
