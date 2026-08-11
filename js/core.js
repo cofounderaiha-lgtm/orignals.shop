@@ -561,7 +561,17 @@ document.addEventListener('DOMContentLoaded', () => {
        deploy is shown immediately — no more stale cached app */
     let _swReloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (_swReloaded) return; _swReloaded = true; location.reload();
+      if (_swReloaded) return;
+      /* Never reload mid-payment or over an open sheet/modal — an unconditional
+         reload here would drop a live Razorpay checkout or a half-filled form.
+         Wait until the user is idle (no open sheet, no payment iframe). */
+      const reloadWhenSafe = () => {
+        const busy = document.body.classList.contains('sheet-open')
+          || !!document.querySelector('.razorpay-container, iframe.razorpay-checkout-frame, iframe[src*="razorpay"], iframe[src*="checkout"]');
+        if (busy) { setTimeout(reloadWhenSafe, 3000); return; }
+        _swReloaded = true; location.reload();
+      };
+      reloadWhenSafe();
     });
   }
 });
