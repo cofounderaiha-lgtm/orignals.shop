@@ -118,6 +118,11 @@ returns json language plpgsql security definer set search_path = public as $$
 declare v_flat double precision; v_flng double precision; v_status text; v_poster text;
         v_dev text; v_km double precision; v_exp interval := interval '25 seconds';
 begin
+  -- serialize concurrent dispatch of the SAME job (insert-trigger vs sweep vs a
+  -- decline re-dispatch) so two candidates can't be offered one job at once. The
+  -- xact lock releases at commit; different jobs hash to different locks.
+  perform pg_advisory_xact_lock(hashtext('dispatch:' || p_job));
+
   select from_lat, from_lng, status, device_key into v_flat, v_flng, v_status, v_poster
     from live_jobs where id = p_job;
   if not found then return json_build_object('ok', false, 'reason', 'not_found'); end if;
@@ -172,6 +177,13 @@ begin
     perform _disp_event(p_job, p_device, 'declined', null);
     perform dispatch_job(p_job);                                  -- immediately try the next candidate
     return json_build_object('ok', true, 'assigned', false);
+  end if;
+
+  -- a partner may hold only ONE job at a time — a live offer for job B could have
+  -- been made before they accepted job A; refuse rather than overwrite carrying.
+  if (select carrying from partner_presence where device_key = p_device) is not null then
+    update job_offers set status = 'expired' where job_id = p_job and device_key = p_device and status = 'accepted';
+    return json_build_object('ok', false, 'reason', 'already_carrying');
   end if;
 
   select name, vehicle, rating into v_name, v_veh, v_rat from partner_presence where device_key = p_device;
@@ -294,6 +306,18 @@ begin
   assert v_status = 'taken', 'FAIL: live_jobs not marked taken on accept';
   assert (select taken_by from live_jobs where id='DISP_J1') = 'disp_far', 'FAIL: wrong assignee';
   assert (select carrying from partner_presence where device_key='disp_far') = 'DISP_J1', 'FAIL: carrier not set';
+
+  -- a partner already carrying cannot accept a SECOND job (guard against
+  -- overwriting carrying with a stale offer for another job)
+  insert into live_jobs(id, device_key, what, jtype, from_lat, from_lng, status)
+    values ('DISP_J1b','disp_poster','x','box',0,0,'open');
+  insert into job_offers(job_id, device_key, status, expires_at)
+    values ('DISP_J1b','disp_far','offered', now()+interval '25 seconds') on conflict do nothing;
+  r := offer_respond('DISP_J1b','disp_far', true);
+  assert (r->>'ok')='false' and (r->>'reason')='already_carrying', 'FAIL: carrying partner accepted a 2nd job';
+  delete from job_offers where job_id='DISP_J1b';
+  delete from dispatch_events where job_id='DISP_J1b';
+  delete from live_jobs where id='DISP_J1b';
 
   -- an accept after the job is gone must not double-assign
   insert into job_offers(job_id, device_key, status, expires_at) values ('DISP_J1','disp_near','offered', now()+interval '25 seconds');

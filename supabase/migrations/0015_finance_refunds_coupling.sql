@@ -95,7 +95,10 @@ begin
   v_idem := 'rf_' || p_order;    -- one refund per order → stable idempotency key
   insert into refunds(order_ref, device_key, rzp_payment_id, amount_paise, reason, status, idempotency_key)
   values (p_order, p_device, v_pay, v_amt, left(coalesce(p_reason,''), 200), 'requested', v_idem)
-  on conflict (idempotency_key) do nothing;
+  on conflict (idempotency_key) do update
+    set status = 'requested', updated_at = now()
+    where refunds.status = 'failed';   -- retry ONLY after a failed provider attempt;
+                                        -- stays idempotent (no-op) for requested/processing/succeeded
 
   perform _fin_event('refund_requested', p_order, null, v_amt/100.0, v_pay, json_build_object('reason', p_reason)::jsonb);
   -- void any seller payable for this order — a refunded order does not pay the seller
