@@ -70,11 +70,12 @@ harden_rls out of order (before those base files) leaves the permissive policies
 | 0015 | finance_refunds_coupling | payments, settlements, shop_orders, 0003, 0009 | **refunds ledger + settlement coupling + finance_events** |
 | 0016 | dispatch | jobs, live_delivery | partner_presence + offers + dispatch |
 | 0017 | derive_identity | 0005, community, settlements | my_shop_orders/shop_reservations/settlement_mine derive from device |
+| 0018 | events | analytics_schema, shop_orders, payments | entity-link analytics_events + emit_event (allowlisted UX) + funnel |
 | 0019 | shop_intelligence | 0005, 0009, settlements | read-only merchant analytics |
 | 0020 | observability | admin_schema | op_log + op_health |
 
-(0012 and the old 0017_events were **deleted** in review; 0018 is unused. Numbering
-consolidation into a single clean sequence is a pre-production step, §78.)
+(0012 and the old 0017_events were **deleted** in review. Numbering consolidation into
+a single clean sequence is a pre-production step, §78.)
 
 Each migration ends with a self-proving `do $$ … assert … $$` block — a failed assert
 aborts the apply. **A migration that aborts = a bug to fix before proceeding.**
