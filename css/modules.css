@@ -90,6 +90,11 @@
   font-weight:700;font-style:normal;padding:4px 6px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(4px)}
 .shop-closed{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;font-size:.56rem;
   font-weight:800;font-style:normal;padding:3px 8px;border-radius:50px}
+/* Sample/demo listing — seed catalogue data with no real seller behind it.
+   Deliberately visible: a demo entity must never pass as a real merchant. */
+.shop-demo{position:absolute;top:6px;right:6px;background:rgba(17,24,39,.82);color:#fff;font-size:.55rem;
+  font-weight:800;font-style:normal;letter-spacing:.04em;text-transform:uppercase;
+  padding:3px 8px;border-radius:50px;backdrop-filter:blur(4px)}
 .shop-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding:2px 0}
 .shop-line1{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
 .shop-line1 b{font-size:.92rem;letter-spacing:-.01em;line-height:1.25}

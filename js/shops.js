@@ -8,26 +8,38 @@ function deliveryBadge(shop) {
   return `<span class="dbadge partner">Orignals partner delivery</span>`;
 }
 
-/* stable named inspector per shop — same person every time */
-function inspectorFor(s) {
-  let h = 0; const id = String(s.id);
-  for (let i = 0; i < id.length; i++) h = (h * 33 + id.charCodeAt(i)) >>> 0;
-  return DB.inspectors[h % DB.inspectors.length];
-}
+/* ---------- purity / inspection status ----------
+   REMOVED 2026-08-11: this used to render "Checked this morning by Inspector
+   <name>" where BOTH the inspector and the time came from a hash of the shop
+   id plus the device clock. No inspection had taken place. Asserting a
+   food-safety check that never happened is a fabricated trust signal — the
+   one thing "Real. Verified. Nearby." cannot afford.
+
+   A real inspection claim must come from the verification pipeline
+   (verify_schema.sql / purity_checks), carrying an actual inspector, a real
+   timestamp and evidence. Until a shop has one, we show the seller's own
+   attested pledge, which is honest about who is making the claim. */
 function inspectorLine(s) {
   if (!['organic', 'food', 'grocery', 'dairy', 'pharmacy'].includes(s.type)) return '';
-  const ins = inspectorFor(s);
-  const hour = new Date().getHours();
-  const when = hour < 12 ? 'this morning' : hour < 17 ? 'at noon today' : 'this morning';
-  return `<div class="inspector-line">${ic('shield', 12)} Checked ${when} by <b>Inspector ${esc(ins.name)}</b> · ${esc(ins.area)} circle</div>`;
+  const chk = s.purity || s.inspection;   // populated only by a real verification record
+  if (chk && chk.at && chk.by) {
+    const d = new Date(chk.at);
+    return `<div class="inspector-line">${ic('shield', 12)} Purity-checked ${esc(d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }))} by <b>${esc(chk.by)}</b>${chk.area ? ' · ' + esc(chk.area) + ' circle' : ''}</div>`;
+  }
+  if (s.demo) return '';
+  return `<div class="inspector-line">${ic('shield', 12)} Seller-attested quality pledge · independent purity check not yet on record</div>`;
 }
 
 function shopTile(s, big) {
   const img = DB.shopImgs[s.id] || s.img;
+  /* Honesty: a seed-catalogue shop has no human seller behind it, so it is
+     labelled. Never let a demo entity look like a real merchant. */
+  const demo = !!s.demo;
   return `<div class="shop-tile ${big ? 'big' : ''}">
     <span class="tile-ic">${typeIcon(s.type, big ? 40 : 28)}</span>
     ${img ? `<img src="${img}" alt="" loading="lazy" onerror="this.remove()"/>` : ''}
     ${!big ? `<span class="rate on-img">★ ${s.rating}</span>` : ''}
+    ${demo ? '<i class="shop-demo" title="Sample listing — not a real seller yet">Sample</i>' : ''}
     ${!big && s.offer ? `<em class="shop-offer">${esc(s.offer)}</em>` : ''}
     ${!big && !s.open ? '<i class="shop-closed">Opens later</i>' : ''}
   </div>`;
@@ -38,12 +50,11 @@ function shopCardHTML(s, featured) {
     ${shopTile(s)}
     <div class="shop-body">
       ${featured ? `<small class="feat-tag">${ic('spark', 11)} Closest to you</small>` : ''}
-      <div class="shop-line1"><b>${esc(s.name)}</b><span class="vbadge">${ic('check', 9)} VERIFIED</span></div>
+      <div class="shop-line1"><b>${esc(s.name)}</b>${s.verified && !s.demo ? `<span class="vbadge">${ic('check', 9)} VERIFIED</span>` : (s.demo ? '' : `<span class="vbadge" style="background:#eef2f7;color:#475569">Self-listed</span>`)}</div>
       <div class="shop-line2">${esc(s.tag)}</div>
       <div class="shop-line3">
         <span>${ic('pin', 11)} ${s.km} km</span><span>·</span><span>${ic('clock', 11)} ${s.time >= 60 ? Math.round(s.time / 60) + ' hr' : s.time + ' min'}</span>
         ${s.b2b ? '<span>·</span><span class="b2b-tag">B2B · MOQ</span>' : ''}
-        ${s.type === 'food' && s.fresh !== false ? '<span>·</span><span style="color:#1a7f3c;font-weight:700">🌿 Fresh today</span>' : ''}
       </div>
       ${deliveryBadge(s)}
     </div></div>`;
@@ -165,8 +176,9 @@ view('shop', args => {
       <span>${ic('pin', 12)} ${s.km} km away</span><span>${ic('clock', 12)} ${s.time >= 60 ? Math.round(s.time / 60) + ' hr' : s.time + ' min'}</span>
       ${deliveryBadge(s)}
     </div>
-    <div class="trust-row">${ic('shield', 13)} Verified seller · GST registered ${s.type === 'food' ? '· FSSAI licensed' : ''} · Secure payments</div>
-    ${s.type === 'food' && s.fresh !== false ? `<div class="trust-row" style="background:#e9f7ee;border-color:#bfe6cd">${ic('leaf', 13)} <b>Freshness pledge</b> — this kitchen attests: cooked <b>fresh today</b>, <b>no pre-made or reheated</b> stock, no banned additives, hygienic handling. Orignals spot-checks &amp; any breach delists the shop.</div>` : ''}
+    ${s.demo ? `<div class="trust-row" style="background:#f3f4f6;border-color:#d1d5db">${ic('grid', 13)} <b>Sample listing</b> — this is catalogue data showing how a shop appears on Orignals. No seller is behind it yet, so an order here is a walkthrough, not a real delivery. Real shops near you are marked with the seller's own name and photo.</div>`
+      : `<div class="trust-row">${ic('shield', 13)} ${s.verified ? 'Verified seller' : 'Self-listed seller'}${s.gst ? ' · GST on file' : ''}${s.type === 'food' && s.fssai ? ' · FSSAI on file' : ''} · Secure payments</div>`}
+    ${s.type === 'food' && s.fresh && s.fresh.made && !s.demo ? `<div class="trust-row" style="background:#e9f7ee;border-color:#bfe6cd">${ic('leaf', 13)} <b>Freshness pledge</b> — this seller has pledged: cooked <b>fresh today</b>, <b>no pre-made or reheated</b> stock, no banned additives, hygienic handling. Orignals spot-checks &amp; any breach delists the shop.</div>` : ''}
     ${inspectorLine(s)}
     ${s.offer ? `<div class="offer-strip">${ic('gift', 13)} ${esc(s.offer)}</div>` : ''}
     ${s.b2b ? `<div class="b2b-strip">${ic('factory', 13)} Wholesale — items have minimum order quantities. GST invoice provided.
@@ -287,6 +299,9 @@ function cartCheckout() {
         kind: 'shop', flow: S.cart.deliv === 'self' ? 'shop_self' : 'shop_partner',
         km: +shop.km || undefined,
         cloudShop: !!shop.community,
+        /* data quality: only orders against a real, human-operated seller may
+           feed GMV, analytics, recommendations, rankings or financials */
+        dq: (typeof dqOf === 'function') ? dqOf(shop) : 'real',
         title: shop.name + ' · ' + items.length + ' item' + (items.length > 1 ? 's' : ''),
         shopId: shop.id, items, total: final, addr: S.user.addr,
         bill: { sub, gst, platformFee, deliveryFee, total: final }, shopName: shop.name, shopGst: shop.gst || null

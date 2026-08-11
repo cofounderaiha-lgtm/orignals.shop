@@ -136,7 +136,7 @@ function shopFreshPledge() {
 }
 function shopFreshConfirm() {
   S.myShop.fresh = { made: true, noPremade: true, hygiene: true, at: Date.now() }; save();
-  closeSheet(); confettiBurst(); toast('Freshness pledge live — buyers now see 🌿 Fresh today');
+  closeSheet(); confettiBurst(); toast('Freshness pledge live — buyers now see it on your shop page');
   renderShopDash();
 }
 
@@ -344,7 +344,7 @@ function renderShopDash() {
   <div class="card-block">
     <h3>${ic('leaf', 14)} Freshness &amp; quality pledge</h3>
     <p class="movie-about">Buyers choose Orignals for genuinely fresh, honest food. Pledge that you sell fresh — no pre-made or reheated stock, no banned additives, clean handling. Keep it: a broken pledge delists your shop.</p>
-    ${M.fresh ? `<div class="trust-row" style="background:#e9f7ee;border-color:#bfe6cd">${ic('check', 12)} Pledged — buyers see <b>🌿 Fresh today</b> on your shop. <button class="lnk red" onclick="S.myShop.fresh=false;save();renderShopDash()">Withdraw</button></div>`
+    ${M.fresh && M.fresh.made ? `<div class="trust-row" style="background:#e9f7ee;border-color:#bfe6cd">${ic('check', 12)} Pledged — buyers see your <b>freshness pledge</b> on your shop page. <button class="lnk red" onclick="S.myShop.fresh=false;save();renderShopDash()">Withdraw</button></div>`
       : `<button class="btn-main sm" onclick="shopFreshPledge()">${ic('leaf', 13)} Take the freshness pledge</button>`}
   </div>
 

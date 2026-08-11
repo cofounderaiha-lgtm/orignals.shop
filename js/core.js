@@ -325,7 +325,14 @@ function createOrder(o) {
   if (!o.partner && o.flow !== 'shop_self') o.partner = Object.assign({ otp: rnd(1000, 9999) }, pick(DB.partners));
   S.orders.unshift(o); save();
   notify('Order ' + o.id + ' placed', o.title, '🧾');
-  if (typeof trackEvent === 'function') trackEvent('order', o.total || 0);   // analytics: conversion + GMV
+  /* GMV/conversion counts REAL orders only. An order placed against seed
+     catalogue data has no seller behind it, so counting it would report
+     revenue that never existed. Demo orders are still tracked as an event —
+     with zero value — so funnel/UX analysis keeps working. */
+  if (typeof trackEvent === 'function') {
+    const real = (o.dq || 'real') === 'real';
+    trackEvent(real ? 'order' : 'order_demo', real ? (o.total || 0) : 0);
+  }
   return o;
 }
 function orderTimes(o) { return o.flowT || FLOW_T[o.flow]; }

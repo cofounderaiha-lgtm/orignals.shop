@@ -74,7 +74,7 @@ view('estate', args => {
       <div class="prop-card">
         <div class="prop-img">
           ${h.img ? `<img src="${h.img}" alt="" loading="lazy" onerror="this.remove()"/>` : `<span class="tile-ic">${ic('home', 34)}</span>`}
-          <em class="prop-verified"${h.mine ? ' style="background:#b45309"' : ''}>${ic('shield', 10)} ${h.mine ? 'YOUR LISTING' : 'VERIFIED HOST'}</em>
+          <em class="prop-verified"${h.mine ? ' style="background:#b45309"' : (h.verified ? '' : ' style="background:#eef2f7;color:#475569"')}>${ic('shield', 10)} ${h.mine ? 'YOUR LISTING' : (h.verified ? 'VERIFIED HOST' : 'LISTED HOST')}</em>
         </div>
         <div class="prop-body">
           <div class="prop-price">${money(h.price)}<small>/night</small></div>
