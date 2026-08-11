@@ -161,6 +161,25 @@ schema + client. Outcome:
   A reservation layer returns only when a real stock-gated checkout exists.
 - **`0017_events` → DELETED.** Dead; duplicated the live `analytics_events`/`track_hit`
   subsystem; false header "contract" claim; anon `emit_event` could spoof actor.
+  (The `0017` number was then reused for `0017_derive_identity` — the H1/H3 argument-
+  trust fix — since the events file is gone. Final numbering is reconciled at the
+  staging consolidation step, §78.)
+
+### Net-new frozen migrations + edge fn built after the review
+- **`0015_finance_refunds_coupling`** — real refunds ledger (idempotent, device-scoped,
+  COD-safe), settlement coupled to delivery + reversible, immutable `finance_events`,
+  `finance_reconcile`. Paired edge fn `functions/razorpay-refund` (real Razorpay refund,
+  service-role) + client `cloudRequestRefund`. Self-reviewed + hardened (failed-refund retry).
+- **`0016_dispatch`** — push dispatch over `live_jobs`: `partner_presence`, timed
+  `job_offers`, nearest-first `dispatch_job` (advisory-locked against double-offer),
+  atomic `offer_respond` (one-job-per-partner guard), `dispatch_sweep`, full audit.
+- **`0017_derive_identity`** — `my_shop_orders`/`shop_reservations`/`settlement_mine`
+  derive the shop/payee from the caller's device (closes cross-shop PII read H1/H3).
+
+### Staging test package (run after the full sequence, on staging)
+`tests/policy_regression.sql` (permissive-policy + device_key-column guard),
+`tests/security_negative.sql` (§30 cross-tenant deny matrix), `tests/concurrency.sql`
+(§48 guard-presence + pgbench harness for double-refund/assign/seat/webhook races).
 - **`0013_eta_engine` → KEPT + FIXED.** Removed the anon grant on `eta_record`
   (median-poisoning), dropped a dead index, added an upper-bound sample validator.
   Sound ETA math. Still dead until the client (core.js) and leg-completion RPCs call it.
