@@ -73,34 +73,54 @@ function rideCheckout(km) {
   const gst = Math.round(fare * 0.05);
   const platform = Math.round(fare * 0.03);
   const grand = fare + gst + platform;
-  checkoutSheet({
-    title: v.name + ' to ' + RIDE.to.name, icon: 'bike',
-    meta: `${RIDE.from.name} → ${RIDE.to.name} · ${km.toFixed(1)} km · ${sched ? 'scheduled ' + RIDE.when : (RIDE.share ? 'shared ride' : 'solo')} · fixed fare`,
-    lines: [['Base fare', v.base], ['Distance (' + km.toFixed(1) + ' km × ' + money(v.perKm) + ')', Math.round(kmFare(v, km)) - v.base], ...(RIDE.share ? [['Ride-share saving', -(Math.round(kmFare(v, km)) - fare)]] : []),
-      ['GST (5%)', gst], ['Platform fee (3%)', platform]],
-    total: grand,
-    onPay: (final) => {
-      if (sched) {
-        /* scheduled ride: confirmed for later, not tracked live now */
-        if (!S.scheduled) S.scheduled = [];
-        const sid = 'RD' + rnd(10000, 99999);
-        S.scheduled.unshift({ id: sid, title: v.name + ' to ' + RIDE.to.name, when: RIDE.when, from: RIDE.from.name, to: RIDE.to.name, km: +km.toFixed(1), total: final, ts: Date.now() });
-        save(); confettiBurst();
-        notify('Ride scheduled', `${v.name} to ${RIDE.to.name} at ${RIDE.when}. Your captain is assigned 15 min before.`);
-        toast('Ride scheduled for ' + RIDE.when);
-        RIDE.done = true; go('orders');
-        return;
-      }
-      const o = createOrder({
-        kind: 'ride', flow: 'ride', km,
-        geo: (RIDE.from.lat != null && RIDE.to.lat != null) ? { from: { lat: +RIDE.from.lat, lng: +RIDE.from.lng }, to: { lat: +RIDE.to.lat, lng: +RIDE.to.lng } } : undefined,
-        title: v.name + ' to ' + RIDE.to.name + (RIDE.share ? ' (shared)' : ''),
-        total: final,
-        detail: `${RIDE.from.name} → ${RIDE.to.name} · ${km.toFixed(1)} km${RIDE.share ? ' · shared' : ''}`,
-        items: [{ name: v.name + ' ride · ' + km.toFixed(1) + ' km', q: 1, price: final }]
-      });
-      RIDE.done = true;
-      go('track/' + o.id);
-    }
+  const lines = [['Base fare', v.base], ['Distance (' + km.toFixed(1) + ' km × ' + money(v.perKm) + ')', Math.round(kmFare(v, km)) - v.base],
+    ...(RIDE.share ? [['Ride-share saving', -(Math.round(kmFare(v, km)) - fare)]] : []), ['GST (5%)', gst], ['Platform fee (3%)', platform]];
+  /* SAFETY (2026-08-11): rides take NO online prepayment. Real-time captain
+     dispatch is not yet guaranteed (see COMPLETION-ASSESSMENT §J — no dispatch
+     engine), so charging up front would be charging for a ride that may not be
+     matched. You pay the captain DIRECTLY at the end (cash / UPI). Booking posts
+     a REAL job to nearby captains via the same live_jobs feed a Send parcel uses,
+     so a real captain can claim it — no fabricated payment. */
+  sheet(`
+    <div class="sheet-grab"></div>
+    <div class="ck-head"><span class="ck-ic">${ic('bike', 22)}</span>
+      <div><b>${esc(v.name)} to ${esc(RIDE.to.name)}</b><small>${esc(RIDE.from.name)} → ${esc(RIDE.to.name)} · ${km.toFixed(1)} km · ${sched ? 'scheduled ' + esc(RIDE.when) : (RIDE.share ? 'shared' : 'solo')}</small></div></div>
+    <div class="ck-bill">
+      ${lines.map(l => `<div class="ck-line"><span>${esc(l[0])}</span><span>${money(l[1])}</span></div>`).join('')}
+      <div class="ck-line grand"><span>Estimated fare</span><span>${money(grand)}</span></div>
+    </div>
+    <div class="foot-note sm" style="text-align:left">${ic('shield', 12)} You pay the captain directly at the end of the trip (cash / UPI). <b>No money is taken now.</b> We post your ride to verified captains near ${esc(RIDE.from.name)} — fare is an estimate and settles on the metered distance.</div>
+    <button class="btn-main wide" onclick="rideBook(${km},${grand},${fare},${sched ? 1 : 0})">${sched ? 'Schedule ride' : 'Confirm — find my captain'}</button>`);
+}
+function rideBook(km, grand, fare, sched) {
+  const v = DB.vehicles.find(x => x.id === RIDE.veh);
+  closeSheet();
+  if (sched) {
+    /* scheduled ride: confirmed for later, not tracked live now */
+    if (!S.scheduled) S.scheduled = [];
+    const sid = 'RD' + uidStrong().slice(0, 10);
+    S.scheduled.unshift({ id: sid, title: v.name + ' to ' + RIDE.to.name, when: RIDE.when, from: RIDE.from.name, to: RIDE.to.name, km: +km.toFixed(1), total: grand, ts: Date.now() });
+    save(); confettiBurst();
+    notify('Ride scheduled', `${v.name} to ${RIDE.to.name} at ${RIDE.when}. A captain is matched near the time — you pay them directly at the end.`);
+    toast('Ride scheduled for ' + RIDE.when);
+    RIDE.done = true; go('orders');
+    return;
+  }
+  const title = v.name + ' to ' + RIDE.to.name + (RIDE.share ? ' (shared)' : '');
+  const geo = (RIDE.from.lat != null && RIDE.to.lat != null) ? { from: { lat: +RIDE.from.lat, lng: +RIDE.from.lng }, to: { lat: +RIDE.to.lat, lng: +RIDE.to.lng } } : undefined;
+  const o = createOrder({
+    kind: 'ride', flow: 'ride', km, payMethod: 'cod',
+    geo, title, total: grand,
+    detail: `${RIDE.from.name} → ${RIDE.to.name} · ${km.toFixed(1)} km${RIDE.share ? ' · shared' : ''}`,
+    items: [{ name: v.name + ' ride · ' + km.toFixed(1) + ' km', q: 1, price: grand }]
   });
+  /* post a REAL job so a nearby captain can actually claim this ride */
+  if (typeof cloudPostJob === 'function') cloudPostJob({
+    id: o.id, jtype: 'ride', what: v.name + ' ride · ' + km.toFixed(1) + ' km',
+    from_name: RIDE.from.name, to_name: RIDE.to.name,
+    from_lat: RIDE.from.lat, from_lng: RIDE.from.lng, to_lat: RIDE.to.lat, to_lng: RIDE.to.lng,
+    km: +km.toFixed(1), pay: fare, order_ref: o.id
+  });
+  RIDE.done = true; confettiBurst();
+  go('track/' + o.id);
 }

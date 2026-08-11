@@ -108,7 +108,20 @@ try { S = Object.assign(defaultState(), JSON.parse(localStorage.getItem(OMNY_KEY
 catch (e) { S = defaultState(); }
 function save() {
   S.lastSaved = Date.now();
-  localStorage.setItem(OMNY_KEY, JSON.stringify(S));
+  try {
+    localStorage.setItem(OMNY_KEY, JSON.stringify(S));
+  } catch (e) {
+    /* localStorage quota exceeded (S.orders was unbounded). Trim the largest
+       histories and retry ONCE, so a long-lived install never wedges every
+       future write — save() runs on every mutation, so an uncaught throw here
+       would break the entire app. */
+    try {
+      S.orders = (S.orders || []).slice(0, 60);
+      S.notifs = (S.notifs || []).slice(0, 30);
+      S.earnings = (S.earnings || []).slice(0, 100);
+      localStorage.setItem(OMNY_KEY, JSON.stringify(S));
+    } catch (e2) { /* nothing more we can safely drop */ }
+  }
   if (typeof cloudQueue === 'function') cloudQueue();
 }
 
@@ -311,7 +324,10 @@ const FLOW_T = {
 };
 
 function createOrder(o) {
-  o.id = 'OM' + rnd(10000, 99999);
+  /* collision-safe id (was 'OM'+5-digit Math.random → birthday collisions in the
+     low hundreds of orders; shop_orders posts with on_conflict=ignore-duplicates,
+     so a colliding id SILENTLY dropped the order and the shop never saw it). */
+  o.id = 'OM' + uidStrong().slice(0, 9).toUpperCase();
   o.placedAt = Date.now();
   o.lastStage = 0;
   /* stage times scale with the real trip distance: longer routes
@@ -323,7 +339,9 @@ function createOrder(o) {
     o.flowT = pattern.map(t => Math.round(t / last * total));
   }
   if (!o.partner && o.flow !== 'shop_self') o.partner = Object.assign({ otp: rnd(1000, 9999) }, pick(DB.partners));
-  S.orders.unshift(o); save();
+  S.orders.unshift(o);
+  if (S.orders.length > 150) S.orders = S.orders.slice(0, 150);   // was never capped → unbounded localStorage growth
+  save();
   notify('Order ' + o.id + ' placed', o.title, '🧾');
   /* GMV/conversion counts REAL orders only. An order placed against seed
      catalogue data has no seller behind it, so counting it would report

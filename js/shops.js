@@ -183,7 +183,7 @@ view('shop', args => {
     ${s.offer ? `<div class="offer-strip">${ic('gift', 13)} ${esc(s.offer)}</div>` : ''}
     ${s.b2b ? `<div class="b2b-strip">${ic('factory', 13)} Wholesale — items have minimum order quantities. GST invoice provided.
       <button class="btn-main sm alt" onclick="rfqSheet('${s.id}')">Get Best Price</button></div>` : ''}
-    ${myRfqs.length ? myRfqs.map(r => `<div class="offer-strip">${ic('receipt', 13)} Quote ${r.status === 'quoted' ? `received: <b>${money(r.quote)}/${esc(r.unit)}</b> for ${r.qty} ${esc(r.unit)}s` : 'requested — supplier replies in minutes'} · ${esc(r.item)}</div>`).join('') : ''}
+    ${myRfqs.length ? myRfqs.map(r => `<div class="offer-strip">${ic('receipt', 13)} Quote ${r.status === 'quoted' ? `received: <b>${money(r.quote)}/${esc(r.unit)}</b> for ${r.qty} ${esc(r.unit)}s` : 'requested — awaiting the seller’s reply'} · ${esc(r.item)}</div>`).join('') : ''}
     ${s.type === 'food' ? `<label class="veg-toggle"><input type="checkbox" ${vegOnly ? 'checked' : ''} onchange="window._vegOnly=this.checked;VIEWS.shop(['${s.id}'])"/><span></span> Veg only</label>` : ''}
 
     ${best.length ? `<div class="sec-head"><h2>Bestsellers</h2></div>${best.map(itemRow).join('')}` : ''}
@@ -218,17 +218,17 @@ function rfqSubmit(shopId) {
   const qty = parseInt($('#rfqQty').value, 10);
   if (!qty || qty < 1) { toast('Enter the quantity you need'); return; }
   if (!S.rfqs) S.rfqs = [];
-  const r = { id: uid(), shopId, item: it.name, unit: it.qty.replace('per ', ''), qty, status: 'sent', ts: Date.now() };
+  const note = (($('#rfqNote') && $('#rfqNote').value) || '').trim();
+  const r = { id: uid(), shopId, item: it.name, unit: it.qty.replace('per ', ''), qty, note, status: 'sent', ts: Date.now() };
   S.rfqs.unshift(r); save(); closeSheet();
-  toast('Quote requested — supplier is typing…');
-  setTimeout(() => {
-    r.status = 'quoted';
-    r.quote = Math.round(it.price * (qty >= (it.moq || 1) * 4 ? 0.88 : 0.94) * 100) / 100;
-    save();
-    notify('Best price received', `${s.name}: ${money(r.quote)}/${r.unit} for ${qty} ${r.unit}s of ${it.name}`);
-    toast(`Quote in: ${money(r.quote)}/${r.unit} from ${s.name}`);
-    if (location.hash.includes(shopId)) VIEWS.shop([shopId]);
-  }, 4000);
+  /* HONEST (2026-08-11): we do NOT fabricate a quote. Previously a setTimeout
+     invented a price (item price × 0.88/0.94) and showed it as a "best price
+     received" — no supplier ever saw the request. The RFQ is now a real pending
+     request; a price appears only when the seller actually responds. Seller-side
+     RFQ inbox + delivery is a Phase-4 build (see COMPLETION-ASSESSMENT §E). */
+  notify('Quote request sent', `Your request for ${qty} ${r.unit}s of ${it.name} was sent to ${s.name}. You'll be notified here when they send a price.`);
+  toast('Request sent — awaiting the seller’s quote');
+  if (location.hash.includes(shopId)) VIEWS.shop([shopId]);
 }
 
 /* ---------- CART ---------- */

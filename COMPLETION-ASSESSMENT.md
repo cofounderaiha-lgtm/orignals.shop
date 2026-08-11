@@ -151,6 +151,17 @@ passes schema/RLS/RPC/order/payment/concurrency/negative-authorization tests.**
 
 ---
 
+## Agent-drafted target migrations — UNVERIFIED, FROZEN
+During the audit, domain agents drafted target migrations for their areas. They are
+in `supabase/migrations/` and **must be treated as unreviewed drafts, not applied
+work**: `0011_inventory_reservations`, `0013_eta_engine`, `0014_search`,
+`0017_events`, `0019_shop_intelligence`, `0020_observability`. Each is marked
+NOT-YET-APPLIED. They align with the roadmap and coordinate on a shared `events`
+contract, but **none has been reviewed line-by-line or staged**. Before any of them
+is considered: full review, dependency/numbering reconciliation (gaps at 0012/0015–
+0018; two `0011`s must be renumbered — the device_key security migration should own
+an earlier number), then staging validation. Do **not** apply any of them.
+
 ## Biggest risks (fix-first)
 1. **`device_key` world-readable** → account takeover. (Phase 1)
 2. **No refund execution** on paid cancellations → real money owed, silently. (Phase 2)
