@@ -75,6 +75,7 @@ harden_rls out of order (before those base files) leaves the permissive policies
 | 0020 | observability | admin_schema | op_log + op_health |
 | 0021 | recommendations | schema (shops, shop_items), shop_orders | reco_home + reco_bought_together (grounded in realised orders) |
 | 0022 | fraud_risk | fraud_schema, 0009, 0015, payments, auth_schema | per-device explainable risk score (refund/cancel/payfail/multi-acct) |
+| 0023 | exec_dashboard | shop_orders, payments, settlements, analytics, 0015, 0022 | CEO/CFO/COO KPIs from real tables (L4+, finance L5) |
 
 (0012 and the old 0017_events were **deleted** in review. Numbering consolidation into
 a single clean sequence is a pre-production step, §78. Note: the base
