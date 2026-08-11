@@ -74,9 +74,13 @@ harden_rls out of order (before those base files) leaves the permissive policies
 | 0019 | shop_intelligence | 0005, 0009, settlements | read-only merchant analytics |
 | 0020 | observability | admin_schema | op_log + op_health |
 | 0021 | recommendations | schema (shops, shop_items), shop_orders | reco_home + reco_bought_together (grounded in realised orders) |
+| 0022 | fraud_risk | fraud_schema, 0009, 0015, payments, auth_schema | per-device explainable risk score (refund/cancel/payfail/multi-acct) |
 
 (0012 and the old 0017_events were **deleted** in review. Numbering consolidation into
-a single clean sequence is a pre-production step, §78.)
+a single clean sequence is a pre-production step, §78. Note: the base
+`fraud_schema.many_cancels` signal is DEAD — it matches `status='cancelled'` but buyer
+cancel sets `'rejected'` (0009); 0022's `fraud_risk` uses the event log's `actor`
+instead, and the base signal should be corrected or dropped at consolidation.)
 
 Each migration ends with a self-proving `do $$ … assert … $$` block — a failed assert
 aborts the apply. **A migration that aborts = a bug to fix before proceeding.**
