@@ -50,7 +50,7 @@ view('home', () => {
     <div class="hero-copy">
       <div class="home-greet">${greet}${isGuest() ? '' : ', <b>' + esc(displayName()) + '</b>'}${isGuest() ? ' — <b onclick="go(\'login\')" style="cursor:pointer;color:var(--primary)">sign in</b>' : ''}</div>
       <h1 class="home-title">Real food. Real shops.<br/><span>Verified by our own people.</span></h1>
-      <div class="usp-strip">${ic('shield', 13)} No adulterated ghee. No fake paneer. Every batch purity-tested — Safety · Purity · Sustainability.</div>
+      <div class="usp-strip">${ic('shield', 13)} Our promise: no adulterated ghee, no fake paneer. Sellers pledge purity — Safety · Purity · Sustainability.</div>
 
       <button class="mitra-bar" onclick="go('mitra')">
         <span class="mitra-orb">${ic('mic', 17)}</span>
@@ -179,7 +179,7 @@ view('promise', () => {
       <div class="promise-row"><i>${ic('check', 13)}</i><div><b>Verified by named inspectors</b>
         <small>A real person with a real name checks every food shop — and you see who checked it, and when. Adulterated ghee and fake paneer end here.</small></div></div>
       <div class="promise-row"><i>${ic('check', 13)}</i><div><b>Delivered by neighbours you can see</b>
-        <small>Every partner is ID-, face- and vehicle-verified. You see their name, their rating, their trips — and they see yours.</small></div></div>
+        <small>Every partner is ID- and face-verified. You see their name, their rating, their trips — and they see yours.</small></div></div>
       <div class="promise-row"><i>${ic('check', 13)}</i><div><b>The price on the card is the price you pay</b>
         <small>No surge, no hidden fees, no dark patterns. Cancel before pickup and every rupee returns to your original payment method.</small></div></div>
     </div>

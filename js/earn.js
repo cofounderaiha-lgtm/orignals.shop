@@ -155,7 +155,7 @@ function renderEarnPitch() {
   </div>
 
   <button class="btn-main wide lg" onclick="startPartnerReg()">Start earning on your route</button>
-  <div class="foot-note">${ic('shield', 12)} Face + vehicle verified by computer vision · OTP handovers · live GPS. Safety first, always.</div>`;
+  <div class="foot-note">${ic('shield', 12)} Face-verified riders · OTP handovers · live GPS trace. Safety first.</div>`;
 }
 
 function startPartnerReg() {
@@ -334,7 +334,7 @@ function renderJobFeed() {
   : `<div class="empty"><span>${ic('clock', 40)}</span><b>No jobs on your path right now</b>
       <p>New rides &amp; parcels appear the moment neighbours and shops post them.</p>
       <button class="btn-main" onclick="S.earnings=S.earnings.map(e=>({...e,jobId:'used_'+e.jobId}));save();VIEWS.earn([])">Check for new jobs</button></div>`}
-  <div class="foot-note">${ic('shield', 12)} OTP both ends · GPS trace · insurance on every trip · money lands instantly</div>`;
+  <div class="foot-note">${ic('shield', 12)} OTP both ends · live GPS trace · earnings credited instantly, settled daily to your bank</div>`;
 }
 
 function acceptJob(jobId, seva) {
