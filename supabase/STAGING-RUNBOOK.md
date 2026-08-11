@@ -73,6 +73,7 @@ harden_rls out of order (before those base files) leaves the permissive policies
 | 0018 | events | analytics_schema, shop_orders, payments | entity-link analytics_events + emit_event (allowlisted UX) + funnel |
 | 0019 | shop_intelligence | 0005, 0009, settlements | read-only merchant analytics |
 | 0020 | observability | admin_schema | op_log + op_health |
+| 0021 | recommendations | schema (shops, shop_items), shop_orders | reco_home + reco_bought_together (grounded in realised orders) |
 
 (0012 and the old 0017_events were **deleted** in review. Numbering consolidation into
 a single clean sequence is a pre-production step, §78.)
