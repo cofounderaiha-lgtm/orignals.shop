@@ -400,8 +400,12 @@ function cancelOrder(oid) {
 }
 function activeOrders() { return S.orders.filter(o => !orderDone(o)); }
 
-/* poll: fire notifications when a stage advances; refresh live views */
-setInterval(() => {
+/* poll: fire notifications when a stage advances; refresh live views.
+   §53 (low-bandwidth): the tick is SKIPPED while the tab is backgrounded — no
+   network polls (pollCloudOrders), no rendering — saving battery + mobile data for
+   tier-2/3 users. Order stages are time-derived, so they self-correct the instant
+   the tab is visible again (we run one catch-up tick on visibilitychange). */
+function _orderTick() {
   let changed = false;
   S.orders.forEach(o => {
     const st = orderStage(o);
@@ -419,7 +423,9 @@ setInterval(() => {
   if (live && typeof renderTrack === 'function') renderTrack(live.dataset.liveOrder);
   const strip = $('#activeStrip');
   if (strip && typeof activeStripHTML === 'function') strip.innerHTML = activeStripHTML();
-}, 2500);
+}
+setInterval(() => { if (!document.hidden) _orderTick(); }, 2500);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) _orderTick(); });
 
 /* order timeline HTML (shared by tracking views) */
 function timelineHTML(o) {
