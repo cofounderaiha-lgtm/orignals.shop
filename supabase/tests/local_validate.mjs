@@ -40,7 +40,7 @@ const BASE = [
   'harden_rls.sql',
 ];
 const MIGS = ['0001','0002','0003','0004','0005','0006','0007','0008','0009','0010','0011',
-  '0013','0014','0015','0016','0017','0018','0019','0020','0021','0022','0023','0024','0025','0026'];
+  '0013','0014','0015','0016','0017','0018','0019','0020','0021','0022','0023','0024','0025','0026','0027'];
 const migFile = (n) => {
   const map = {'0001':'0001_admin_bootstrap_secret','0002':'0002_shop_upsert_rpc','0003':'0003_orders_snapshots_rpc',
    '0004':'0004_errors_and_storage','0005':'0005_supply_chain','0006':'0006_stock_idempotent','0007':'0007_po_conserve_stock',
@@ -48,7 +48,7 @@ const migFile = (n) => {
    '0013':'0013_eta_engine','0014':'0014_search','0015':'0015_finance_refunds_coupling','0016':'0016_dispatch',
    '0017':'0017_derive_identity','0018':'0018_events','0019':'0019_shop_intelligence','0020':'0020_observability',
    '0021':'0021_recommendations','0022':'0022_fraud_risk','0023':'0023_exec_dashboard',
-   '0024':'0024_catalog_variants_discounts','0025':'0025_double_entry_ledger','0026':'0026_inventory_reservations'};
+   '0024':'0024_catalog_variants_discounts','0025':'0025_double_entry_ledger','0026':'0026_inventory_reservations','0027':'0027_order_full'};
   return 'migrations/' + map[n] + '.sql';
 };
 
