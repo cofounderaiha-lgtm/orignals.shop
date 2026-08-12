@@ -85,7 +85,7 @@ const migFail = [];
 for (const n of MIGS) { if (!(await apply(n + '  ' + migFile(n).replace('migrations/',''), rd(migFile(n))))) migFail.push(n); }
 
 log('\n=== TEST SUITES ===');
-for (const t of ['tests/policy_regression.sql','tests/security_negative.sql','tests/concurrency.sql']) await apply(t, rd(t));
+for (const t of ['tests/policy_regression.sql','tests/security_negative.sql','tests/concurrency.sql','tests/e2e_scenarios.sql']) await apply(t, rd(t));
 
 log('\n=== DIRECT VERIFICATION (independently prove negative-authz denies) ===');
 async function probe(label, sql, expect) {
