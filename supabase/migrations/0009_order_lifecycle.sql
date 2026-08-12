@@ -218,5 +218,5 @@ select 'shop_orders read leak closed' as check,
 union all
 -- c) market_stats runs and returns the 4 keys:
 select 'market_stats returns keys',
-  case when market_stats() ? 'open_jobs' and market_stats() ? 'community_shops'
+  case when market_stats()::jsonb ? 'open_jobs' and market_stats()::jsonb ? 'community_shops'
        then 'PASS' else 'FAIL' end;

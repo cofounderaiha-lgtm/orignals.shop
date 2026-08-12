@@ -24,7 +24,7 @@
 
 -- guard: _my_shop must exist (from 0005_supply_chain)
 do $$ begin
-  if to_regproc('_my_shop(text)') is null then
+  if to_regprocedure('_my_shop(text)') is null then
     raise exception '0017 requires _my_shop(text) from 0005_supply_chain — apply 0005 first';
   end if;
 end $$;

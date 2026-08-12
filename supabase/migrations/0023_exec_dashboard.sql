@@ -57,7 +57,7 @@ begin
   end if;
 
   -- open fraud-risk devices (0022) — count only, L4+
-  if to_regproc('fraud_risk(text,int)') is not null then
+  if to_regprocedure('fraud_risk(text,int)') is not null then
     select coalesce(json_array_length((fraud_risk(p_token, 40))->'devices'),0) into v_fraud;
   end if;
 
@@ -78,7 +78,7 @@ grant execute on function exec_dashboard(text, int) to anon;
 
 -- ---------- proof (expect PASS) ----------
 do $$
-declare j json;
+declare j jsonb;
 begin
   insert into admin_users(ident, level, name, active) values ('__ex_l5__','l5','extest',true)
     on conflict (ident) do update set level='l5', active=true;

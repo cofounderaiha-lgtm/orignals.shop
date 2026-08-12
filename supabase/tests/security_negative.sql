@@ -29,7 +29,7 @@ begin
   -- 1. SELLER A cannot advance SELLER B's order (shop_order_status derives shop
   --    from the CALLER's device, so naming the victim's order id must fail). [0009]
   -- ==========================================================
-  if to_regproc('shop_order_status(text,text,text)') is not null then
+  if to_regprocedure('shop_order_status(text,text,text)') is not null then
     -- attacker (A's device) tries to move the victim's order to 'prep'
     if shop_order_status('STG_VO1', A, 'prep') = true then
       raise exception 'AUTHZ FAIL 1: seller A advanced seller B''s order';
@@ -41,7 +41,7 @@ begin
   -- ==========================================================
   -- 2. BUYER A cannot cancel BUYER B's order. [0009]
   -- ==========================================================
-  if to_regproc('shop_order_cancel(text,text)') is not null then
+  if to_regprocedure('shop_order_cancel(text,text)') is not null then
     r := shop_order_cancel('STG_VO1', A);
     assert (r->>'ok') = 'false', 'AUTHZ FAIL 2: buyer A cancelled buyer B''s order';
   else skipped := skipped || ' [2:shop_order_cancel]'; end if;
@@ -49,7 +49,7 @@ begin
   -- ==========================================================
   -- 3. BUYER A cannot read BUYER B's order timeline. [0009]
   -- ==========================================================
-  if to_regproc('order_timeline(text,text)') is not null then
+  if to_regprocedure('order_timeline(text,text)') is not null then
     select count(*) into n from order_timeline('STG_VO1', A);
     assert n = 0, 'AUTHZ FAIL 3: buyer A read buyer B''s order history';
   else skipped := skipped || ' [3:order_timeline]'; end if;
@@ -57,7 +57,7 @@ begin
   -- ==========================================================
   -- 4. BUYER A cannot refund BUYER B's order. [0015]
   -- ==========================================================
-  if to_regproc('refund_open(text,text,text)') is not null then
+  if to_regprocedure('refund_open(text,text,text)') is not null then
     r := refund_open('STG_VO1', A, 'x');
     assert (r->>'ok') = 'false', 'AUTHZ FAIL 4: buyer A opened a refund on buyer B''s order';
   else skipped := skipped || ' [4:refund_open]'; end if;
@@ -65,7 +65,7 @@ begin
   -- ==========================================================
   -- 5. MITRA A cannot accept an offer made to MITRA B. [0016]
   -- ==========================================================
-  if to_regproc('offer_respond(text,text,boolean)') is not null
+  if to_regprocedure('offer_respond(text,text,boolean)') is not null
      and to_regclass('public.job_offers') is not null and to_regclass('public.live_jobs') is not null then
     delete from job_offers where job_id = 'STG_J1';
     delete from live_jobs where id = 'STG_J1';
@@ -83,7 +83,7 @@ begin
   -- ==========================================================
   -- 6. MITRA A cannot complete-deliver MITRA B's job. [live_delivery]
   -- ==========================================================
-  if to_regproc('job_deliver(text,text,text)') is not null and to_regclass('public.live_jobs') is not null then
+  if to_regprocedure('job_deliver(text,text,text)') is not null and to_regclass('public.live_jobs') is not null then
     delete from live_jobs where id = 'STG_J2';
     insert into live_jobs(id, device_key, what, jtype, status, taken_by, taken_at)
       values ('STG_J2', 'stg_poster', 'x', 'box', 'taken', V, now());   -- taken by VICTIM
@@ -95,13 +95,13 @@ begin
   -- ==========================================================
   -- 7. A non-admin token cannot read admin surfaces. [settlements / 0020]
   -- ==========================================================
-  if to_regproc('settlement_summary(text)') is not null then
+  if to_regprocedure('settlement_summary(text)') is not null then
     assert (settlement_summary('stg_not_a_token')->>'ok') = 'false', 'AUTHZ FAIL 7: non-admin read settlement_summary';
   else skipped := skipped || ' [7:settlement_summary]'; end if;
-  if to_regproc('op_health(text)') is not null then
+  if to_regprocedure('op_health(text)') is not null then
     assert (op_health('stg_not_a_token')->>'ok') = 'false', 'AUTHZ FAIL 7b: non-admin read op_health';
   else skipped := skipped || ' [7b:op_health]'; end if;
-  if to_regproc('finance_reconcile(text)') is not null then
+  if to_regprocedure('finance_reconcile(text)') is not null then
     assert (finance_reconcile('stg_not_a_token')->>'ok') = 'false', 'AUTHZ FAIL 7c: non-admin read finance_reconcile';
   else skipped := skipped || ' [7c:finance_reconcile]'; end if;
 

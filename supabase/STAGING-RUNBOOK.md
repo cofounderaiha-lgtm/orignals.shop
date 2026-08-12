@@ -22,10 +22,10 @@ Do not request the production Management token until every gate below is green.
 Dependencies flow downward; apply top to bottom. (Names are the files in `supabase/`.)
 ```
 schema.sql                 -- core: profiles, shops, shop_items, orders(+order_events), custom_categories, RLS
-admin_schema.sql           -- admin_users, _admin_level(), admin_rank()   [gate used everywhere]
-auth_schema.sql            -- app_users, auth_sessions, otp_challenges
-geo_schema.sql             -- geo_places
-ops_schema.sql             -- platform_flags, error_log
+ops_schema.sql             -- platform_flags, error_log   [precede admin_schema: admin adds admin_setup_code to platform_flags]
+auth_schema.sql            -- app_users, auth_sessions, otp_challenges  (needs pgcrypto in schema `extensions`) [precede admin_schema: admin reads auth_sessions]
+admin_schema.sql           -- admin_users, _admin_level(), admin_rank()   [gate used everywhere; needs platform_flags + auth_sessions]
+geo_schema.sql             -- geo_places  (needs pg_trgm)
 jobs_schema.sql            -- live_jobs (base)              [needed by live_delivery, 0016]
 shop_orders_schema.sql     -- shop_orders (the operational order table)   [0009,0015,0019]
 shop_menu_schema.sql       -- shop_items photo/section, price_bounds, price_check
