@@ -101,7 +101,7 @@ create or replace function settlement_run(p_token text, p_payee text)
 returns json language plpgsql security definer set search_path=public as $$
 declare v_ref text; v_n int; v_sum numeric;
 begin
-  if _admin_level(p_token) <> 'l5' then return json_build_object('ok',false,'reason','only_l5'); end if;
+  if _admin_level(p_token) is distinct from 'l5' then return json_build_object('ok',false,'reason','only_l5'); end if;
   v_ref := 'PO' || to_char(now(),'YYYYMMDDHH24MISS');
   update settlement_ledger set status='paid', payout_ref=v_ref, paid_at=now()
     where status='due' and (coalesce(p_payee,'')='' or payee=p_payee);

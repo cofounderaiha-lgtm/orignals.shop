@@ -238,7 +238,7 @@ end $$;
 create or replace function hr_payroll_pay(p_token text, p_id bigint)
 returns json language plpgsql security definer set search_path=public as $$
 begin
-  if _admin_level(p_token) <> 'l5' then return json_build_object('ok',false,'reason','only_l5'); end if;
+  if _admin_level(p_token) is distinct from 'l5' then return json_build_object('ok',false,'reason','only_l5'); end if;
   update hr_payroll set status='paid', paid_at=now() where id=p_id;
   return json_build_object('ok', found);
 exception when others then return json_build_object('ok',false,'reason','error'); end $$;

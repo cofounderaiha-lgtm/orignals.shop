@@ -115,7 +115,7 @@ exception when others then return json_build_object('ok',false,'reason','error')
 create or replace function analytics_prune(p_token text, p_keep_days int)
 returns json language plpgsql security definer set search_path=public as $$
 begin
-  if _admin_level(p_token) <> 'l5' then return json_build_object('ok',false,'reason','forbidden'); end if;
+  if _admin_level(p_token) is distinct from 'l5' then return json_build_object('ok',false,'reason','forbidden'); end if;
   delete from analytics_events where ts < now() - (least(greatest(coalesce(p_keep_days,180),7),3650) || ' days')::interval;
   return json_build_object('ok',true);
 exception when others then return json_build_object('ok',false); end $$;
