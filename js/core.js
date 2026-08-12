@@ -104,8 +104,16 @@ function defaultState() {
 }
 
 let S;
-try { S = Object.assign(defaultState(), JSON.parse(localStorage.getItem(OMNY_KEY)) || {}); }
-catch (e) { S = defaultState(); }
+try {
+  S = Object.assign(defaultState(), JSON.parse(localStorage.getItem(OMNY_KEY)) || {});
+  /* backfill NESTED defaults a shallow merge misses — so a field later added to
+     defaultState().user / .cart reaches existing installs too (their stored values
+     still win, since S.* is spread last). Prevents subtle "undefined field" breakage
+     as the state shape evolves. */
+  const _d = defaultState();
+  S.user = Object.assign({}, _d.user, S.user);
+  S.cart = Object.assign({}, _d.cart, S.cart);
+} catch (e) { S = defaultState(); }
 function save() {
   S.lastSaved = Date.now();
   try {
