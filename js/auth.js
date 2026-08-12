@@ -67,6 +67,9 @@ async function authSubmit() {
   const finalize = () => {
     authSave({ token: r.token, ident: r.ident, name: r.name || name, face: !!r.face });
     if (name && (!S.user.name || S.user.name === 'Friend')) { S.user.name = name; save(); }
+    /* emit a real signup event so the admin 'signups' KPI stops being permanently 0
+       (analytics_overview counts kind='event' name='signup'). Registration only. */
+    if (_authMode === 'register' && typeof trackEvent === 'function') trackEvent('signup');
     confettiBurst();
     toast(_authMode === 'login' ? 'Welcome back!' : 'Account created — you\'re secured');
     refreshChrome && refreshChrome();
