@@ -31,6 +31,40 @@ async function cloudFetch(path, opts) {
   return txt ? JSON.parse(txt) : null;
 }
 
+/* ---------- durable write outbox ----------
+   Critical cloud writes used to be fire-and-forget: a transient network drop
+   SILENTLY lost the write. The outbox persists a failed IDEMPOTENT write and
+   replays it on reconnect so nothing is lost on a blip. Only writes safe to REPEAT
+   are queued (today: the buyer→shop order POST, which is on_conflict=ignore-
+   duplicates). We enqueue ONLY on a network failure — our own thrown 'HTTP 4xx'
+   errors are permanent and must not be retried forever. */
+function _isNetworkErr(e) { return !e || !/^HTTP\s\d/.test(String((e && e.message) || e)); }
+function outboxAdd(path, headers, body) {
+  if (!S.outbox) S.outbox = [];
+  S.outbox.push({ id: uid(), ts: Date.now(), path, headers: headers || null, body, tries: 0 });
+  if (S.outbox.length > 50) S.outbox = S.outbox.slice(-50);
+  save();
+}
+let _outboxBusy = false;
+async function outboxFlush() {
+  if (_outboxBusy || !CLOUD.on || !navigator.onLine || !S.outbox || !S.outbox.length) return;
+  _outboxBusy = true;
+  for (const it of S.outbox.slice()) {
+    try {
+      await cloudFetch(it.path, { method: 'POST', headers: it.headers || undefined, body: JSON.stringify(it.body) });
+      S.outbox = (S.outbox || []).filter(x => x.id !== it.id);                 // delivered → drop
+    } catch (e) {
+      const row = (S.outbox || []).find(x => x.id === it.id);
+      if (row) { row.tries = (row.tries || 0) + 1; if (row.tries >= 8 || !_isNetworkErr(e)) S.outbox = S.outbox.filter(x => x.id !== it.id); }
+    }
+  }
+  _outboxBusy = false; save();
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => { try { outboxFlush(); } catch (e) {} });
+  setInterval(() => { try { outboxFlush(); } catch (e) {} }, 30000);
+}
+
 function cloudInit() {
   const cfg = window.ORIGNALS_CONFIG || {};
   if (!cfg.supabaseUrl || !cfg.supabaseAnonKey || cfg.supabaseUrl.includes('YOUR-')) {
@@ -69,6 +103,7 @@ async function cloudBoot() {
     }
     if (typeof brainAdoptGlobal === 'function') brainAdoptGlobal();
     cloudQueue();               // first push — silent (no infra details ever shown to users)
+    outboxFlush();              // replay any critical writes stranded by an earlier network drop
   } catch (e) {
     CLOUD.status = 'error'; CLOUD.lastError = e.message;
     console.warn('[cloud] boot failed:', e.message);
@@ -518,19 +553,26 @@ function cloudPostShopOrder(o, shop) {
   /* notify the shop owner even if their app is closed */
   cloudPushTo({ shop_id: shop.id, title: 'New order at ' + (shop.name || 'your shop'), body: (o.items || []).map(i => i.name).join(', ') + ' · ' + money(o.total), url: '#/myshop' });
   const a = S.user.addr || DB.places[0];
+  const row = {
+    id: o.id, shop_id: shop.id,
+    buyer_device: S.deviceKey || 'anon',
+    buyer_name: (S.user.name || 'Customer').slice(0, 40),
+    buyer_addr: (a.name + (a.sub ? ', ' + a.sub : '')).slice(0, 120),
+    buyer_lat: a.lat != null ? +a.lat : null, buyer_lng: a.lng != null ? +a.lng : null,
+    items: o.items || [], total: o.total,
+    drop_otp: (o.partner && o.partner.otp) ? String(o.partner.otp) : null   // buyer's handover OTP (server-verified)
+  };
   cloudFetch('shop_orders?on_conflict=id', {
     method: 'POST',
     headers: { 'Prefer': 'resolution=ignore-duplicates' },
-    body: JSON.stringify([{
-      id: o.id, shop_id: shop.id,
-      buyer_device: S.deviceKey || 'anon',
-      buyer_name: (S.user.name || 'Customer').slice(0, 40),
-      buyer_addr: (a.name + (a.sub ? ', ' + a.sub : '')).slice(0, 120),
-      buyer_lat: a.lat != null ? +a.lat : null, buyer_lng: a.lng != null ? +a.lng : null,
-      items: o.items || [], total: o.total,
-      drop_otp: (o.partner && o.partner.otp) ? String(o.partner.otp) : null   // buyer's handover OTP (server-verified)
-    }])
-  }).catch(e => console.warn('[shop order] post skipped:', e.message));
+    body: JSON.stringify([row])
+  }).catch(e => {
+    /* don't silently drop the order on a network blip — queue it for retry on
+       reconnect. The POST is idempotent (on_conflict=ignore-duplicates), so a
+       replay can never create a duplicate order. */
+    console.warn('[shop order] queued for retry:', e.message);
+    if (_isNetworkErr(e)) outboxAdd('shop_orders?on_conflict=id', { 'Prefer': 'resolution=ignore-duplicates' }, [row]);
+  });
 }
 
 /* owner action → cloud status (drives the buyer's live tracking) */
